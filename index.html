@@ -39,7 +39,8 @@
     .brand { display:flex; align-items:center; gap:0.75rem; min-width:0; }
     .brand-logo { width:180px; max-width:52vw; height:auto; display:block; object-fit:contain; }
     .brand-title { margin:0; font-size:1rem; font-weight:800; }
-    .sync-status { display:flex; align-items:center; gap:0.4rem; font-size:0.72rem; font-weight:700; white-space:nowrap; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); border-radius:999px; padding:.35rem .55rem; }
+    .sync-status { display:flex; align-items:center; gap:0.4rem; font-size:0.72rem; font-weight:700; white-space:nowrap; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); border-radius:999px; padding:.35rem .55rem; cursor:pointer; user-select:none; }
+    .sync-status:active { transform: scale(0.96); }
     .sync-dot { width:8px; height:8px; border-radius:50%; background:#86efac; }
     .sync-status.offline .sync-dot { background:#fbbf24; }
     .sync-status.pending .sync-dot { background:#60a5fa; }
@@ -394,7 +395,10 @@
       <img class="brand-logo" src="./logo-awb.png" alt="Agri Wangi Berry">
       <h1 class="brand-title">Processing</h1>
     </div>
-    <div id="sync-status" class="sync-status"><span class="sync-dot"></span><span id="sync-status-text">Memuat...</span></div>
+    <div id="sync-status" class="sync-status" onclick="manualRefresh()" title="Klik untuk sinkron sekarang">
+      <span class="sync-dot"></span>
+      <span id="sync-status-text">Memuat...</span>
+    </div>
   </div>
   <div class="tabs">
     <button class="tab active" onclick="showTab('lks', this)">📝 Form Kerja Harian</button>
@@ -877,7 +881,6 @@
   };
 
   // ========== OFFLINE + GOOGLE SHEETS SYNC ==========
-  // Isi URL Web App Google Apps Script setelah deploy.
   const SYNC_CONFIG = {
     APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbz-3jsdyi2gVHU1Fmy28j4otA_1RWjqOBWOBiSD8-7v3-a7rfj77gGYIn2Msjhai7TcLQ/exec',
     API_KEY: 'AWB_PROCESSING_2026',
@@ -920,7 +923,6 @@
     if (!type || suppressSync) return;
     let queue = getSyncQueue();
     const id = typeof recordOrId === 'object' ? recordOrId.id : recordOrId;
-    // Operasi terbaru untuk ID yang sama menggantikan operasi lama.
     queue = queue.filter(x => !(x.type === type && String(x.id) === String(id)));
     if (action === 'clear') {
       queue = queue.filter(x => x.type !== type);
@@ -949,8 +951,6 @@
     });
   }
 
-  // Intercept perubahan data lokal dari kode lama, sehingga fungsi existing
-  // tetap bekerja offline tanpa perlu mengubah seluruh modul satu per satu.
   localStorage.setItem = function(key, value) {
     const type = syncTypeFromKey(key);
     const oldRaw = type ? nativeStorage.getItem(key) : null;
@@ -992,7 +992,12 @@
       };
       window[callback] = data => { cleanup(); resolve(data); };
       script.onerror = () => { cleanup(); reject(new Error('Gagal menghubungi Google Apps Script.')); };
-      const query = new URLSearchParams({ ...params, callback, key: SYNC_CONFIG.API_KEY }).toString();
+      const query = new URLSearchParams({
+        ...params,
+        callback,
+        key: SYNC_CONFIG.API_KEY,
+        _t: Date.now()   // cache-buster agar browser tidak memakai respons lama
+      }).toString();
       script.src = SYNC_CONFIG.APPS_SCRIPT_URL + (SYNC_CONFIG.APPS_SCRIPT_URL.includes('?') ? '&' : '?') + query;
       timer = setTimeout(() => { cleanup(); reject(new Error('Timeout sinkronisasi.')); }, timeoutMs);
       document.body.appendChild(script);
@@ -1031,7 +1036,6 @@
   async function pullFromSheet() {
     if (!navigator.onLine || !SYNC_CONFIG.APPS_SCRIPT_URL || SYNC_CONFIG.APPS_SCRIPT_URL.includes('PASTE_GOOGLE')) return;
     if (getSyncQueue().length) await syncQueue();
-    // Jangan pull jika masih ada antrean yang gagal dikirim; data lokal lebih aman.
     if (getSyncQueue().length) return;
     try {
       updateSyncStatus('syncing');
@@ -1086,6 +1090,48 @@
   window.addEventListener('online', () => { updateSyncStatus(); syncQueue().then(pullFromSheet); });
   window.addEventListener('offline', () => updateSyncStatus());
 
+  // ---- Manual refresh & polling otomatis ----
+  let syncPollTimer = null;
+
+  async function manualRefresh() {
+    if (!navigator.onLine) { showToast('Tidak ada koneksi internet.', 'error'); return; }
+    if (syncBusy) { showToast('Sinkronisasi sedang berjalan...'); return; }
+    try {
+      updateSyncStatus('syncing');
+      if (getSyncQueue().length) await syncQueue();
+      await pullFromSheet();
+      showToast('✅ Data berhasil disinkronkan');
+    } catch (e) {
+      showToast('Gagal sinkron: ' + (e.message || e), 'error');
+    }
+  }
+
+  function scheduleSyncPoll() {
+    if (syncPollTimer) clearInterval(syncPollTimer);
+    syncPollTimer = setInterval(async () => {
+      if (!navigator.onLine) return;
+      if (document.visibilityState !== 'visible') return;
+      if (syncBusy) return;
+      if (getSyncQueue().length) {
+        await syncQueue();
+        await pullFromSheet();
+      } else {
+        await pullFromSheet();
+      }
+    }, 45000);
+  }
+
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState !== 'visible' || !navigator.onLine) return;
+    if (syncBusy) return;
+    if (getSyncQueue().length) {
+      await syncQueue();
+      await pullFromSheet();
+    } else {
+      await pullFromSheet();
+    }
+  });
+
   // ========== MAIN NAVIGATION ==========
   function showTab(id, btn) {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -1125,6 +1171,7 @@
     updateSyncStatus();
     migrateExistingLocalData();
     syncQueue().then(pullFromSheet);
+    scheduleSyncPoll();
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW gagal:', err));
     }
@@ -1307,6 +1354,7 @@
     if (!item) return;
 
     window.editingLksId = id;
+    window.editingPanenId = null;
     const body = document.getElementById('modal-edit-panen-body');
     let html = `
       <div class="input-group"><label>Tanggal</label><input type="date" id="edit-lks-tgl" value="${item.tanggal}"></div>
@@ -1387,7 +1435,6 @@
     document.getElementById('calc-grand-total-r').textContent = grandTotalReject.toFixed(2) + ' Kg';
     document.getElementById('calc-reject-rate').textContent = rejectRate.toFixed(2) + '%';
 
-    // Total Pengiriman termasuk Frozen
     const totalKirim = getValP('k-hatsu') + getValP('k-a11') + getValP('k-a15') + getValP('k-frozen');
     const rateKirim = totalPanen > 0 ? (totalKirim / totalPanen * 100) : 0;
     document.getElementById('calc-total-kirim').textContent = totalKirim.toFixed(2) + ' Kg';
@@ -1560,17 +1607,15 @@
     updateDashboard();
   }
 
-  // ========== STOK KEMASAN FUNCTIONS (LENGKAP) ==========
+  // ========== STOK KEMASAN FUNCTIONS ==========
   function recalculateStockKemasan() {
     const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
     
-    // Reset state awal
     const accum = {};
     masterJenisKemasan.forEach(m => {
       accum[m.name] = { gudang: 0, processing: 0, keluar: 0, reject: 0 };
     });
 
-    // Urutkan tanggal naik untuk kalkulasi kronologis
     const sorted = [...db].sort((a, b) => new Date(a.tgl) - new Date(b.tgl));
 
     sorted.forEach(entry => {
@@ -1595,7 +1640,6 @@
       };
     });
 
-    // Render Summary UI
     let totGudang = 0, totProc = 0, totKeluar = 0, totRej = 0;
     let summaryHtml = '';
 
@@ -1769,7 +1813,6 @@
   function renderKemasanTables() {
     const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
 
-    // Render Variance Table
     const varTbody = document.getElementById('tbl-variance-body');
     let varRows = [];
 
@@ -1803,7 +1846,6 @@
       varTbody.innerHTML = varRows.reverse().join('');
     }
 
-    // Render History Table
     const histTbody = document.getElementById('tbl-kemasan-history-body');
     if (db.length === 0) {
       histTbody.innerHTML = '<tr><td colspan="6" class="text-center" style="color: #999;">Belum ada history</td></tr>';
@@ -1886,7 +1928,6 @@
       monthlyTbody.innerHTML = monthlyRows.reverse().join('');
     }
 
-    // Cards Rekap Jenis
     let cardsHtml = '';
     masterJenisKemasan.forEach(m => {
       const st = monthlyStats[m.name];
@@ -2028,17 +2069,14 @@
     const now = new Date();
     const thisMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
 
-    // Total Panen Bulan Ini
     const panenBulanIni = panenDb
       .filter(x => x.tgl && x.tgl.startsWith(thisMonth))
       .reduce((sum, x) => sum + x.p_hatsu + x.p_gradea + x.p_gradeb + x.rk_crack + x.rk_poli + x.rk_hpt, 0);
 
-    // Total Mika Terkirim Bulan Ini
     const mikaBulanIni = panenDb
       .filter(x => x.tgl && x.tgl.startsWith(thisMonth))
       .reduce((sum, x) => sum + (x.m_hatsu || 0) + (x.m_a11 || 0) + (x.m_a15 || 0), 0);
 
-    // Re-calculating Kemasan Stock
     recalculateStockKemasan();
 
     const totalGudang = Object.values(currentStockStateKemasan).reduce((sum, x) => sum + x.gudang, 0);
