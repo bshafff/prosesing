@@ -996,7 +996,7 @@
         ...params,
         callback,
         key: SYNC_CONFIG.API_KEY,
-        _t: Date.now()   // cache-buster agar browser tidak memakai respons lama
+        _t: Date.now()
       }).toString();
       script.src = SYNC_CONFIG.APPS_SCRIPT_URL + (SYNC_CONFIG.APPS_SCRIPT_URL.includes('?') ? '&' : '?') + query;
       timer = setTimeout(() => { cleanup(); reject(new Error('Timeout sinkronisasi.')); }, timeoutMs);
@@ -1035,6 +1035,7 @@
 
   async function pullFromSheet() {
     if (!navigator.onLine || !SYNC_CONFIG.APPS_SCRIPT_URL || SYNC_CONFIG.APPS_SCRIPT_URL.includes('PASTE_GOOGLE')) return;
+    if (userIsEditingKemasan()) return; // jangan pull saat user sedang mengisi form kemasan
     if (getSyncQueue().length) await syncQueue();
     if (getSyncQueue().length) return;
     try {
@@ -1112,6 +1113,7 @@
       if (!navigator.onLine) return;
       if (document.visibilityState !== 'visible') return;
       if (syncBusy) return;
+      if (userIsEditingKemasan()) return;
       if (getSyncQueue().length) {
         await syncQueue();
         await pullFromSheet();
@@ -1124,6 +1126,7 @@
   document.addEventListener('visibilitychange', async () => {
     if (document.visibilityState !== 'visible' || !navigator.onLine) return;
     if (syncBusy) return;
+    if (userIsEditingKemasan()) return;
     if (getSyncQueue().length) {
       await syncQueue();
       await pullFromSheet();
@@ -1670,6 +1673,55 @@
 
   function getValK(id) { return parseFloat(document.getElementById(id).value) || 0; }
 
+  // ========== FIX: Cegah input hilang saat auto-sync ==========
+  function captureKemasanFormValues() {
+    const container = document.getElementById('forms-kemasan');
+    if (!container || !container.children.length) return null;
+    const values = {};
+    masterJenisKemasan.forEach((item, i) => {
+      values[i] = {
+        masuk:       document.getElementById(`masuk-${i}`)?.value ?? '',
+        bongkarDus:  document.getElementById(`bongkar-dus-${i}`)?.value ?? '',
+        aktualPcs:   document.getElementById(`aktual-pcs-${i}`)?.value ?? '',
+        kirim:       document.getElementById(`kirim-${i}`)?.value ?? '',
+        tamu:        document.getElementById(`tamu-${i}`)?.value ?? '',
+        ketTamu:     document.getElementById(`ket-tamu-${i}`)?.value ?? '',
+        rejectTutup: document.getElementById(`reject-tutup-${i}`)?.value ?? '',
+        rejectAlas:  document.getElementById(`reject-alas-${i}`)?.value ?? '',
+        ketReject:   document.getElementById(`ket-reject-${i}`)?.value ?? ''
+      };
+    });
+    return values;
+  }
+
+  function restoreKemasanFormValues(values) {
+    if (!values) return;
+    masterJenisKemasan.forEach((item, i) => {
+      const v = values[i];
+      if (!v) return;
+      const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+      set(`masuk-${i}`, v.masuk);
+      set(`bongkar-dus-${i}`, v.bongkarDus);
+      set(`aktual-pcs-${i}`, v.aktualPcs);
+      set(`kirim-${i}`, v.kirim);
+      set(`tamu-${i}`, v.tamu);
+      set(`ket-tamu-${i}`, v.ketTamu);
+      set(`reject-tutup-${i}`, v.rejectTutup);
+      set(`reject-alas-${i}`, v.rejectAlas);
+      set(`ket-reject-${i}`, v.ketReject);
+    });
+    // Hitung ulang display readonly agar sesuai dengan input yang dipulihkan
+    masterJenisKemasan.forEach((_, i) => hitungKemasan(i));
+  }
+
+  function userIsEditingKemasan() {
+    const container = document.getElementById('forms-kemasan');
+    if (!container) return false;
+    const active = document.activeElement;
+    return !!(active && container.contains(active) &&
+      (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA'));
+  }
+
   function renderKemasanForms() {
     const html = masterJenisKemasan.map((item, i) => {
       const gAwal = currentStockStateKemasan[item.name].gudang;
@@ -1726,7 +1778,9 @@
       `;
     }).join('');
 
+    const savedValues = captureKemasanFormValues();
     document.getElementById('forms-kemasan').innerHTML = html;
+    restoreKemasanFormValues(savedValues);
   }
 
   function hitungKemasan(i) {
