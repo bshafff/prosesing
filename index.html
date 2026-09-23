@@ -1,0 +1,2055 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#2d5016">
+  <meta name="description" content="Processing AWB - Dashboard Panen & Kemasan">
+  
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  
+  <title>Processing - AWB</title>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html { font-size: 16px; }
+    
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #f5f7f4;
+      color: #1a1a18;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* HEADER & TABS */
+    header {
+      background: linear-gradient(135deg, #2d5016 0%, #5a8f3a 100%);
+      color: white;
+      padding: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .brand-row { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:0.85rem; }
+    .brand { display:flex; align-items:center; gap:0.75rem; min-width:0; }
+    .brand-logo { width:180px; max-width:52vw; height:auto; display:block; object-fit:contain; }
+    .brand-title { margin:0; font-size:1rem; font-weight:800; }
+    .sync-status { display:flex; align-items:center; gap:0.4rem; font-size:0.72rem; font-weight:700; white-space:nowrap; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); border-radius:999px; padding:.35rem .55rem; }
+    .sync-dot { width:8px; height:8px; border-radius:50%; background:#86efac; }
+    .sync-status.offline .sync-dot { background:#fbbf24; }
+    .sync-status.pending .sync-dot { background:#60a5fa; }
+    .sync-status.error .sync-dot { background:#f87171; }
+
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+      border-bottom: 2px solid rgba(255,255,255,0.2);
+      margin-bottom: 0;
+    }
+    .tab {
+      border: none;
+      background: transparent;
+      color: rgba(255,255,255,0.7);
+      padding: 0.75rem 1rem;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab:hover { color: white; }
+    .tab.active {
+      color: white;
+      border-bottom-color: white;
+    }
+
+    /* SUB TABS UNTUK STOK KEMASAN */
+    .sub-tabs {
+      display: flex;
+      gap: 0.375rem;
+      overflow-x: auto;
+      background: #e8f5e9;
+      padding: 0.375rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      border: 1px solid #c8e6c9;
+    }
+    .sub-tab {
+      border: none;
+      background: transparent;
+      color: #2d5016;
+      padding: 0.5rem 0.875rem;
+      font-weight: 700;
+      font-size: 0.875rem;
+      white-space: nowrap;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .sub-tab:hover { background: rgba(45,80,22,0.1); }
+    .sub-tab.active {
+      background: #2d5016;
+      color: white;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem;
+      padding-bottom: calc(100px + env(safe-area-inset-bottom));
+    }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .k-panel { display: none; }
+    .k-panel.active { display: block; }
+
+    /* CARDS */
+    .card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .card-title {
+      font-size: 0.8125rem;
+      font-weight: 800;
+      color: #2d5016;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    .sub-title {
+      font-size: 0.875rem;
+      font-weight: 800;
+      color: #2d5016;
+      margin: 1.25rem 0 0.75rem;
+    }
+
+    /* DASHBOARD STATS */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat-card {
+      background: white;
+      border-left: 4px solid #2d5016;
+      padding: 1.25rem;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .stat-card.red { border-left-color: #dc2626; }
+    .stat-card.blue { border-left-color: #2563eb; }
+    .stat-card.green { border-left-color: #16a34a; }
+    .stat-card.orange { border-left-color: #ea580c; }
+
+    .stat-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #666;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+      letter-spacing: 0.5px;
+    }
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #1a1a18;
+      margin-bottom: 0.5rem;
+    }
+    .stat-meta {
+      font-size: 0.8125rem;
+      color: #999;
+    }
+
+    /* INFO & NOTIF BOXES */
+    .info-box {
+      background: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 0.875rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+      font-size: 0.875rem;
+      color: #1e3a8a;
+    }
+    .warn-box {
+      background: #fff7df;
+      border-left: 4px solid #f59e0b;
+      padding: 0.875rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+      font-size: 0.875rem;
+      color: #78350f;
+    }
+    .success-box {
+      background: #eaf8ee;
+      border-left: 4px solid #16a34a;
+      padding: 0.875rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+      font-size: 0.875rem;
+      color: #14532d;
+    }
+
+    /* INPUTS */
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+      margin-bottom: 1rem;
+    }
+    .input-group label {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #666;
+    }
+    .input-group label.required::after { content: " *"; color: #dc2626; }
+    
+    .input-group input, .input-group select, .input-group textarea {
+      padding: 0.875rem;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 1rem;
+      background: white;
+      color: #1a1a18;
+      font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    .input-group input[readonly] {
+      background: #f1f3f2;
+      color: #4b5563;
+    }
+    .input-group input:focus, .input-group select:focus, .input-group textarea:focus {
+      outline: none;
+      border-color: #2d5016;
+      box-shadow: 0 0 0 3px rgba(45,80,22,0.1);
+    }
+    .input-group textarea { resize: vertical; min-height: 80px; }
+
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+    .row-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
+    .row-6 { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem; }
+
+    /* BUTTONS */
+    .btn-group {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .btn {
+      border: none;
+      border-radius: 8px;
+      padding: 0.875rem 1.25rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: all 0.2s;
+      flex: 1;
+      min-width: 120px;
+    }
+    .btn-primary { background: #2d5016; color: white; }
+    .btn-primary:hover { background: #245010; }
+    .btn-secondary { background: #e5e7eb; color: #1a1a18; }
+    .btn-secondary:hover { background: #d1d5db; }
+    .btn-success { background: #16a34a; color: white; }
+    .btn-success:hover { background: #15803d; }
+    .btn-danger { background: #dc2626; color: white; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-sm {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      flex: none;
+    }
+
+    /* BADGES & TEXT FORMATTING */
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 0.75rem;
+    }
+    .hatsu { background: #dbeafe; color: #1e40af; }
+    .gradea { background: #dcfce7; color: #15803d; }
+    .gradeb { background: #fed7aa; color: #b45309; }
+
+    .kurang { color: #dc2626; font-weight: bold; }
+    .lebih { color: #2563eb; font-weight: bold; }
+    .sesuai { color: #16a34a; font-weight: bold; }
+
+    /* TABLE */
+    .table-container {
+      overflow-x: auto;
+      margin-top: 1rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9375rem;
+    }
+    th {
+      background: #2d5016;
+      color: white;
+      padding: 0.875rem;
+      text-align: left;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    td {
+      padding: 0.875rem;
+      border-bottom: 1px solid #e5e7eb;
+      white-space: nowrap;
+    }
+    tr:hover { background: #f9fafb; }
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+
+    /* MODAL */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .modal.show { display: flex; }
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 2rem;
+    }
+    .modal-header {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #2d5016;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    .modal-body { margin-bottom: 1.5rem; }
+    .modal-footer {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+    }
+
+    /* TOAST */
+    .toast {
+      display: none;
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+      color: white;
+      font-weight: 600;
+      z-index: 200;
+      animation: slideIn 0.3s ease;
+    }
+    .toast.show { display: block; }
+    .toast-success { background: #16a34a; }
+    .toast-error { background: #dc2626; }
+    
+    @keyframes slideIn {
+      from { transform: translateX(400px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    @media (max-width: 768px) {
+      .row-2, .row-3, .row-4, .row-6 { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: 1fr; }
+      .modal-content { padding: 1.5rem; }
+      table { font-size: 0.8125rem; }
+      th, td { padding: 0.625rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="brand-row">
+    <div class="brand">
+      <img class="brand-logo" src="./logo-awb.png" alt="Agri Wangi Berry">
+      <h1 class="brand-title">Processing</h1>
+    </div>
+    <div id="sync-status" class="sync-status"><span class="sync-dot"></span><span id="sync-status-text">Memuat...</span></div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('lks', this)">📝 Form Kerja Harian</button>
+    <button class="tab" onclick="showTab('dashboard', this)">📊 Dashboard Utama</button>
+    <button class="tab" onclick="showTab('panen', this)">🌾 Rekap Panen & Sortir</button>
+    <button class="tab" onclick="showTab('kemasan', this)">📦 Stok Kemasan (Mika)</button>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- ============ PANEL 1: LKS (FORM KERJA HARIAN) ============ -->
+  <div id="lks" class="panel active">
+    <div class="card">
+      <div class="card-title">📅 Tanggal Kerja</div>
+      <input type="date" id="lks-tanggal">
+    </div>
+
+    <div class="card">
+      <div class="card-title">👤 Data Pekerja</div>
+      <div class="row-2">
+        <div class="input-group"><label class="required">Nama Pekerja</label><input type="text" id="lks-nama" placeholder="Masukkan nama pekerja"></div>
+        <div class="input-group"><label class="required">Grade Pekerja</label><select id="lks-grade"><option value="">Pilih grade...</option><option value="Hatsuhana">Hatsuhana</option><option value="Grade A">Grade A</option><option value="Grade B">Grade B</option></select></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🏭 Kegiatan Harian</div>
+      <div id="lks-activity-list">
+        <div class="activity-card" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.875rem; margin-bottom: 0.625rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.625rem;">
+            <span class="activity-num" style="font-size: 0.75rem; font-weight: 700; color: #2d5016; background: #e8f5e9; padding: 0.25rem 0.5rem; border-radius: 6px;">Kegiatan #1</span>
+            <button type="button" class="btn btn-sm btn-danger" onclick="removeLksActivity(this)">Hapus</button>
+          </div>
+          <div class="input-group"><label class="required">Kegiatan</label><input type="text" data-kegiatan placeholder="Tulis nama kegiatan manual..." required></div>
+          <div class="row-2">
+            <div class="input-group"><label>Hasil (pcs)</label><input type="number" data-hasil min="0" step="1" placeholder="Opsional"></div>
+            <div class="input-group"><label>Keterangan</label><input type="text" data-ket placeholder="Opsional"></div>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="addLksActivity()" style="margin-bottom: 1rem;">+ Tambah Kegiatan</button>
+
+      <div class="row-3">
+        <div class="input-group"><label>Job Tambahan</label><input type="text" id="lks-jobTambahan" placeholder="Opsional"></div>
+        <div class="input-group"><label>Perbantuan</label><select id="lks-perbantuan"><option value="">Tidak ada</option><option value="Ya">Ya</option></select></div>
+        <div class="input-group"><label>Jenis Perbantuan</label><input type="text" id="lks-jenisPerbantuan" placeholder="Jika ada perbantuan"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📦 Material Digunakan</div>
+      <div id="lks-material-list">
+        <div class="material-card" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.875rem; margin-bottom: 0.625rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.625rem;">
+            <span class="material-num" style="font-size: 0.75rem; font-weight: 700; color: #2d5016; background: #e8f5e9; padding: 0.25rem 0.5rem; border-radius: 6px;">Material #1</span>
+            <button type="button" class="btn btn-sm btn-danger" onclick="removeLksMaterial(this)">Hapus</button>
+          </div>
+          <div class="input-group"><label class="required">Nama Material</label><input type="text" data-material placeholder="Tulis nama material manual..." required></div>
+          <div class="row-2">
+            <div class="input-group"><label class="required">Jumlah</label><input type="number" data-qty min="0" step="0.1" placeholder="0" required></div>
+            <div class="input-group"><label>Satuan</label><input type="text" data-satuan placeholder="pcs/kg/box" value="pcs"></div>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="addLksMaterial()" style="margin-bottom: 1rem;">+ Tambah Material</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">💬 Keterangan</div>
+      <textarea id="lks-keterangan" placeholder="Keterangan tambahan atau catatan khusus" style="width: 100%; padding: 0.875rem; border: 1.5px solid #d1d5db; border-radius: 8px; resize: vertical; min-height: 80px;"></textarea>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="simpanDataLks()">💾 Simpan LKS</button>
+      <button class="btn btn-secondary" onclick="resetFormLks()">🔄 Reset Form</button>
+    </div>
+
+    <!-- TABEL DATA LKS -->
+    <div class="card" style="margin-top: 1.5rem;">
+      <div class="card-title">📋 Data LKS Tersimpan</div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 60px;">Aksi</th>
+              <th>Tanggal</th>
+              <th>Nama Pekerja</th>
+              <th>Grade</th>
+              <th>Kegiatan</th>
+              <th>Material</th>
+            </tr>
+          </thead>
+          <tbody id="tabel-lks-body">
+            <tr><td colspan="6" class="text-center" style="color: #999;">Belum ada data</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PANEL 2: DASHBOARD ============ -->
+  <div id="dashboard" class="panel">
+    <div class="stats" id="dashboard-stats">
+      <div class="stat-card red">
+        <div class="stat-label">Total Panen (Bulan Ini)</div>
+        <div class="stat-value" id="stat-panen">0.00</div>
+        <div class="stat-meta">Kg</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-label">Total Buah Terkirim</div>
+        <div class="stat-value" id="stat-kirim">0</div>
+        <div class="stat-meta">Pcs Mika</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Stok Kemasan Gudang</div>
+        <div class="stat-value" id="stat-gudang">0</div>
+        <div class="stat-meta">Dus Utuh</div>
+      </div>
+      <div class="stat-card orange">
+        <div class="stat-label">Stok Ready Processing</div>
+        <div class="stat-value" id="stat-processing">0</div>
+        <div class="stat-meta">Mika Siap Packing</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📊 Ringkasan Monitoring AWB Ciwidey</div>
+      <p style="color: #555; line-height: 1.6;">
+        Dashboard ini memantau rekapitulator panen harian, persentase reject (kebun & processing), serta ketersediaan stok fisik kemasan mika di gudang utama dan area kerja processing.
+      </p>
+    </div>
+  </div>
+
+  <!-- ============ PANEL 3: REKAP PANEN & SORTIR ============ -->
+  <div id="panen" class="panel">
+    <div class="card">
+      <div class="card-title">📅 Tanggal Panen</div>
+      <input type="date" id="panen-tgl">
+    </div>
+
+    <!-- PANEN -->
+    <div class="card">
+      <div class="card-title">🌾 1. Panen (Kg)</div>
+      <div class="row-3">
+        <div class="input-group"><label>Hatsuhana</label><input type="number" step="0.01" id="p-hatsu" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>Grade A</label><input type="number" step="0.01" id="p-gradea" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>Grade B</label><input type="number" step="0.01" id="p-gradeb" placeholder="0.00" oninput="hitungAllPanen()"></div>
+      </div>
+      <div style="background: #fff7e6; border-left: 4px solid #ea580c; padding: 1rem; border-radius: 6px; margin-top: 0.75rem;">
+        <strong>Total Panen (Termasuk Reject Kebun):</strong> <span id="calc-total-panen" style="font-size: 1.25rem; font-weight: 800;">0.00 Kg</span>
+      </div>
+    </div>
+
+    <!-- REJECT KEBUN -->
+    <div class="card">
+      <div class="card-title">🍃 2. Reject Kebun (Kg)</div>
+      <div class="row-3">
+        <div class="input-group"><label>Cracking</label><input type="number" step="0.01" id="rk-crack" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>Polinasi</label><input type="number" step="0.01" id="rk-poli" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>HPT</label><input type="number" step="0.01" id="rk-hpt" placeholder="0.00" oninput="hitungAllPanen()"></div>
+      </div>
+      <div style="background: #f0fdf4; border-left: 4px solid #16a34a; padding: 1rem; border-radius: 6px; margin-top: 0.75rem;">
+        <strong>Total Reject Kebun:</strong> <span id="calc-total-rk" style="font-size: 1.25rem; font-weight: 800;">0.00 Kg</span>
+      </div>
+    </div>
+
+    <!-- REJECT PROCESSING -->
+    <div class="card">
+      <div class="card-title">🏭 3. Reject Processing (Kg)</div>
+      <div class="row-6">
+        <div class="input-group"><label>Cracking</label><input type="number" step="0.01" id="rp-crack" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>Polinasi</label><input type="number" step="0.01" id="rp-poli" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>HPT</label><input type="number" step="0.01" id="rp-hpt" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>Bruise</label><input type="number" step="0.01" id="rp-bruise" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>Overripe</label><input type="number" step="0.01" id="rp-overripe" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>Frozen (&lt;11 gr)</label><input type="number" step="0.01" id="rp-frozen" placeholder="0.00" oninput="hitungAllPanen()"></div>
+      </div>
+      <div style="background: #fee2e2; border-left: 4px solid #dc2626; padding: 1rem; border-radius: 6px; margin-top: 0.75rem;">
+        <strong>Total Reject Processing:</strong> <span id="calc-total-rp" style="font-size: 1.25rem; font-weight: 800;">0.00 Kg</span> | 
+        <strong>Grand Total Reject:</strong> <span id="calc-grand-total-r" style="color: #dc2626; font-size: 1.25rem;">0.00 Kg</span> | 
+        <strong>Reject Rate:</strong> <span id="calc-reject-rate" style="color: #dc2626; font-size: 1.25rem;">0.00%</span>
+      </div>
+    </div>
+
+    <!-- BERAT PENGIRIMAN -->
+    <div class="card">
+      <div class="card-title">📦 4. Berat Pengiriman (Kg)</div>
+      <div class="row-4">
+        <div class="input-group"><label>Hatsuhana</label><input type="number" step="0.01" id="k-hatsu" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>A11</label><input type="number" step="0.01" id="k-a11" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>A15</label><input type="number" step="0.01" id="k-a15" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>Frozen</label><input type="number" step="0.01" id="k-frozen" placeholder="0.00" oninput="hitungAllPanen()"></div>
+      </div>
+      <div style="background: #e8f5e9; border-left: 4px solid #16a34a; padding: 1rem; border-radius: 6px; margin-top: 0.75rem;">
+        <strong>Total Pengiriman (Hatsuhana + A11 + A15 + Frozen):</strong> <span id="calc-total-kirim" style="font-size: 1.25rem; font-weight: 800;">0.00 Kg</span> | 
+        <strong>Rate Kirim:</strong> <span id="calc-rate-kirim" style="color: #16a34a; font-size: 1.25rem;">0.00%</span>
+      </div>
+    </div>
+
+    <!-- JUMLAH PENGIRIMAN MIKA -->
+    <div class="card">
+      <div class="card-title">🍓 5. Jumlah Pengiriman (Mika / Pcs)</div>
+      <div class="row-3">
+        <div class="input-group"><label>Hatsuhana</label><input type="number" id="m-hatsu" placeholder="0" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>A11</label><input type="number" id="m-a11" placeholder="0" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>A15</label><input type="number" id="m-a15" placeholder="0" oninput="hitungAllPanen()"></div>
+      </div>
+      <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 6px; margin-top: 0.75rem;">
+        <strong>Total Pengiriman Mika:</strong> <span id="calc-total-mika" style="font-size: 1.25rem; font-weight: 800;">0 Pcs</span>
+      </div>
+    </div>
+
+    <!-- TAMU & SAMPEL -->
+    <div class="card">
+      <div class="card-title">🎁 6. Untuk Tamu & Sampel</div>
+      <div class="row-4">
+        <div class="input-group"><label>Curah (Kg)</label><input type="number" step="0.01" id="t-curah" placeholder="0.00"></div>
+        <div class="input-group"><label>Mika Hatsuhana</label><input type="number" id="t-hatsu" placeholder="0"></div>
+        <div class="input-group"><label>Mika A11</label><input type="number" id="t-a11" placeholder="0"></div>
+        <div class="input-group"><label>Mika A15</label><input type="number" id="t-a15" placeholder="0"></div>
+      </div>
+      <div class="input-group" style="margin-top: 0.75rem;">
+        <label>Keterangan Tamu & Sampel</label>
+        <input type="text" id="t-ket" placeholder="Opsional / Catatan keperluan tamu & sampel">
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="simpanDataPanen()">💾 Simpan Data Hari Ini</button>
+      <button class="btn btn-secondary" onclick="resetFormPanen()">🔄 Reset Form</button>
+    </div>
+
+    <!-- TABEL DATA PANEN -->
+    <div class="card" style="margin-top: 1.5rem;">
+      <div class="card-title">📋 Data Panen Tersimpan</div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 60px;">Aksi</th>
+              <th>Tanggal</th>
+              <th class="text-right">Hatsu (Kg)</th>
+              <th class="text-right">Grade A (Kg)</th>
+              <th class="text-right">Grade B (Kg)</th>
+              <th class="text-right">Total Panen</th>
+              <th class="text-right">Pengiriman (Kg)</th>
+              <th class="text-right">Grand Reject</th>
+              <th class="text-right">Reject %</th>
+              <th class="text-right">Mika Total</th>
+            </tr>
+          </thead>
+          <tbody id="tabel-panen-body">
+            <tr><td colspan="10" class="text-center" style="color: #999;">Belum ada data</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PANEL 4: STOK KEMASAN (LENGKAP) ============ -->
+  <div id="kemasan" class="panel">
+    <!-- SUB TABS KEMASAN -->
+    <div class="sub-tabs">
+      <button class="sub-tab active" onclick="showKemasanSubTab('k-input', this)">📝 Input Hari Ini</button>
+      <button class="sub-tab" onclick="showKemasanSubTab('k-summary', this)">📊 Ringkasan Stok</button>
+      <button class="sub-tab" onclick="showKemasanSubTab('k-variance', this)">⚖️ Selisih Bongkar</button>
+      <button class="sub-tab" onclick="showKemasanSubTab('k-monthly', this)">📅 Rekap Bulanan</button>
+      <button class="sub-tab" onclick="showKemasanSubTab('k-history', this)">📜 History Data</button>
+    </div>
+
+    <!-- SUB PANEL 1: INPUT HARI INI -->
+    <div id="k-input" class="k-panel active">
+      <div class="card">
+        <div class="card-title">📅 Tanggal Input Kemasan</div>
+        <input type="date" id="kemasan-tgl">
+      </div>
+
+      <div id="forms-kemasan"></div>
+
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="simpanDataKemasan()">💾 Simpan Semua Data Kemasan</button>
+        <button class="btn btn-secondary" onclick="resetFormKemasan()">🔄 Reset Form</button>
+      </div>
+    </div>
+
+    <!-- SUB PANEL 2: RINGKASAN STOK -->
+    <div id="k-summary" class="k-panel">
+      <div class="card">
+        <div class="card-title">📊 Ringkasan Akumulasi Stok</div>
+        <div class="stats">
+          <div class="stat-card green">
+            <div class="stat-label">STOK GUDANG</div>
+            <div class="stat-value" id="k-stat-gudang">0</div>
+            <div class="stat-meta">Dus Utuh</div>
+          </div>
+          <div class="stat-card orange">
+            <div class="stat-label">PROCESSING</div>
+            <div class="stat-value" id="k-stat-processing">0</div>
+            <div class="stat-meta">PCS Mika Ready</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-label">TOTAL KELUAR</div>
+            <div class="stat-value" id="k-stat-keluar">0</div>
+            <div class="stat-meta">PCS</div>
+          </div>
+          <div class="stat-card red">
+            <div class="stat-label">TOTAL REJECT</div>
+            <div class="stat-value" id="k-stat-reject">0</div>
+            <div class="stat-meta">PCS</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📋 Detail Stok Per Jenis Grade</div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Jenis Grade</th>
+                <th class="text-right">Gudang (Dus)</th>
+                <th class="text-right">Processing (PCS)</th>
+                <th class="text-right">Total Akhir (PCS)</th>
+                <th class="text-right">Total Keluar (PCS)</th>
+                <th class="text-right">Total Reject (PCS)</th>
+              </tr>
+            </thead>
+            <tbody id="tbl-summary-body">
+              <tr><td colspan="6" class="text-center" style="color: #999;">Belum ada data</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUB PANEL 3: SELISIH BONGKAR -->
+    <div id="k-variance" class="k-panel">
+      <div class="card">
+        <div class="card-title">📋 Log Selisih Bongkar Fisik</div>
+        <div class="info-box">
+          PCS aktual hasil bongkar tetap masuk ke ruang Processing. Catatan selisih berguna untuk mengevaluasi akurasi isi per dus.
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Tanggal</th>
+                <th>Jenis</th>
+                <th class="text-right">Dus</th>
+                <th class="text-right">Standar</th>
+                <th class="text-right">Aktual</th>
+                <th class="text-right">Selisih</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="tbl-variance-body">
+              <tr><td colspan="7" class="text-center" style="color: #999;">Belum ada data selisih bongkar</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUB PANEL 4: REKAP BULANAN -->
+    <div id="k-monthly" class="k-panel">
+      <div class="card">
+        <div class="card-title">📅 Filter Rekap Selisih Bulanan</div>
+        <div class="row-2" style="align-items: flex-end;">
+          <div class="input-group" style="margin-bottom:0;">
+            <label>Pilih Bulan</label>
+            <input type="month" id="filter-bulan-kemasan" onchange="renderKemasanMonthly()">
+          </div>
+          <button class="btn btn-success" onclick="exportKemasanCSV()">📥 Export Selisih CSV</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📊 Rekap Selisih Per Grade</div>
+        <div class="row-3" id="cards-rekap-jenis"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📋 Detail Rincian Selisih Bulanan</div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Tanggal</th>
+                <th>Jenis Grade</th>
+                <th class="text-right">Dus</th>
+                <th class="text-right">Standar</th>
+                <th class="text-right">Aktual</th>
+                <th class="text-right">Selisih</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="tbl-monthly-body">
+              <tr><td colspan="7" class="text-center" style="color: #999;">Belum ada data bulan ini</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUB PANEL 5: HISTORY DATA -->
+    <div id="k-history" class="k-panel">
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <div class="card-title" style="margin-bottom: 0; border-bottom: none;">📜 History Transaksi Kemasan</div>
+          <button class="btn btn-danger btn-sm" onclick="hapusSemuaHistoryKemasan()">🗑️ Hapus Semua History</button>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 60px;">Aksi</th>
+                <th>Tanggal</th>
+                <th>Hatsuhana (Dus/Pcs)</th>
+                <th>Grade A (Dus/Pcs)</th>
+                <th>Grade B (Dus/Pcs)</th>
+                <th>Ringkasan Pengeluaran</th>
+              </tr>
+            </thead>
+            <tbody id="tbl-kemasan-history-body">
+              <tr><td colspan="6" class="text-center" style="color: #999;">Belum ada history</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL EDIT LKS & PANEN -->
+<div id="modal-edit-panen" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">✏️ Edit Data</div>
+    <div class="modal-body" id="modal-edit-panen-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModalEditPanen()">Batal</button>
+      <button class="btn btn-primary" onclick="saveEditPanen()">Simpan Perubahan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDIT KEMASAN -->
+<div id="modal-edit-kemasan" class="modal">
+  <div class="modal-content" style="max-width: 600px;">
+    <div class="modal-header">✏️ Edit Transaksi Kemasan</div>
+    <div class="modal-body" id="modal-edit-kemasan-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModalEditKemasan()">Batal</button>
+      <button class="btn btn-primary" onclick="saveEditKemasan()">Simpan Perubahan</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST NOTIFICATION -->
+<div id="toast" class="toast"></div>
+
+<script>
+  // ========== STORAGE KEYS ==========
+  const LKS_STORAGE_KEY = 'lks_awb_v1';
+  const PANEN_STORAGE_KEY = 'panen_awb_v1';
+  const KEMASAN_STORAGE_KEY = 'kemasan_awb_v1';
+
+  // Master Kemasan Specification
+  const masterJenisKemasan = [
+    { name: 'Hatsu', std: 200, badge: 'hatsu' },
+    { name: 'Grade A', std: 200, badge: 'gradea' },
+    { name: 'Grade B', std: 300, badge: 'gradeb' }
+  ];
+
+  let currentStockStateKemasan = {
+    'Hatsu': { gudang: 0, processing: 0 },
+    'Grade A': { gudang: 0, processing: 0 },
+    'Grade B': { gudang: 0, processing: 0 }
+  };
+
+  // ========== OFFLINE + GOOGLE SHEETS SYNC ==========
+  // Isi URL Web App Google Apps Script setelah deploy.
+  const SYNC_CONFIG = {
+    APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbz-3jsdyi2gVHU1Fmy28j4otA_1RWjqOBWOBiSD8-7v3-a7rfj77gGYIn2Msjhai7TcLQ/exec',
+    API_KEY: 'AWB_PROCESSING_2026',
+    VERSION: '1.0.0'
+  };
+  const SYNC_QUEUE_KEY = 'awb_sync_queue_v1';
+  const SYNC_MIGRATION_KEY = 'awb_sync_migration_v1';
+  const SYNC_LAST_KEY = 'awb_sync_last_v1';
+  let syncBusy = false;
+  let suppressSync = false;
+
+  const nativeStorage = {
+    getItem: localStorage.getItem.bind(localStorage),
+    setItem: localStorage.setItem.bind(localStorage),
+    removeItem: localStorage.removeItem.bind(localStorage)
+  };
+
+  function syncTypeFromKey(key) {
+    if (key === LKS_STORAGE_KEY) return 'lks';
+    if (key === PANEN_STORAGE_KEY) return 'panen';
+    if (key === KEMASAN_STORAGE_KEY) return 'kemasan';
+    return null;
+  }
+
+  function readArrayRaw(raw) {
+    try { const x = JSON.parse(raw || '[]'); return Array.isArray(x) ? x : []; }
+    catch { return []; }
+  }
+
+  function getSyncQueue() {
+    return readArrayRaw(nativeStorage.getItem(SYNC_QUEUE_KEY));
+  }
+
+  function saveSyncQueue(queue) {
+    nativeStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
+    updateSyncStatus();
+  }
+
+  function queueMutation(type, action, recordOrId) {
+    if (!type || suppressSync) return;
+    let queue = getSyncQueue();
+    const id = typeof recordOrId === 'object' ? recordOrId.id : recordOrId;
+    // Operasi terbaru untuk ID yang sama menggantikan operasi lama.
+    queue = queue.filter(x => !(x.type === type && String(x.id) === String(id)));
+    if (action === 'clear') {
+      queue = queue.filter(x => x.type !== type);
+      queue.push({ type, action: 'clear', id: '__clear__', queuedAt: Date.now() });
+    } else if (action === 'delete') {
+      queue.push({ type, action: 'delete', id, queuedAt: Date.now() });
+    } else if (action === 'upsert') {
+      queue.push({ type, action: 'upsert', id, record: recordOrId, queuedAt: Date.now() });
+    }
+    saveSyncQueue(queue);
+  }
+
+  function diffAndQueue(type, oldRaw, newRaw) {
+    if (suppressSync) return;
+    const oldArr = readArrayRaw(oldRaw);
+    const newArr = readArrayRaw(newRaw);
+    const oldMap = new Map(oldArr.map(x => [String(x.id), x]));
+    const newMap = new Map(newArr.map(x => [String(x.id), x]));
+
+    newMap.forEach((record, id) => {
+      const old = oldMap.get(id);
+      if (!old || JSON.stringify(old) !== JSON.stringify(record)) queueMutation(type, 'upsert', record);
+    });
+    oldMap.forEach((_, id) => {
+      if (!newMap.has(id)) queueMutation(type, 'delete', id);
+    });
+  }
+
+  // Intercept perubahan data lokal dari kode lama, sehingga fungsi existing
+  // tetap bekerja offline tanpa perlu mengubah seluruh modul satu per satu.
+  localStorage.setItem = function(key, value) {
+    const type = syncTypeFromKey(key);
+    const oldRaw = type ? nativeStorage.getItem(key) : null;
+    nativeStorage.setItem(key, value);
+    if (type) diffAndQueue(type, oldRaw, value);
+  };
+
+  localStorage.removeItem = function(key) {
+    const type = syncTypeFromKey(key);
+    const oldRaw = type ? nativeStorage.getItem(key) : null;
+    nativeStorage.removeItem(key);
+    if (type && !suppressSync) {
+      if (type === 'kemasan') queueMutation(type, 'clear', '__clear__');
+      else readArrayRaw(oldRaw).forEach(record => queueMutation(type, 'delete', record.id));
+    }
+    if (type) updateSyncStatus();
+  };
+
+  function base64Utf8Encode(obj) {
+    const bytes = new TextEncoder().encode(JSON.stringify(obj));
+    let binary = '';
+    bytes.forEach(b => binary += String.fromCharCode(b));
+    return btoa(binary);
+  }
+
+  function jsonpRequest(params, timeoutMs = 20000) {
+    return new Promise((resolve, reject) => {
+      if (!SYNC_CONFIG.APPS_SCRIPT_URL || SYNC_CONFIG.APPS_SCRIPT_URL.includes('PASTE_GOOGLE')) {
+        reject(new Error('URL Google Apps Script belum diisi.'));
+        return;
+      }
+      const callback = 'awbJsonp_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+      const script = document.createElement('script');
+      let timer;
+      const cleanup = () => {
+        clearTimeout(timer);
+        delete window[callback];
+        script.remove();
+      };
+      window[callback] = data => { cleanup(); resolve(data); };
+      script.onerror = () => { cleanup(); reject(new Error('Gagal menghubungi Google Apps Script.')); };
+      const query = new URLSearchParams({ ...params, callback, key: SYNC_CONFIG.API_KEY }).toString();
+      script.src = SYNC_CONFIG.APPS_SCRIPT_URL + (SYNC_CONFIG.APPS_SCRIPT_URL.includes('?') ? '&' : '?') + query;
+      timer = setTimeout(() => { cleanup(); reject(new Error('Timeout sinkronisasi.')); }, timeoutMs);
+      document.body.appendChild(script);
+    });
+  }
+
+  async function syncQueue() {
+    if (syncBusy || !navigator.onLine) return;
+    const queue = getSyncQueue();
+    if (!queue.length) { updateSyncStatus(); return; }
+    syncBusy = true;
+    updateSyncStatus('syncing');
+    try {
+      while (true) {
+        const current = getSyncQueue();
+        if (!current.length) break;
+        const item = current[0];
+        let payload = { type: item.type, action: item.action };
+        if (item.action === 'upsert') payload.record = item.record;
+        if (item.action === 'delete') payload.id = item.id;
+        const result = await jsonpRequest({ action: 'write', payload: base64Utf8Encode(payload) });
+        if (!result || !result.ok) throw new Error(result && result.error ? result.error : 'Server menolak data.');
+        const after = getSyncQueue().filter((_, idx) => idx !== 0);
+        saveSyncQueue(after);
+        nativeStorage.setItem(SYNC_LAST_KEY, new Date().toISOString());
+      }
+      updateSyncStatus('online');
+    } catch (err) {
+      console.error(err);
+      updateSyncStatus('error', err.message);
+    } finally {
+      syncBusy = false;
+    }
+  }
+
+  async function pullFromSheet() {
+    if (!navigator.onLine || !SYNC_CONFIG.APPS_SCRIPT_URL || SYNC_CONFIG.APPS_SCRIPT_URL.includes('PASTE_GOOGLE')) return;
+    if (getSyncQueue().length) await syncQueue();
+    // Jangan pull jika masih ada antrean yang gagal dikirim; data lokal lebih aman.
+    if (getSyncQueue().length) return;
+    try {
+      updateSyncStatus('syncing');
+      const result = await jsonpRequest({ action: 'pull' });
+      if (!result || !result.ok) throw new Error(result && result.error ? result.error : 'Gagal mengambil data dari Sheet.');
+      suppressSync = true;
+      Object.entries(result.data || {}).forEach(([type, records]) => {
+        const key = type === 'lks' ? LKS_STORAGE_KEY : type === 'panen' ? PANEN_STORAGE_KEY : KEMASAN_STORAGE_KEY;
+        nativeStorage.setItem(key, JSON.stringify(Array.isArray(records) ? records : []));
+      });
+      suppressSync = false;
+      nativeStorage.setItem(SYNC_MIGRATION_KEY, '1');
+      renderTableLks(); renderTablePanen();
+      recalculateStockKemasan(); renderKemasanForms(); renderKemasanTables(); updateDashboard();
+      updateSyncStatus('online');
+    } catch (err) {
+      suppressSync = false;
+      console.error(err);
+      updateSyncStatus('error', err.message);
+    }
+  }
+
+  function migrateExistingLocalData() {
+    if (nativeStorage.getItem(SYNC_MIGRATION_KEY)) return;
+    const sources = [
+      ['lks', LKS_STORAGE_KEY],
+      ['panen', PANEN_STORAGE_KEY],
+      ['kemasan', KEMASAN_STORAGE_KEY]
+    ];
+    sources.forEach(([type, key]) => {
+      readArrayRaw(nativeStorage.getItem(key)).forEach(record => queueMutation(type, 'upsert', record));
+    });
+    nativeStorage.setItem(SYNC_MIGRATION_KEY, '1');
+  }
+
+  function updateSyncStatus(mode) {
+    const el = document.getElementById('sync-status');
+    const txt = document.getElementById('sync-status-text');
+    if (!el || !txt) return;
+    const pending = getSyncQueue().length;
+    el.className = 'sync-status';
+    if (!navigator.onLine) {
+      el.classList.add('offline');
+      txt.textContent = pending ? `Offline • ${pending} antrean` : 'Offline';
+      return;
+    }
+    if (mode === 'syncing') { el.classList.add('pending'); txt.textContent = `Sync ${pending}...`; return; }
+    if (mode === 'error') { el.classList.add('error'); txt.textContent = `Sync gagal • ${pending}`; return; }
+    txt.textContent = pending ? `Online • ${pending} antrean` : 'Online • Tersimpan';
+  }
+
+  window.addEventListener('online', () => { updateSyncStatus(); syncQueue().then(pullFromSheet); });
+  window.addEventListener('offline', () => updateSyncStatus());
+
+  // ========== MAIN NAVIGATION ==========
+  function showTab(id, btn) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  function showKemasanSubTab(subId, btn) {
+    document.querySelectorAll('.k-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(subId).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  function showToast(msg, type = 'success') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast show ' + (type === 'error' ? 'toast-error' : 'toast-success');
+    setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  // ========== INIT APP ==========
+  window.addEventListener('DOMContentLoaded', () => {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('lks-tanggal').value = today;
+    document.getElementById('panen-tgl').value = today;
+    document.getElementById('kemasan-tgl').value = today;
+    document.getElementById('filter-bulan-kemasan').value = today.substring(0, 7);
+
+    renderTableLks();
+    renderTablePanen();
+    recalculateStockKemasan();
+    renderKemasanForms();
+    renderKemasanTables();
+    updateDashboard();
+    updateSyncStatus();
+    migrateExistingLocalData();
+    syncQueue().then(pullFromSheet);
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW gagal:', err));
+    }
+  });
+
+  // ========== LKS FUNCTIONS ==========
+  function addLksActivity() {
+    const list = document.getElementById('lks-activity-list');
+    const idx = list.children.length + 1;
+    const div = document.createElement('div');
+    div.className = 'activity-card';
+    div.style.cssText = 'background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.875rem; margin-bottom: 0.625rem;';
+    div.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.625rem;">
+        <span class="activity-num" style="font-size: 0.75rem; font-weight: 700; color: #2d5016; background: #e8f5e9; padding: 0.25rem 0.5rem; border-radius: 6px;">Kegiatan #${idx}</span>
+        <button type="button" class="btn btn-sm btn-danger" onclick="removeLksActivity(this)">Hapus</button>
+      </div>
+      <div class="input-group"><label class="required">Kegiatan</label><input type="text" data-kegiatan placeholder="Tulis nama kegiatan manual..." required></div>
+      <div class="row-2">
+        <div class="input-group"><label>Hasil (pcs)</label><input type="number" data-hasil min="0" step="1" placeholder="Opsional"></div>
+        <div class="input-group"><label>Keterangan</label><input type="text" data-ket placeholder="Opsional"></div>
+      </div>
+    `;
+    list.appendChild(div);
+  }
+
+  function removeLksActivity(btn) {
+    const list = document.getElementById('lks-activity-list');
+    if (list.children.length <= 1) { showToast('Minimal 1 kegiatan!', 'error'); return; }
+    btn.closest('.activity-card').remove();
+    Array.from(list.children).forEach((card, i) => {
+      card.querySelector('.activity-num').textContent = 'Kegiatan #' + (i + 1);
+    });
+  }
+
+  function addLksMaterial() {
+    const list = document.getElementById('lks-material-list');
+    const idx = list.children.length + 1;
+    const div = document.createElement('div');
+    div.className = 'material-card';
+    div.style.cssText = 'background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.875rem; margin-bottom: 0.625rem;';
+    div.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.625rem;">
+        <span class="material-num" style="font-size: 0.75rem; font-weight: 700; color: #2d5016; background: #e8f5e9; padding: 0.25rem 0.5rem; border-radius: 6px;">Material #${idx}</span>
+        <button type="button" class="btn btn-sm btn-danger" onclick="removeLksMaterial(this)">Hapus</button>
+      </div>
+      <div class="input-group"><label class="required">Nama Material</label><input type="text" data-material placeholder="Tulis nama material manual..." required></div>
+      <div class="row-2">
+        <div class="input-group"><label class="required">Jumlah</label><input type="number" data-qty min="0" step="0.1" placeholder="0" required></div>
+        <div class="input-group"><label>Satuan</label><input type="text" data-satuan placeholder="pcs/kg/box" value="pcs"></div>
+      </div>
+    `;
+    list.appendChild(div);
+  }
+
+  function removeLksMaterial(btn) {
+    const list = document.getElementById('lks-material-list');
+    btn.closest('.material-card').remove();
+  }
+
+  function collectLksData() {
+    const kegiatan = [];
+    document.querySelectorAll('#lks-activity-list .activity-card').forEach(card => {
+      const k = card.querySelector('[data-kegiatan]').value;
+      if (k) kegiatan.push({ kegiatan: k, hasil: card.querySelector('[data-hasil]').value, ket: card.querySelector('[data-ket]').value });
+    });
+
+    const material = [];
+    document.querySelectorAll('#lks-material-list .material-card').forEach(card => {
+      const m = card.querySelector('[data-material]').value;
+      const q = card.querySelector('[data-qty]').value;
+      if (m && q) material.push({ material: m, jumlah: q, satuan: card.querySelector('[data-satuan]').value });
+    });
+
+    return {
+      tanggal: document.getElementById('lks-tanggal').value,
+      nama: document.getElementById('lks-nama').value,
+      grade: document.getElementById('lks-grade').value,
+      kegiatan: kegiatan,
+      jobTambahan: document.getElementById('lks-jobTambahan').value,
+      perbantuan: document.getElementById('lks-perbantuan').value,
+      jenisPerbantuan: document.getElementById('lks-jenisPerbantuan').value,
+      material: material,
+      keterangan: document.getElementById('lks-keterangan').value
+    };
+  }
+
+  function simpanDataLks() {
+    const data = collectLksData();
+    if (!data.tanggal || !data.nama || !data.grade) {
+      showToast('Isi Tanggal, Nama Pekerja, dan Grade!', 'error');
+      return;
+    }
+    if (!data.kegiatan || data.kegiatan.length === 0 || !data.kegiatan[0].kegiatan) {
+      showToast('Isi minimal 1 kegiatan!', 'error');
+      return;
+    }
+
+    const entry = { id: Date.now(), ...data };
+    let db = JSON.parse(localStorage.getItem(LKS_STORAGE_KEY) || '[]');
+    db.push(entry);
+    localStorage.setItem(LKS_STORAGE_KEY, JSON.stringify(db));
+
+    showToast('✅ LKS berhasil disimpan!');
+    resetFormLks();
+    renderTableLks();
+    updateDashboard();
+  }
+
+  function resetFormLks() {
+    document.getElementById('lks-tanggal').value = new Date().toISOString().split('T')[0];
+    document.getElementById('lks-nama').value = '';
+    document.getElementById('lks-grade').value = '';
+    document.getElementById('lks-jobTambahan').value = '';
+    document.getElementById('lks-perbantuan').value = '';
+    document.getElementById('lks-jenisPerbantuan').value = '';
+    document.getElementById('lks-keterangan').value = '';
+
+    document.getElementById('lks-activity-list').innerHTML = `
+      <div class="activity-card" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.875rem; margin-bottom: 0.625rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.625rem;">
+          <span class="activity-num" style="font-size: 0.75rem; font-weight: 700; color: #2d5016; background: #e8f5e9; padding: 0.25rem 0.5rem; border-radius: 6px;">Kegiatan #1</span>
+          <button type="button" class="btn btn-sm btn-danger" onclick="removeLksActivity(this)">Hapus</button>
+        </div>
+        <div class="input-group"><label class="required">Kegiatan</label><input type="text" data-kegiatan placeholder="Tulis nama kegiatan manual..." required></div>
+        <div class="row-2">
+          <div class="input-group"><label>Hasil (pcs)</label><input type="number" data-hasil min="0" step="1" placeholder="Opsional"></div>
+          <div class="input-group"><label>Keterangan</label><input type="text" data-ket placeholder="Opsional"></div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('lks-material-list').innerHTML = `
+      <div class="material-card" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.875rem; margin-bottom: 0.625rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.625rem;">
+          <span class="material-num" style="font-size: 0.75rem; font-weight: 700; color: #2d5016; background: #e8f5e9; padding: 0.25rem 0.5rem; border-radius: 6px;">Material #1</span>
+          <button type="button" class="btn btn-sm btn-danger" onclick="removeLksMaterial(this)">Hapus</button>
+        </div>
+        <div class="input-group"><label class="required">Nama Material</label><input type="text" data-material placeholder="Tulis nama material manual..." required></div>
+        <div class="row-2">
+          <div class="input-group"><label class="required">Jumlah</label><input type="number" data-qty min="0" step="0.1" placeholder="0" required></div>
+          <div class="input-group"><label>Satuan</label><input type="text" data-satuan placeholder="pcs/kg/box" value="pcs"></div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderTableLks() {
+    const db = JSON.parse(localStorage.getItem(LKS_STORAGE_KEY) || '[]');
+    const tbody = document.getElementById('tabel-lks-body');
+
+    if (db.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center" style="color: #999;">Belum ada data</td></tr>';
+      return;
+    }
+
+    db.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+    tbody.innerHTML = db.map(item => {
+      const kegiatanList = item.kegiatan ? item.kegiatan.map(k => k.kegiatan).join(', ') : '-';
+      const materialList = item.material ? item.material.map(m => m.material).join(', ') : '-';
+      return `
+        <tr>
+          <td>
+            <button class="btn btn-sm btn-secondary" onclick="editDataLks(${item.id})">✏️</button>
+            <button class="btn btn-sm btn-danger" onclick="hapusDataLks(${item.id})">🗑️</button>
+          </td>
+          <td>${item.tanggal}</td>
+          <td>${item.nama}</td>
+          <td>${item.grade}</td>
+          <td><small>${kegiatanList}</small></td>
+          <td><small>${materialList}</small></td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function editDataLks(id) {
+    const db = JSON.parse(localStorage.getItem(LKS_STORAGE_KEY) || '[]');
+    const item = db.find(x => x.id === id);
+    if (!item) return;
+
+    window.editingLksId = id;
+    const body = document.getElementById('modal-edit-panen-body');
+    let html = `
+      <div class="input-group"><label>Tanggal</label><input type="date" id="edit-lks-tgl" value="${item.tanggal}"></div>
+      <div class="input-group"><label>Nama Pekerja</label><input type="text" id="edit-lks-nama" value="${item.nama}"></div>
+      <div class="input-group"><label>Grade Pekerja</label>
+        <select id="edit-lks-grade">
+          <option value="Hatsuhana" ${item.grade === 'Hatsuhana' ? 'selected' : ''}>Hatsuhana</option>
+          <option value="Grade A" ${item.grade === 'Grade A' ? 'selected' : ''}>Grade A</option>
+          <option value="Grade B" ${item.grade === 'Grade B' ? 'selected' : ''}>Grade B</option>
+        </select>
+      </div>
+      <hr>
+      <div class="input-group"><label>Kegiatan (Satu per baris)</label>
+        <textarea id="edit-lks-kegiatan" style="padding: 0.875rem; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 0.9rem;">${item.kegiatan ? item.kegiatan.map(k => k.kegiatan).join('\n') : ''}</textarea>
+      </div>
+      <div class="input-group"><label>Material (Satu per baris)</label>
+        <textarea id="edit-lks-material" style="padding: 0.875rem; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 0.9rem;">${item.material ? item.material.map(m => m.material).join('\n') : ''}</textarea>
+      </div>
+      <hr>
+      <div class="input-group"><label>Keterangan</label><textarea id="edit-lks-ket" style="padding: 0.875rem; border: 1.5px solid #d1d5db; border-radius: 8px; min-height: 60px;">${item.keterangan || ''}</textarea></div>
+    `;
+    body.innerHTML = html;
+    document.getElementById('modal-edit-panen').querySelector('.modal-header').textContent = '✏️ Edit Data LKS';
+    document.getElementById('modal-edit-panen').classList.add('show');
+  }
+
+  function hapusDataLks(id) {
+    if (!confirm('Yakin hapus LKS ini?')) return;
+    const db = JSON.parse(localStorage.getItem(LKS_STORAGE_KEY) || '[]');
+    const filtered = db.filter(x => x.id !== id);
+    localStorage.setItem(LKS_STORAGE_KEY, JSON.stringify(filtered));
+    showToast('✅ LKS berhasil dihapus!');
+    renderTableLks();
+    updateDashboard();
+  }
+
+  function saveEditLks() {
+    if (!window.editingLksId) return;
+    const db = JSON.parse(localStorage.getItem(LKS_STORAGE_KEY) || '[]');
+    const idx = db.findIndex(x => x.id === window.editingLksId);
+    if (idx === -1) return;
+
+    db[idx] = {
+      id: window.editingLksId,
+      tanggal: document.getElementById('edit-lks-tgl').value,
+      nama: document.getElementById('edit-lks-nama').value,
+      grade: document.getElementById('edit-lks-grade').value,
+      kegiatan: document.getElementById('edit-lks-kegiatan').value.split('\n').map(k => ({ kegiatan: k.trim(), hasil: '', ket: '' })).filter(k => k.kegiatan),
+      jobTambahan: db[idx].jobTambahan || '',
+      perbantuan: db[idx].perbantuan || '',
+      jenisPerbantuan: db[idx].jenisPerbantuan || '',
+      material: document.getElementById('edit-lks-material').value.split('\n').map(m => ({ material: m.trim(), jumlah: 1, satuan: 'pcs' })).filter(m => m.material),
+      keterangan: document.getElementById('edit-lks-ket').value
+    };
+
+    localStorage.setItem(LKS_STORAGE_KEY, JSON.stringify(db));
+    showToast('✅ LKS berhasil diupdate!');
+    closeModalEditPanen();
+    renderTableLks();
+    updateDashboard();
+  }
+
+  // ========== PANEN FUNCTIONS ==========
+  function getValP(id) { return parseFloat(document.getElementById(id).value) || 0; }
+
+  function hitungAllPanen() {
+    const totRkBun = getValP('rk-crack') + getValP('rk-poli') + getValP('rk-hpt');
+    document.getElementById('calc-total-rk').textContent = totRkBun.toFixed(2) + ' Kg';
+
+    const totRPros = getValP('rp-crack') + getValP('rp-poli') + getValP('rp-hpt') + getValP('rp-bruise') + getValP('rp-overripe') + getValP('rp-frozen');
+    document.getElementById('calc-total-rp').textContent = totRPros.toFixed(2) + ' Kg';
+
+    const grandTotalReject = totRkBun + totRPros;
+    const totalPanen = getValP('p-hatsu') + getValP('p-gradea') + getValP('p-gradeb') + totRkBun;
+    document.getElementById('calc-total-panen').textContent = totalPanen.toFixed(2) + ' Kg';
+
+    const rejectRate = totalPanen > 0 ? (grandTotalReject / totalPanen * 100) : 0;
+    document.getElementById('calc-grand-total-r').textContent = grandTotalReject.toFixed(2) + ' Kg';
+    document.getElementById('calc-reject-rate').textContent = rejectRate.toFixed(2) + '%';
+
+    // Total Pengiriman termasuk Frozen
+    const totalKirim = getValP('k-hatsu') + getValP('k-a11') + getValP('k-a15') + getValP('k-frozen');
+    const rateKirim = totalPanen > 0 ? (totalKirim / totalPanen * 100) : 0;
+    document.getElementById('calc-total-kirim').textContent = totalKirim.toFixed(2) + ' Kg';
+    document.getElementById('calc-rate-kirim').textContent = rateKirim.toFixed(2) + '%';
+
+    const totalMika = parseInt(document.getElementById('m-hatsu').value || 0) + parseInt(document.getElementById('m-a11').value || 0) + parseInt(document.getElementById('m-a15').value || 0);
+    document.getElementById('calc-total-mika').textContent = totalMika + ' Pcs';
+  }
+
+  function simpanDataPanen() {
+    const tgl = document.getElementById('panen-tgl').value;
+    if (!tgl) { showToast('Pilih tanggal panen terlebih dahulu!', 'error'); return; }
+
+    const entry = {
+      id: Date.now(),
+      tgl: tgl,
+      p_hatsu: getValP('p-hatsu'),
+      p_gradea: getValP('p-gradea'),
+      p_gradeb: getValP('p-gradeb'),
+      rk_crack: getValP('rk-crack'),
+      rk_poli: getValP('rk-poli'),
+      rk_hpt: getValP('rk-hpt'),
+      rp_crack: getValP('rp-crack'),
+      rp_poli: getValP('rp-poli'),
+      rp_hpt: getValP('rp-hpt'),
+      rp_bruise: getValP('rp-bruise'),
+      rp_overripe: getValP('rp-overripe'),
+      rp_frozen: getValP('rp-frozen'),
+      k_hatsu: getValP('k-hatsu'),
+      k_a11: getValP('k-a11'),
+      k_a15: getValP('k-a15'),
+      k_frozen: getValP('k-frozen'),
+      m_hatsu: parseInt(document.getElementById('m-hatsu').value || 0),
+      m_a11: parseInt(document.getElementById('m-a11').value || 0),
+      m_a15: parseInt(document.getElementById('m-a15').value || 0),
+      t_curah: getValP('t-curah'),
+      t_hatsu: parseInt(document.getElementById('t-hatsu').value || 0),
+      t_a11: parseInt(document.getElementById('t-a11').value || 0),
+      t_a15: parseInt(document.getElementById('t-a15').value || 0),
+      t_ket: document.getElementById('t-ket').value || ''
+    };
+
+    let db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+    db.push(entry);
+    localStorage.setItem(PANEN_STORAGE_KEY, JSON.stringify(db));
+
+    showToast('✅ Data panen berhasil disimpan!');
+    resetFormPanen();
+    renderTablePanen();
+    updateDashboard();
+  }
+
+  function resetFormPanen() {
+    document.querySelectorAll('#panen input[type="number"]').forEach(i => i.value = '');
+    document.querySelectorAll('#panen input[type="text"]').forEach(i => i.value = '');
+    document.getElementById('panen-tgl').value = new Date().toISOString().split('T')[0];
+    hitungAllPanen();
+  }
+
+  function renderTablePanen() {
+    const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+    const tbody = document.getElementById('tabel-panen-body');
+    
+    if (db.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="10" class="text-center" style="color: #999;">Belum ada data</td></tr>';
+      return;
+    }
+
+    db.sort((a, b) => new Date(b.tgl) - new Date(a.tgl));
+    tbody.innerHTML = db.map(item => {
+      const totPanen = item.p_hatsu + item.p_gradea + item.p_gradeb + item.rk_crack + item.rk_poli + item.rk_hpt;
+      const totKirim = item.k_hatsu + item.k_a11 + item.k_a15 + (item.k_frozen || 0);
+      const grandReject = item.rk_crack + item.rk_poli + item.rk_hpt + item.rp_crack + item.rp_poli + item.rp_hpt + item.rp_bruise + item.rp_overripe + item.rp_frozen;
+      const rejRate = totPanen > 0 ? (grandReject / totPanen * 100) : 0;
+      const totMika = item.m_hatsu + item.m_a11 + item.m_a15;
+
+      return `
+        <tr>
+          <td>
+            <button class="btn btn-sm btn-secondary" onclick="editDataPanen(${item.id})">✏️</button>
+            <button class="btn btn-sm btn-danger" onclick="hapusDataPanen(${item.id})">🗑️</button>
+          </td>
+          <td>${item.tgl}</td>
+          <td class="text-right">${item.p_hatsu.toFixed(2)}</td>
+          <td class="text-right">${item.p_gradea.toFixed(2)}</td>
+          <td class="text-right">${item.p_gradeb.toFixed(2)}</td>
+          <td class="text-right"><strong>${totPanen.toFixed(2)}</strong></td>
+          <td class="text-right"><strong>${totKirim.toFixed(2)}</strong></td>
+          <td class="text-right">${grandReject.toFixed(2)}</td>
+          <td class="text-right">${rejRate.toFixed(2)}%</td>
+          <td class="text-right"><strong>${totMika}</strong></td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function editDataPanen(id) {
+    const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+    const item = db.find(x => x.id === id);
+    if (!item) return;
+
+    window.editingPanenId = id;
+    window.editingLksId = null;
+    const body = document.getElementById('modal-edit-panen-body');
+    document.getElementById('modal-edit-panen').querySelector('.modal-header').textContent = '✏️ Edit Data Panen';
+    body.innerHTML = `
+      <div class="input-group"><label>Tanggal</label><input type="date" id="edit-p-tgl" value="${item.tgl}"></div>
+      <div class="input-group"><label>Panen Hatsu (Kg)</label><input type="number" step="0.01" id="edit-p-hatsu" value="${item.p_hatsu}"></div>
+      <div class="input-group"><label>Panen Grade A (Kg)</label><input type="number" step="0.01" id="edit-p-gradea" value="${item.p_gradea}"></div>
+      <div class="input-group"><label>Panen Grade B (Kg)</label><input type="number" step="0.01" id="edit-p-gradeb" value="${item.p_gradeb}"></div>
+      <hr>
+      <div class="input-group"><label>Kirim Hatsu (Kg)</label><input type="number" step="0.01" id="edit-k-hatsu" value="${item.k_hatsu}"></div>
+      <div class="input-group"><label>Kirim A11 (Kg)</label><input type="number" step="0.01" id="edit-k-a11" value="${item.k_a11}"></div>
+      <div class="input-group"><label>Kirim A15 (Kg)</label><input type="number" step="0.01" id="edit-k-a15" value="${item.k_a15}"></div>
+      <div class="input-group"><label>Kirim Frozen (Kg)</label><input type="number" step="0.01" id="edit-k-frozen" value="${item.k_frozen || 0}"></div>
+      <hr>
+      <div class="input-group"><label>Mika Hatsu (Pcs)</label><input type="number" id="edit-m-hatsu" value="${item.m_hatsu}"></div>
+      <div class="input-group"><label>Mika A11 (Pcs)</label><input type="number" id="edit-m-a11" value="${item.m_a11}"></div>
+      <div class="input-group"><label>Mika A15 (Pcs)</label><input type="number" id="edit-m-a15" value="${item.m_a15}"></div>
+      <hr>
+      <div class="input-group"><label>Keterangan Tamu & Sampel</label><input type="text" id="edit-t-ket" value="${item.t_ket || ''}"></div>
+    `;
+    document.getElementById('modal-edit-panen').classList.add('show');
+  }
+
+  function closeModalEditPanen() {
+    document.getElementById('modal-edit-panen').classList.remove('show');
+    window.editingLksId = null;
+    window.editingPanenId = null;
+  }
+
+  function saveEditPanen() {
+    if (window.editingLksId) { saveEditLks(); return; }
+    if (!window.editingPanenId) return;
+    
+    const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+    const idx = db.findIndex(x => x.id === window.editingPanenId);
+    if (idx === -1) return;
+
+    db[idx] = {
+      ...db[idx],
+      tgl: document.getElementById('edit-p-tgl').value,
+      p_hatsu: parseFloat(document.getElementById('edit-p-hatsu').value || 0),
+      p_gradea: parseFloat(document.getElementById('edit-p-gradea').value || 0),
+      p_gradeb: parseFloat(document.getElementById('edit-p-gradeb').value || 0),
+      k_hatsu: parseFloat(document.getElementById('edit-k-hatsu').value || 0),
+      k_a11: parseFloat(document.getElementById('edit-k-a11').value || 0),
+      k_a15: parseFloat(document.getElementById('edit-k-a15').value || 0),
+      k_frozen: parseFloat(document.getElementById('edit-k-frozen').value || 0),
+      m_hatsu: parseInt(document.getElementById('edit-m-hatsu').value || 0),
+      m_a11: parseInt(document.getElementById('edit-m-a11').value || 0),
+      m_a15: parseInt(document.getElementById('edit-m-a15').value || 0),
+      t_ket: document.getElementById('edit-t-ket') ? document.getElementById('edit-t-ket').value : (db[idx].t_ket || '')
+    };
+
+    localStorage.setItem(PANEN_STORAGE_KEY, JSON.stringify(db));
+    showToast('✅ Data panen berhasil diupdate!');
+    closeModalEditPanen();
+    renderTablePanen();
+    updateDashboard();
+  }
+
+  function hapusDataPanen(id) {
+    if (!confirm('Yakin hapus data panen ini?')) return;
+    const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+    const filtered = db.filter(x => x.id !== id);
+    localStorage.setItem(PANEN_STORAGE_KEY, JSON.stringify(filtered));
+    showToast('✅ Data panen berhasil dihapus!');
+    renderTablePanen();
+    updateDashboard();
+  }
+
+  // ========== STOK KEMASAN FUNCTIONS (LENGKAP) ==========
+  function recalculateStockKemasan() {
+    const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
+    
+    // Reset state awal
+    const accum = {};
+    masterJenisKemasan.forEach(m => {
+      accum[m.name] = { gudang: 0, processing: 0, keluar: 0, reject: 0 };
+    });
+
+    // Urutkan tanggal naik untuk kalkulasi kronologis
+    const sorted = [...db].sort((a, b) => new Date(a.tgl) - new Date(b.tgl));
+
+    sorted.forEach(entry => {
+      if (entry.items && Array.isArray(entry.items)) {
+        entry.items.forEach(item => {
+          if (accum[item.name]) {
+            accum[item.name].gudang += (item.masuk || 0) - (item.bongkarDus || 0);
+            const totalOut = (item.kirim || 0) + (item.tamu || 0);
+            const totalRej = (item.rejectTutup || 0) + (item.rejectAlas || 0);
+            accum[item.name].processing += (item.aktualPcs || 0) - totalOut - totalRej;
+            accum[item.name].keluar += totalOut;
+            accum[item.name].reject += totalRej;
+          }
+        });
+      }
+    });
+
+    masterJenisKemasan.forEach(m => {
+      currentStockStateKemasan[m.name] = {
+        gudang: Math.max(0, accum[m.name].gudang),
+        processing: Math.max(0, accum[m.name].processing)
+      };
+    });
+
+    // Render Summary UI
+    let totGudang = 0, totProc = 0, totKeluar = 0, totRej = 0;
+    let summaryHtml = '';
+
+    masterJenisKemasan.forEach(m => {
+      const a = accum[m.name];
+      const totAkhir = a.processing;
+      totGudang += a.gudang;
+      totProc += a.processing;
+      totKeluar += a.keluar;
+      totRej += a.reject;
+
+      summaryHtml += `<tr>
+        <td><strong><span class="badge ${m.badge}">${m.name}</span></strong></td>
+        <td class="text-right">${a.gudang} Dus</td>
+        <td class="text-right">${a.processing} Pcs</td>
+        <td class="text-right"><strong>${totAkhir} Pcs</strong></td>
+        <td class="text-right">${a.keluar} Pcs</td>
+        <td class="text-right" style="color:#dc2626;">${a.reject} Pcs</td>
+      </tr>`;
+    });
+
+    document.getElementById('tbl-summary-body').innerHTML = summaryHtml;
+    document.getElementById('k-stat-gudang').textContent = totGudang;
+    document.getElementById('k-stat-processing').textContent = totProc;
+    document.getElementById('k-stat-keluar').textContent = totKeluar;
+    document.getElementById('k-stat-reject').textContent = totRej;
+  }
+
+  function getValK(id) { return parseFloat(document.getElementById(id).value) || 0; }
+
+  function renderKemasanForms() {
+    const html = masterJenisKemasan.map((item, i) => {
+      const gAwal = currentStockStateKemasan[item.name].gudang;
+      const pAwal = currentStockStateKemasan[item.name].processing;
+
+      return `
+        <div class="card" id="card-kemasan-${i}">
+          <div class="card-title">📦 Mika ${item.name} <span class="badge ${item.badge}">Std: ${item.std} Pcs/Dus</span></div>
+          <div class="info-box">
+            Stok Awal Fisik Saat Ini: Gudang <b>${gAwal}</b> Dus Utuh | Processing <b>${pAwal}</b> PCS
+          </div>
+
+          <div class="sub-title">📦 1. Stok Gudang — Dus Belum Dibongkar</div>
+          <div class="row-2">
+            <div class="input-group"><label>Kemasan Masuk (Dus)</label><input type="number" id="masuk-${i}" placeholder="0" oninput="hitungKemasan(${i})"></div>
+            <div class="input-group"><label>Dus Dibongkar Hari Ini</label><input type="number" id="bongkar-dus-${i}" placeholder="0" oninput="hitungKemasan(${i})"></div>
+          </div>
+          <div class="row-2">
+            <div class="input-group"><label>Stok Gudang Awal</label><input readonly value="${gAwal}"></div>
+            <div class="input-group"><label>Stok Gudang Akhir (Est.)</label><input readonly id="gudang-akhir-${i}" value="${gAwal}"></div>
+          </div>
+
+          <div class="sub-title">🔧 2. Bongkar Kemasan ke Processing</div>
+          <div class="warn-box">Standar acuan ${item.std} pcs/dus. Jumlah PCS aktual hasil bongkar akan otomatis masuk ke stok Processing.</div>
+          <div class="row-2">
+            <div class="input-group"><label>Standar PCS (Dus × ${item.std})</label><input readonly id="standar-pcs-${i}" value="0"></div>
+            <div class="input-group"><label class="required">PCS Aktual Hasil Bongkar</label><input type="number" id="aktual-pcs-${i}" placeholder="Masukkan pcs aktual" oninput="hitungKemasan(${i})"></div>
+          </div>
+          <div class="info-box" id="info-selisih-${i}" style="background: #f8fafc; border-left-color: #64748b; color: #334155;">
+            Selisih bongkar: <b>0 pcs</b>
+          </div>
+
+          <div class="sub-title">🏭 3. Ruang Processing — PCS Siap Packing</div>
+          <div class="row-3">
+            <div class="input-group"><label>Processing Awal</label><input readonly value="${pAwal}"></div>
+            <div class="input-group"><label>Hasil Bongkar (Aktual)</label><input readonly id="pcs-bongkar-display-${i}" value="0"></div>
+            <div class="input-group"><label>Processing Akhir (Est.)</label><input readonly id="processing-akhir-${i}" value="${pAwal}"></div>
+          </div>
+
+          <div class="sub-title">📤 4. Pengeluaran Hari Ini</div>
+          <div class="row-2">
+            <div class="input-group"><label>Kirim Packing (PCS)</label><input type="number" id="kirim-${i}" placeholder="0" oninput="hitungKemasan(${i})"></div>
+            <div class="input-group"><label>Mika Tamu / Sample (PCS)</label><input type="number" id="tamu-${i}" placeholder="0" oninput="hitungKemasan(${i})"></div>
+          </div>
+          <div class="input-group"><label>Keterangan Tamu / Sample</label><input type="text" id="ket-tamu-${i}" placeholder="Contoh: Demo customer / kunjungan dinas"></div>
+
+          <div class="sub-title">❌ 5. Reject Mika Hari Ini</div>
+          <div class="row-2">
+            <div class="input-group"><label>Reject Tutup (PCS)</label><input type="number" id="reject-tutup-${i}" placeholder="0" oninput="hitungKemasan(${i})"></div>
+            <div class="input-group"><label>Reject Alas (PCS)</label><input type="number" id="reject-alas-${i}" placeholder="0" oninput="hitungKemasan(${i})"></div>
+          </div>
+          <div class="input-group"><label>Keterangan Reject</label><input type="text" id="ket-reject-${i}" placeholder="Contoh: Sobek, pecah, kotor, atau cacat pabrik"></div>
+        </div>
+      `;
+    }).join('');
+
+    document.getElementById('forms-kemasan').innerHTML = html;
+  }
+
+  function hitungKemasan(i) {
+    const item = masterJenisKemasan[i];
+    const gAwal = currentStockStateKemasan[item.name].gudang;
+    const pAwal = currentStockStateKemasan[item.name].processing;
+
+    const masuk = getValK(`masuk-${i}`);
+    const dusBongkar = getValK(`bongkar-dus-${i}`);
+    const gAkhir = gAwal + masuk - dusBongkar;
+    document.getElementById(`gudang-akhir-${i}`).value = Math.max(0, gAkhir);
+
+    const stdPcs = dusBongkar * item.std;
+    document.getElementById(`standar-pcs-${i}`).value = stdPcs;
+
+    const pcsAktual = getValK(`aktual-pcs-${i}`);
+    document.getElementById(`pcs-bongkar-display-${i}`).value = pcsAktual;
+
+    const selisih = pcsAktual - stdPcs;
+    const infoBox = document.getElementById(`info-selisih-${i}`);
+
+    if (dusBongkar > 0 || pcsAktual > 0) {
+      if (selisih < 0) {
+        infoBox.innerHTML = `Selisih bongkar: <b class="kurang">Kurang ${Math.abs(selisih)} pcs</b> (Standar: ${stdPcs}, Aktual: ${pcsAktual})`;
+      } else if (selisih > 0) {
+        infoBox.innerHTML = `Selisih bongkar: <b class="lebih">Lebih +${selisih} pcs</b> (Standar: ${stdPcs}, Aktual: ${pcsAktual})`;
+      } else {
+        infoBox.innerHTML = `Selisih bongkar: <b class="sesuai">Sesuai Standar (0 pcs)</b>`;
+      }
+    } else {
+      infoBox.innerHTML = `Selisih bongkar: <b>0 pcs</b>`;
+    }
+
+    const kirim = getValK(`kirim-${i}`);
+    const tamu = getValK(`tamu-${i}`);
+    const rTutup = getValK(`reject-tutup-${i}`);
+    const rAlas = getValK(`reject-alas-${i}`);
+
+    const pAkhir = pAwal + pcsAktual - kirim - tamu - rTutup - rAlas;
+    document.getElementById(`processing-akhir-${i}`).value = Math.max(0, pAkhir);
+  }
+
+  function simpanDataKemasan() {
+    const tgl = document.getElementById('kemasan-tgl').value;
+    if (!tgl) { showToast('Pilih tanggal input kemasan!', 'error'); return; }
+
+    const entry = {
+      id: Date.now(),
+      tgl: tgl,
+      items: masterJenisKemasan.map((item, i) => ({
+        name: item.name,
+        std: item.std,
+        masuk: getValK(`masuk-${i}`),
+        bongkarDus: getValK(`bongkar-dus-${i}`),
+        aktualPcs: getValK(`aktual-pcs-${i}`),
+        kirim: getValK(`kirim-${i}`),
+        tamu: getValK(`tamu-${i}`),
+        ketTamu: document.getElementById(`ket-tamu-${i}`).value || '',
+        rejectTutup: getValK(`reject-tutup-${i}`),
+        rejectAlas: getValK(`reject-alas-${i}`),
+        ketReject: document.getElementById(`ket-reject-${i}`).value || ''
+      }))
+    };
+
+    let db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
+    db.push(entry);
+    localStorage.setItem(KEMASAN_STORAGE_KEY, JSON.stringify(db));
+
+    showToast('✅ Data stok kemasan berhasil disimpan!');
+    resetFormKemasan();
+    recalculateStockKemasan();
+    renderKemasanForms();
+    renderKemasanTables();
+    updateDashboard();
+  }
+
+  function resetFormKemasan() {
+    document.querySelectorAll('#forms-kemasan input[type="number"]').forEach(i => i.value = '');
+    document.querySelectorAll('#forms-kemasan input[type="text"]').forEach(i => i.value = '');
+    document.getElementById('kemasan-tgl').value = new Date().toISOString().split('T')[0];
+    masterJenisKemasan.forEach((_, i) => hitungKemasan(i));
+  }
+
+  function renderKemasanTables() {
+    const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
+
+    // Render Variance Table
+    const varTbody = document.getElementById('tbl-variance-body');
+    let varRows = [];
+
+    db.forEach(entry => {
+      entry.items.forEach(item => {
+        if (item.bongkarDus > 0 || item.aktualPcs > 0) {
+          const stdPcs = item.bongkarDus * (item.std || 200);
+          const selisih = item.aktualPcs - stdPcs;
+          let statusBadge = '<span class="sesuai">Sesuai</span>';
+          if (selisih < 0) statusBadge = `<span class="kurang">Kurang ${Math.abs(selisih)}</span>`;
+          if (selisih > 0) statusBadge = `<span class="lebih">Lebih +${selisih}</span>`;
+
+          varRows.push(`
+            <tr>
+              <td>${entry.tgl}</td>
+              <td><strong>${item.name}</strong></td>
+              <td class="text-right">${item.bongkarDus}</td>
+              <td class="text-right">${stdPcs}</td>
+              <td class="text-right">${item.aktualPcs}</td>
+              <td class="text-right">${selisih > 0 ? '+' + selisih : selisih}</td>
+              <td>${statusBadge}</td>
+            </tr>
+          `);
+        }
+      });
+    });
+
+    if (varRows.length === 0) {
+      varTbody.innerHTML = '<tr><td colspan="7" class="text-center" style="color: #999;">Belum ada data selisih bongkar</td></tr>';
+    } else {
+      varTbody.innerHTML = varRows.reverse().join('');
+    }
+
+    // Render History Table
+    const histTbody = document.getElementById('tbl-kemasan-history-body');
+    if (db.length === 0) {
+      histTbody.innerHTML = '<tr><td colspan="6" class="text-center" style="color: #999;">Belum ada history</td></tr>';
+    } else {
+      db.sort((a, b) => new Date(b.tgl) - new Date(a.tgl));
+      histTbody.innerHTML = db.map(entry => {
+        const h0 = entry.items[0] || {};
+        const h1 = entry.items[1] || {};
+        const h2 = entry.items[2] || {};
+
+        const outSummary = entry.items.map(it => `${it.name}: K ${it.kirim || 0}/R ${(it.rejectTutup || 0) + (it.rejectAlas || 0)}`).join(' | ');
+
+        return `
+          <tr>
+            <td>
+              <button class="btn btn-sm btn-secondary" onclick="editDataKemasan(${entry.id})">✏️</button>
+              <button class="btn btn-sm btn-danger" onclick="hapusDataKemasan(${entry.id})">🗑️</button>
+            </td>
+            <td>${entry.tgl}</td>
+            <td>${h0.bongkarDus || 0} Dus / ${h0.aktualPcs || 0} Pcs</td>
+            <td>${h1.bongkarDus || 0} Dus / ${h1.aktualPcs || 0} Pcs</td>
+            <td>${h2.bongkarDus || 0} Dus / ${h2.aktualPcs || 0} Pcs</td>
+            <td><small>${outSummary}</small></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    renderKemasanMonthly();
+  }
+
+  function renderKemasanMonthly() {
+    const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
+    const selectedMonth = document.getElementById('filter-bulan-kemasan').value;
+
+    const filtered = db.filter(x => x.tgl.startsWith(selectedMonth));
+    const monthlyTbody = document.getElementById('tbl-monthly-body');
+
+    let monthlyRows = [];
+    const monthlyStats = {
+      'Hatsu': { dus: 0, std: 0, akt: 0, sel: 0 },
+      'Grade A': { dus: 0, std: 0, akt: 0, sel: 0 },
+      'Grade B': { dus: 0, std: 0, akt: 0, sel: 0 }
+    };
+
+    filtered.forEach(entry => {
+      entry.items.forEach(item => {
+        if (item.bongkarDus > 0 || item.aktualPcs > 0) {
+          const stdPcs = item.bongkarDus * (item.std || 200);
+          const selisih = item.aktualPcs - stdPcs;
+          let statusBadge = '<span class="sesuai">Sesuai</span>';
+          if (selisih < 0) statusBadge = `<span class="kurang">Kurang ${Math.abs(selisih)}</span>`;
+          if (selisih > 0) statusBadge = `<span class="lebih">Lebih +${selisih}</span>`;
+
+          monthlyRows.push(`
+            <tr>
+              <td>${entry.tgl}</td>
+              <td><strong>${item.name}</strong></td>
+              <td class="text-right">${item.bongkarDus}</td>
+              <td class="text-right">${stdPcs}</td>
+              <td class="text-right">${item.aktualPcs}</td>
+              <td class="text-right">${selisih > 0 ? '+' + selisih : selisih}</td>
+              <td>${statusBadge}</td>
+            </tr>
+          `);
+
+          if (monthlyStats[item.name]) {
+            monthlyStats[item.name].dus += item.bongkarDus;
+            monthlyStats[item.name].std += stdPcs;
+            monthlyStats[item.name].akt += item.aktualPcs;
+            monthlyStats[item.name].sel += selisih;
+          }
+        }
+      });
+    });
+
+    if (monthlyRows.length === 0) {
+      monthlyTbody.innerHTML = '<tr><td colspan="7" class="text-center" style="color: #999;">Belum ada data pada bulan ini</td></tr>';
+    } else {
+      monthlyTbody.innerHTML = monthlyRows.reverse().join('');
+    }
+
+    // Cards Rekap Jenis
+    let cardsHtml = '';
+    masterJenisKemasan.forEach(m => {
+      const st = monthlyStats[m.name];
+      const cls = st.sel < 0 ? 'kurang' : (st.sel > 0 ? 'lebih' : 'sesuai');
+      cardsHtml += `
+        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem;">
+          <h4 style="margin: 0 0 0.5rem; color: #2d5016;">${m.name}</h4>
+          <div style="font-size: 0.875rem; color: #555;">
+            Total Bongkar: <b>${st.dus} Dus</b><br>
+            Standar / Aktual: <b>${st.std}</b> / <b>${st.akt}</b> Pcs<br>
+            Selisih: <span class="${cls}"><b>${st.sel > 0 ? '+' + st.sel : st.sel} Pcs</b></span>
+          </div>
+        </div>
+      `;
+    });
+    document.getElementById('cards-rekap-jenis').innerHTML = cardsHtml;
+  }
+
+  function exportKemasanCSV() {
+    const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
+    const selectedMonth = document.getElementById('filter-bulan-kemasan').value;
+    const filtered = db.filter(x => x.tgl.startsWith(selectedMonth));
+
+    if (filtered.length === 0) {
+      showToast('Tidak ada data untuk diexport pada bulan ini!', 'error');
+      return;
+    }
+
+    let csvContent = 'data:text/csv;charset=utf-8,Tanggal,Jenis Grade,Dus Dibongkar,Standar PCS,Aktual PCS,Selisih,Kirim,Tamu,Reject Tutup,Reject Alas\n';
+
+    filtered.forEach(entry => {
+      entry.items.forEach(item => {
+        const stdPcs = item.bongkarDus * (item.std || 200);
+        const selisih = item.aktualPcs - stdPcs;
+        csvContent += `${entry.tgl},${item.name},${item.bongkarDus},${stdPcs},${item.aktualPcs},${selisih},${item.kirim},${item.tamu},${item.rejectTutup},${item.rejectAlas}\n`;
+      });
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Rekap_Kemasan_${selectedMonth}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function editDataKemasan(id) {
+    const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
+    const item = db.find(x => x.id === id);
+    if (!item) return;
+
+    window.editingKemaId = id;
+    let body = '<div style="max-height: 500px; overflow-y: auto;">';
+    body += `<div class="input-group"><label>Tanggal</label><input type="date" id="edit-k-tgl" value="${item.tgl}"></div><hr>`;
+
+    item.items.forEach((it, i) => {
+      body += `
+        <h4 style="color: #2d5016; margin: 0.75rem 0 0.5rem;">${it.name}</h4>
+        <div class="row-2">
+          <div class="input-group"><label>Masuk (Dus)</label><input type="number" id="edit-k-masuk-${i}" value="${it.masuk || 0}"></div>
+          <div class="input-group"><label>Bongkar (Dus)</label><input type="number" id="edit-k-bongkar-${i}" value="${it.bongkarDus || 0}"></div>
+        </div>
+        <div class="row-2">
+          <div class="input-group"><label>PCS Aktual</label><input type="number" id="edit-k-aktual-${i}" value="${it.aktualPcs || 0}"></div>
+          <div class="input-group"><label>Kirim (PCS)</label><input type="number" id="edit-k-kirim-${i}" value="${it.kirim || 0}"></div>
+        </div>
+        <div class="row-2">
+          <div class="input-group"><label>Reject Tutup</label><input type="number" id="edit-k-rtutup-${i}" value="${it.rejectTutup || 0}"></div>
+          <div class="input-group"><label>Reject Alas</label><input type="number" id="edit-k-ralas-${i}" value="${it.rejectAlas || 0}"></div>
+        </div>
+        <hr>
+      `;
+    });
+    body += '</div>';
+
+    document.getElementById('modal-edit-kemasan-body').innerHTML = body;
+    document.getElementById('modal-edit-kemasan').classList.add('show');
+  }
+
+  function closeModalEditKemasan() {
+    document.getElementById('modal-edit-kemasan').classList.remove('show');
+    window.editingKemaId = null;
+  }
+
+  function saveEditKemasan() {
+    if (!window.editingKemaId) return;
+
+    const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
+    const idx = db.findIndex(x => x.id === window.editingKemaId);
+    if (idx === -1) return;
+
+    db[idx].tgl = document.getElementById('edit-k-tgl').value;
+    db[idx].items = db[idx].items.map((it, i) => ({
+      ...it,
+      masuk: parseFloat(document.getElementById(`edit-k-masuk-${i}`).value || 0),
+      bongkarDus: parseFloat(document.getElementById(`edit-k-bongkar-${i}`).value || 0),
+      aktualPcs: parseFloat(document.getElementById(`edit-k-aktual-${i}`).value || 0),
+      kirim: parseFloat(document.getElementById(`edit-k-kirim-${i}`).value || 0),
+      rejectTutup: parseFloat(document.getElementById(`edit-k-rtutup-${i}`).value || 0),
+      rejectAlas: parseFloat(document.getElementById(`edit-k-ralas-${i}`).value || 0)
+    }));
+
+    localStorage.setItem(KEMASAN_STORAGE_KEY, JSON.stringify(db));
+    showToast('✅ Transaksi kemasan berhasil diupdate!');
+    closeModalEditKemasan();
+    recalculateStockKemasan();
+    renderKemasanForms();
+    renderKemasanTables();
+    updateDashboard();
+  }
+
+  function hapusDataKemasan(id) {
+    if (!confirm('Yakin hapus data transaksi kemasan ini?')) return;
+    const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
+    const filtered = db.filter(x => x.id !== id);
+    localStorage.setItem(KEMASAN_STORAGE_KEY, JSON.stringify(filtered));
+
+    showToast('✅ Data kemasan berhasil dihapus!');
+    recalculateStockKemasan();
+    renderKemasanForms();
+    renderKemasanTables();
+    updateDashboard();
+  }
+
+  function hapusSemuaHistoryKemasan() {
+    if (!confirm('⚠️ PERINGATAN! Semua history data stok kemasan akan dihapus permanen. Lanjutkan?')) return;
+    localStorage.removeItem(KEMASAN_STORAGE_KEY);
+    showToast('✅ Semua history kemasan berhasil dibersihkan!');
+    recalculateStockKemasan();
+    renderKemasanForms();
+    renderKemasanTables();
+    updateDashboard();
+  }
+
+  // ========== DASHBOARD REFRESH ==========
+  function updateDashboard() {
+    const panenDb = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+    const now = new Date();
+    const thisMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+
+    // Total Panen Bulan Ini
+    const panenBulanIni = panenDb
+      .filter(x => x.tgl && x.tgl.startsWith(thisMonth))
+      .reduce((sum, x) => sum + x.p_hatsu + x.p_gradea + x.p_gradeb + x.rk_crack + x.rk_poli + x.rk_hpt, 0);
+
+    // Total Mika Terkirim Bulan Ini
+    const mikaBulanIni = panenDb
+      .filter(x => x.tgl && x.tgl.startsWith(thisMonth))
+      .reduce((sum, x) => sum + (x.m_hatsu || 0) + (x.m_a11 || 0) + (x.m_a15 || 0), 0);
+
+    // Re-calculating Kemasan Stock
+    recalculateStockKemasan();
+
+    const totalGudang = Object.values(currentStockStateKemasan).reduce((sum, x) => sum + x.gudang, 0);
+    const totalProcessing = Object.values(currentStockStateKemasan).reduce((sum, x) => sum + x.processing, 0);
+
+    document.getElementById('stat-panen').textContent = panenBulanIni.toFixed(2);
+    document.getElementById('stat-kirim').textContent = mikaBulanIni;
+    document.getElementById('stat-gudang').textContent = totalGudang;
+    document.getElementById('stat-processing').textContent = totalProcessing;
+  }
+</script>
+
+</body>
+</html>
