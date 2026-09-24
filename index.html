@@ -89,8 +89,6 @@
       padding-bottom: calc(100px + env(safe-area-inset-bottom));
     }
 
-
-
     .k-panel { display: none; }
     .k-panel.active { display: block; }
 
@@ -438,7 +436,18 @@
     <div class="card">
       <div class="card-title">👤 Data Pekerja</div>
       <div class="row-2">
-        <div class="input-group"><label class="required">Nama Pekerja</label><input type="text" id="lks-nama" placeholder="Masukkan nama pekerja"></div>
+        <div class="input-group">
+          <label class="required">Nama Pekerja</label>
+          <select id="lks-nama" required>
+            <option value="">Pilih nama pekerja...</option>
+            <option value="Astrin Julianti Kusmawan">Astrin Julianti Kusmawan</option>
+            <option value="Mianti Fatma Kusmawan">Mianti Fatma Kusmawan</option>
+            <option value="Resa Yolandari">Resa Yolandari</option>
+            <option value="Santi Susanti">Santi Susanti</option>
+            <option value="Tanti Agustina">Tanti Agustina</option>
+            <option value="Zahra Agesty Rainiztan">Zahra Agesty Rainiztan</option>
+          </select>
+        </div>
         <div class="input-group"><label class="required">Grade Pekerja</label><select id="lks-grade"><option value="">Pilih grade...</option><option value="Hatsuhana">Hatsuhana</option><option value="Grade A">Grade A</option><option value="Grade B">Grade B</option></select></div>
       </div>
     </div>
@@ -451,7 +460,22 @@
             <span class="activity-num" style="font-size: 0.75rem; font-weight: 700; color: #2d5016; background: #e8f5e9; padding: 0.25rem 0.5rem; border-radius: 6px;">Kegiatan #1</span>
             <button type="button" class="btn btn-sm btn-danger" onclick="removeLksActivity(this)">Hapus</button>
           </div>
-          <div class="input-group"><label class="required">Kegiatan</label><input type="text" data-kegiatan placeholder="Tulis nama kegiatan manual..." required></div>
+          <div class="input-group">
+            <label class="required">Kegiatan</label>
+            <select data-kegiatan-select onchange="toggleManualKegiatan(this)" required>
+              <option value="">Pilih kegiatan...</option>
+              <option value="Packing Grade Hatsuhana">Packing Grade Hatsuhana</option>
+              <option value="Packing Grade A">Packing Grade A</option>
+              <option value="Packing Grade B">Packing Grade B</option>
+              <option value="Loading Buah">Loading Buah</option>
+              <option value="Perbantuan">Perbantuan</option>
+              <option value="Persiapan Mika">Persiapan Mika</option>
+              <option value="Persiapan Netfoam">Persiapan Netfoam</option>
+              <option value="Persiapan Sleeve">Persiapan Sleeve</option>
+              <option value="Lainnya">Lainnya (Tulis Manual)</option>
+            </select>
+            <input type="text" data-kegiatan-manual placeholder="Tulis nama kegiatan manual..." style="display:none; margin-top:0.5rem;">
+          </div>
           <div class="row-2">
             <div class="input-group"><label>Hasil (pcs)</label><input type="number" data-hasil min="0" step="1" placeholder="Opsional"></div>
             <div class="input-group"><label>Keterangan</label><input type="text" data-ket placeholder="Opsional"></div>
@@ -462,8 +486,27 @@
 
       <div class="row-3">
         <div class="input-group"><label>Job Tambahan</label><input type="text" id="lks-jobTambahan" placeholder="Opsional"></div>
-        <div class="input-group"><label>Perbantuan</label><select id="lks-perbantuan"><option value="">Tidak ada</option><option value="Ya">Ya</option></select></div>
-        <div class="input-group"><label>Jenis Perbantuan</label><input type="text" id="lks-jenisPerbantuan" placeholder="Jika ada perbantuan"></div>
+        <div class="input-group">
+          <label>Perbantuan</label>
+          <select id="lks-perbantuan">
+            <option value="">Tidak ada</option>
+            <option value="Greenhouse 1">Greenhouse 1</option>
+            <option value="Greenhouse 2">Greenhouse 2</option>
+            <option value="Fertigasi">Fertigasi</option>
+            <option value="General">General</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Jenis Perbantuan</label>
+          <select id="lks-jenisPerbantuan">
+            <option value="">Pilih jenis perbantuan...</option>
+            <option value="Pruning">Pruning</option>
+            <option value="Sanitasi">Sanitasi</option>
+            <option value="Penanaman">Penanaman</option>
+            <option value="Perhitungan Bunga">Perhitungan Bunga</option>
+            <option value="Stok Opname Barang">Stok Opname Barang</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -475,7 +518,18 @@
             <span class="material-num" style="font-size: 0.75rem; font-weight: 700; color: #2d5016; background: #e8f5e9; padding: 0.25rem 0.5rem; border-radius: 6px;">Material #1</span>
             <button type="button" class="btn btn-sm btn-danger" onclick="removeLksMaterial(this)">Hapus</button>
           </div>
-          <div class="input-group"><label class="required">Nama Material</label><input type="text" data-material placeholder="Tulis nama material manual..." required></div>
+          <div class="input-group">
+            <label class="required">Nama Material</label>
+            <select data-material-select onchange="toggleManualMaterial(this)" required>
+              <option value="">Pilih material...</option>
+              <option value="Mika Grade Hatsuhana">Mika Grade Hatsuhana</option>
+              <option value="Mika Grade A11">Mika Grade A11</option>
+              <option value="Mika Grade A15">Mika Grade A15</option>
+              <option value="Lakban">Lakban</option>
+              <option value="Lainnya">Lainnya (Tulis Manual)</option>
+            </select>
+            <input type="text" data-material-manual placeholder="Tulis nama material manual..." style="display:none; margin-top:0.5rem;">
+          </div>
           <div class="row-2">
             <div class="input-group"><label class="required">Jumlah</label><input type="number" data-qty min="0" step="0.1" placeholder="0" required></div>
             <div class="input-group"><label>Satuan</label><input type="text" data-satuan placeholder="pcs/kg/box" value="pcs"></div>
@@ -911,7 +965,6 @@
   };
 
   // ========== OFFLINE + GOOGLE SHEETS SYNC (gaya IPM) ==========
-  // URL Web App diisi lewat tombol "Connect Sheets", disimpan di perangkat.
   const SYNC_CONFIG = {
     API_KEY: 'AWB_PROCESSING_2026',
     VERSION: '1.0.0'
@@ -977,7 +1030,6 @@
     if (!type || suppressSync) return;
     let queue = getSyncQueue();
     const id = typeof recordOrId === 'object' ? recordOrId.id : recordOrId;
-    // Operasi terbaru untuk ID yang sama menggantikan operasi lama.
     queue = queue.filter(x => !(x.type === type && String(x.id) === String(id)));
     if (action === 'clear') {
       queue = queue.filter(x => x.type !== type);
@@ -1006,8 +1058,6 @@
     });
   }
 
-  // Intercept perubahan data lokal dari kode lama, sehingga fungsi existing
-  // tetap bekerja offline tanpa perlu mengubah seluruh modul satu per satu.
   localStorage.setItem = function(key, value) {
     const type = syncTypeFromKey(key);
     const oldRaw = type ? nativeStorage.getItem(key) : null;
@@ -1097,7 +1147,6 @@
     if (!navigator.onLine) { showToast('Sedang offline — tidak bisa memuat dari Sheet.', 'error'); return; }
     if (!confirm('Muat dari Google Sheet akan MENIMPA data lokal di perangkat ini. Lanjutkan?')) return;
     if (getSyncQueue().length) await syncQueue();
-    // Jangan pull jika masih ada antrean yang gagal dikirim; data lokal lebih aman.
     if (getSyncQueue().length) return;
     try {
       updateSyncStatus('syncing');
@@ -1212,7 +1261,35 @@
     }
   });
 
-  // ========== LKS FUNCTIONS ==========
+  // ========== LKS FUNCTIONS (UPDATED) ==========
+  function toggleManualKegiatan(selectEl) {
+    const card = selectEl.closest('.activity-card');
+    const manualInput = card.querySelector('[data-kegiatan-manual]');
+    if (selectEl.value === 'Lainnya') {
+      manualInput.style.display = 'block';
+      manualInput.required = true;
+      manualInput.focus();
+    } else {
+      manualInput.style.display = 'none';
+      manualInput.required = false;
+      manualInput.value = '';
+    }
+  }
+
+  function toggleManualMaterial(selectEl) {
+    const card = selectEl.closest('.material-card');
+    const manualInput = card.querySelector('[data-material-manual]');
+    if (selectEl.value === 'Lainnya') {
+      manualInput.style.display = 'block';
+      manualInput.required = true;
+      manualInput.focus();
+    } else {
+      manualInput.style.display = 'none';
+      manualInput.required = false;
+      manualInput.value = '';
+    }
+  }
+
   function addLksActivity() {
     const list = document.getElementById('lks-activity-list');
     const idx = list.children.length + 1;
@@ -1220,11 +1297,26 @@
     div.className = 'activity-card';
     div.style.cssText = 'background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.875rem; margin-bottom: 0.625rem;';
     div.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.625rem;">
+      <div style="display: flex; justify-space-between; align-items: center; margin-bottom: 0.625rem;">
         <span class="activity-num" style="font-size: 0.75rem; font-weight: 700; color: #2d5016; background: #e8f5e9; padding: 0.25rem 0.5rem; border-radius: 6px;">Kegiatan #${idx}</span>
         <button type="button" class="btn btn-sm btn-danger" onclick="removeLksActivity(this)">Hapus</button>
       </div>
-      <div class="input-group"><label class="required">Kegiatan</label><input type="text" data-kegiatan placeholder="Tulis nama kegiatan manual..." required></div>
+      <div class="input-group">
+        <label class="required">Kegiatan</label>
+        <select data-kegiatan-select onchange="toggleManualKegiatan(this)" required>
+          <option value="">Pilih kegiatan...</option>
+          <option value="Packing Grade Hatsuhana">Packing Grade Hatsuhana</option>
+          <option value="Packing Grade A">Packing Grade A</option>
+          <option value="Packing Grade B">Packing Grade B</option>
+          <option value="Loading Buah">Loading Buah</option>
+          <option value="Perbantuan">Perbantuan</option>
+          <option value="Persiapan Mika">Persiapan Mika</option>
+          <option value="Persiapan Netfoam">Persiapan Netfoam</option>
+          <option value="Persiapan Sleeve">Persiapan Sleeve</option>
+          <option value="Lainnya">Lainnya (Tulis Manual)</option>
+        </select>
+        <input type="text" data-kegiatan-manual placeholder="Tulis nama kegiatan manual..." style="display:none; margin-top:0.5rem;">
+      </div>
       <div class="row-2">
         <div class="input-group"><label>Hasil (pcs)</label><input type="number" data-hasil min="0" step="1" placeholder="Opsional"></div>
         <div class="input-group"><label>Keterangan</label><input type="text" data-ket placeholder="Opsional"></div>
@@ -1253,7 +1345,18 @@
         <span class="material-num" style="font-size: 0.75rem; font-weight: 700; color: #2d5016; background: #e8f5e9; padding: 0.25rem 0.5rem; border-radius: 6px;">Material #${idx}</span>
         <button type="button" class="btn btn-sm btn-danger" onclick="removeLksMaterial(this)">Hapus</button>
       </div>
-      <div class="input-group"><label class="required">Nama Material</label><input type="text" data-material placeholder="Tulis nama material manual..." required></div>
+      <div class="input-group">
+        <label class="required">Nama Material</label>
+        <select data-material-select onchange="toggleManualMaterial(this)" required>
+          <option value="">Pilih material...</option>
+          <option value="Mika Grade Hatsuhana">Mika Grade Hatsuhana</option>
+          <option value="Mika Grade A11">Mika Grade A11</option>
+          <option value="Mika Grade A15">Mika Grade A15</option>
+          <option value="Lakban">Lakban</option>
+          <option value="Lainnya">Lainnya (Tulis Manual)</option>
+        </select>
+        <input type="text" data-material-manual placeholder="Tulis nama material manual..." style="display:none; margin-top:0.5rem;">
+      </div>
       <div class="row-2">
         <div class="input-group"><label class="required">Jumlah</label><input type="number" data-qty min="0" step="0.1" placeholder="0" required></div>
         <div class="input-group"><label>Satuan</label><input type="text" data-satuan placeholder="pcs/kg/box" value="pcs"></div>
@@ -1270,13 +1373,17 @@
   function collectLksData() {
     const kegiatan = [];
     document.querySelectorAll('#lks-activity-list .activity-card').forEach(card => {
-      const k = card.querySelector('[data-kegiatan]').value;
+      const selectVal = card.querySelector('[data-kegiatan-select]') ? card.querySelector('[data-kegiatan-select]').value : '';
+      const manualVal = card.querySelector('[data-kegiatan-manual]') ? card.querySelector('[data-kegiatan-manual]').value : '';
+      const k = selectVal === 'Lainnya' ? manualVal : selectVal;
       if (k) kegiatan.push({ kegiatan: k, hasil: card.querySelector('[data-hasil]').value, ket: card.querySelector('[data-ket]').value });
     });
 
     const material = [];
     document.querySelectorAll('#lks-material-list .material-card').forEach(card => {
-      const m = card.querySelector('[data-material]').value;
+      const selectVal = card.querySelector('[data-material-select]') ? card.querySelector('[data-material-select]').value : '';
+      const manualVal = card.querySelector('[data-material-manual]') ? card.querySelector('[data-material-manual]').value : '';
+      const m = selectVal === 'Lainnya' ? manualVal : selectVal;
       const q = card.querySelector('[data-qty]').value;
       if (m && q) material.push({ material: m, jumlah: q, satuan: card.querySelector('[data-satuan]').value });
     });
@@ -1331,7 +1438,22 @@
           <span class="activity-num" style="font-size: 0.75rem; font-weight: 700; color: #2d5016; background: #e8f5e9; padding: 0.25rem 0.5rem; border-radius: 6px;">Kegiatan #1</span>
           <button type="button" class="btn btn-sm btn-danger" onclick="removeLksActivity(this)">Hapus</button>
         </div>
-        <div class="input-group"><label class="required">Kegiatan</label><input type="text" data-kegiatan placeholder="Tulis nama kegiatan manual..." required></div>
+        <div class="input-group">
+          <label class="required">Kegiatan</label>
+          <select data-kegiatan-select onchange="toggleManualKegiatan(this)" required>
+            <option value="">Pilih kegiatan...</option>
+            <option value="Packing Grade Hatsuhana">Packing Grade Hatsuhana</option>
+            <option value="Packing Grade A">Packing Grade A</option>
+            <option value="Packing Grade B">Packing Grade B</option>
+            <option value="Loading Buah">Loading Buah</option>
+            <option value="Perbantuan">Perbantuan</option>
+            <option value="Persiapan Mika">Persiapan Mika</option>
+            <option value="Persiapan Netfoam">Persiapan Netfoam</option>
+            <option value="Persiapan Sleeve">Persiapan Sleeve</option>
+            <option value="Lainnya">Lainnya (Tulis Manual)</option>
+          </select>
+          <input type="text" data-kegiatan-manual placeholder="Tulis nama kegiatan manual..." style="display:none; margin-top:0.5rem;">
+        </div>
         <div class="row-2">
           <div class="input-group"><label>Hasil (pcs)</label><input type="number" data-hasil min="0" step="1" placeholder="Opsional"></div>
           <div class="input-group"><label>Keterangan</label><input type="text" data-ket placeholder="Opsional"></div>
@@ -1345,7 +1467,18 @@
           <span class="material-num" style="font-size: 0.75rem; font-weight: 700; color: #2d5016; background: #e8f5e9; padding: 0.25rem 0.5rem; border-radius: 6px;">Material #1</span>
           <button type="button" class="btn btn-sm btn-danger" onclick="removeLksMaterial(this)">Hapus</button>
         </div>
-        <div class="input-group"><label class="required">Nama Material</label><input type="text" data-material placeholder="Tulis nama material manual..." required></div>
+        <div class="input-group">
+          <label class="required">Nama Material</label>
+          <select data-material-select onchange="toggleManualMaterial(this)" required>
+            <option value="">Pilih material...</option>
+            <option value="Mika Grade Hatsuhana">Mika Grade Hatsuhana</option>
+            <option value="Mika Grade A11">Mika Grade A11</option>
+            <option value="Mika Grade A15">Mika Grade A15</option>
+            <option value="Lakban">Lakban</option>
+            <option value="Lainnya">Lainnya (Tulis Manual)</option>
+          </select>
+          <input type="text" data-material-manual placeholder="Tulis nama material manual..." style="display:none; margin-top:0.5rem;">
+        </div>
         <div class="row-2">
           <div class="input-group"><label class="required">Jumlah</label><input type="number" data-qty min="0" step="0.1" placeholder="0" required></div>
           <div class="input-group"><label>Satuan</label><input type="text" data-satuan placeholder="pcs/kg/box" value="pcs"></div>
@@ -1390,9 +1523,22 @@
 
     window.editingLksId = id;
     const body = document.getElementById('modal-edit-panen-body');
+    const namaList = [
+      'Astrin Julianti Kusmawan',
+      'Mianti Fatma Kusmawan',
+      'Resa Yolandari',
+      'Santi Susanti',
+      'Tanti Agustina',
+      'Zahra Agesty Rainiztan'
+    ];
     let html = `
       <div class="input-group"><label>Tanggal</label><input type="date" id="edit-lks-tgl" value="${item.tanggal}"></div>
-      <div class="input-group"><label>Nama Pekerja</label><input type="text" id="edit-lks-nama" value="${item.nama}"></div>
+      <div class="input-group"><label>Nama Pekerja</label>
+        <select id="edit-lks-nama">
+          ${namaList.map(n => `<option value="${n}" ${item.nama === n ? 'selected' : ''}>${n}</option>`).join('')}
+          ${!namaList.includes(item.nama) && item.nama ? `<option value="${item.nama}" selected>${item.nama}</option>` : ''}
+        </select>
+      </div>
       <div class="input-group"><label>Grade Pekerja</label>
         <select id="edit-lks-grade">
           <option value="Hatsuhana" ${item.grade === 'Hatsuhana' ? 'selected' : ''}>Hatsuhana</option>
@@ -1469,7 +1615,6 @@
     document.getElementById('calc-grand-total-r').textContent = grandTotalReject.toFixed(2) + ' Kg';
     document.getElementById('calc-reject-rate').textContent = rejectRate.toFixed(2) + '%';
 
-    // Total Pengiriman termasuk Frozen
     const totalKirim = getValP('k-hatsu') + getValP('k-a11') + getValP('k-a15') + getValP('k-frozen');
     const rateKirim = totalPanen > 0 ? (totalKirim / totalPanen * 100) : 0;
     document.getElementById('calc-total-kirim').textContent = totalKirim.toFixed(2) + ' Kg';
@@ -1646,13 +1791,11 @@
   function recalculateStockKemasan() {
     const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
     
-    // Reset state awal
     const accum = {};
     masterJenisKemasan.forEach(m => {
       accum[m.name] = { gudang: 0, processing: 0, keluar: 0, reject: 0 };
     });
 
-    // Urutkan tanggal naik untuk kalkulasi kronologis
     const sorted = [...db].sort((a, b) => new Date(a.tgl) - new Date(b.tgl));
 
     sorted.forEach(entry => {
@@ -1677,7 +1820,6 @@
       };
     });
 
-    // Render Summary UI
     let totGudang = 0, totProc = 0, totKeluar = 0, totRej = 0;
     let summaryHtml = '';
 
@@ -1773,68 +1915,72 @@
     const pAwal = currentStockStateKemasan[item.name].processing;
 
     const masuk = getValK(`masuk-${i}`);
-    const dusBongkar = getValK(`bongkar-dus-${i}`);
-    const gAkhir = gAwal + masuk - dusBongkar;
+    const bongkarDus = getValK(`bongkar-dus-${i}`);
+    const gAkhir = gAwal + masuk - bongkarDus;
     document.getElementById(`gudang-akhir-${i}`).value = Math.max(0, gAkhir);
 
-    const stdPcs = dusBongkar * item.std;
+    const stdPcs = bongkarDus * item.std;
     document.getElementById(`standar-pcs-${i}`).value = stdPcs;
 
-    const pcsAktual = getValK(`aktual-pcs-${i}`);
-    document.getElementById(`pcs-bongkar-display-${i}`).value = pcsAktual;
+    const aktualPcs = getValK(`aktual-pcs-${i}`);
+    document.getElementById(`pcs-bongkar-display-${i}`).value = aktualPcs;
 
-    const selisih = pcsAktual - stdPcs;
-    const infoBox = document.getElementById(`info-selisih-${i}`);
-
-    if (dusBongkar > 0 || pcsAktual > 0) {
+    const selisih = aktualPcs - stdPcs;
+    const infoEl = document.getElementById(`info-selisih-${i}`);
+    if (bongkarDus > 0 || aktualPcs > 0) {
       if (selisih < 0) {
-        infoBox.innerHTML = `Selisih bongkar: <b class="kurang">Kurang ${Math.abs(selisih)} pcs</b> (Standar: ${stdPcs}, Aktual: ${pcsAktual})`;
+        infoEl.style.cssText = 'background: #fef2f2; border-left-color: #dc2626; color: #991b1b;';
+        infoEl.innerHTML = `Selisih bongkar: <b class="kurang">${selisih} pcs</b> (Kurang dari standar)`;
       } else if (selisih > 0) {
-        infoBox.innerHTML = `Selisih bongkar: <b class="lebih">Lebih +${selisih} pcs</b> (Standar: ${stdPcs}, Aktual: ${pcsAktual})`;
+        infoEl.style.cssText = 'background: #eff6ff; border-left-color: #2563eb; color: #1e40af;';
+        infoEl.innerHTML = `Selisih bongkar: <b class="lebih">+${selisih} pcs</b> (Lebih dari standar)`;
       } else {
-        infoBox.innerHTML = `Selisih bongkar: <b class="sesuai">Sesuai Standar (0 pcs)</b>`;
+        infoEl.style.cssText = 'background: #f0fdf4; border-left-color: #16a34a; color: #166534;';
+        infoEl.innerHTML = `Selisih bongkar: <b class="sesuai">0 pcs</b> (Sesuai standar)`;
       }
     } else {
-      infoBox.innerHTML = `Selisih bongkar: <b>0 pcs</b>`;
+      infoEl.style.cssText = 'background: #f8fafc; border-left-color: #64748b; color: #334155;';
+      infoEl.innerHTML = `Selisih bongkar: <b>0 pcs</b>`;
     }
 
     const kirim = getValK(`kirim-${i}`);
     const tamu = getValK(`tamu-${i}`);
-    const rTutup = getValK(`reject-tutup-${i}`);
-    const rAlas = getValK(`reject-alas-${i}`);
+    const rejTutup = getValK(`reject-tutup-${i}`);
+    const rejAlas = getValK(`reject-alas-${i}`);
 
-    const pAkhir = pAwal + pcsAktual - kirim - tamu - rTutup - rAlas;
+    const pAkhir = pAwal + aktualPcs - kirim - tamu - rejTutup - rejAlas;
     document.getElementById(`processing-akhir-${i}`).value = Math.max(0, pAkhir);
   }
 
   function simpanDataKemasan() {
     const tgl = document.getElementById('kemasan-tgl').value;
-    if (!tgl) { showToast('Pilih tanggal input kemasan!', 'error'); return; }
+    if (!tgl) { showToast('Pilih tanggal transaksi kemasan!', 'error'); return; }
 
-    const entry = {
-      id: Date.now(),
-      tgl: tgl,
-      items: masterJenisKemasan.map((item, i) => ({
-        name: item.name,
-        std: item.std,
-        masuk: getValK(`masuk-${i}`),
-        bongkarDus: getValK(`bongkar-dus-${i}`),
-        aktualPcs: getValK(`aktual-pcs-${i}`),
-        kirim: getValK(`kirim-${i}`),
-        tamu: getValK(`tamu-${i}`),
-        ketTamu: document.getElementById(`ket-tamu-${i}`).value || '',
-        rejectTutup: getValK(`reject-tutup-${i}`),
-        rejectAlas: getValK(`reject-alas-${i}`),
-        ketReject: document.getElementById(`ket-reject-${i}`).value || ''
-      }))
-    };
+    const items = masterJenisKemasan.map((m, i) => ({
+      name: m.name,
+      std: m.std,
+      masuk: getValK(`masuk-${i}`),
+      bongkarDus: getValK(`bongkar-dus-${i}`),
+      standarPcs: getValK(`bongkar-dus-${i}`) * m.std,
+      aktualPcs: getValK(`aktual-pcs-${i}`),
+      selisih: getValK(`aktual-pcs-${i}`) - (getValK(`bongkar-dus-${i}`) * m.std),
+      kirim: getValK(`kirim-${i}`),
+      tamu: getValK(`tamu-${i}`),
+      ketTamu: document.getElementById(`ket-tamu-${i}`).value,
+      rejectTutup: getValK(`reject-tutup-${i}`),
+      rejectAlas: getValK(`reject-alas-${i}`),
+      ketReject: document.getElementById(`ket-reject-${i}`).value
+    }));
 
+    const hasData = items.some(x => x.masuk > 0 || x.bongkarDus > 0 || x.aktualPcs > 0 || x.kirim > 0 || x.tamu > 0 || x.rejectTutup > 0 || x.rejectAlas > 0);
+    if (!hasData) { showToast('Isi minimal 1 data transaksi kemasan!', 'error'); return; }
+
+    const entry = { id: Date.now(), tgl, items };
     let db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
     db.push(entry);
     localStorage.setItem(KEMASAN_STORAGE_KEY, JSON.stringify(db));
 
-    showToast('✅ Data stok kemasan berhasil disimpan!');
-    resetFormKemasan();
+    showToast('✅ Data kemasan berhasil disimpan!');
     recalculateStockKemasan();
     renderKemasanForms();
     renderKemasanTables();
@@ -1842,75 +1988,65 @@
   }
 
   function resetFormKemasan() {
-    document.querySelectorAll('#forms-kemasan input[type="number"]').forEach(i => i.value = '');
-    document.querySelectorAll('#forms-kemasan input[type="text"]').forEach(i => i.value = '');
     document.getElementById('kemasan-tgl').value = new Date().toISOString().split('T')[0];
-    masterJenisKemasan.forEach((_, i) => hitungKemasan(i));
+    renderKemasanForms();
   }
 
   function renderKemasanTables() {
     const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
 
-    // Render Variance Table
-    const varTbody = document.getElementById('tbl-variance-body');
-    let varRows = [];
+    // 1. Selisih Bongkar Log
+    const varBody = document.getElementById('tbl-variance-body');
+    const varRows = [];
 
-    db.forEach(entry => {
-      entry.items.forEach(item => {
-        if (item.bongkarDus > 0 || item.aktualPcs > 0) {
-          const stdPcs = item.bongkarDus * (item.std || 200);
-          const selisih = item.aktualPcs - stdPcs;
-          let statusBadge = '<span class="sesuai">Sesuai</span>';
-          if (selisih < 0) statusBadge = `<span class="kurang">Kurang ${Math.abs(selisih)}</span>`;
-          if (selisih > 0) statusBadge = `<span class="lebih">Lebih +${selisih}</span>`;
+    db.sort((a, b) => new Date(b.tgl) - new Date(a.tgl)).forEach(entry => {
+      if (entry.items) {
+        entry.items.forEach(it => {
+          if (it.bongkarDus > 0 || it.aktualPcs > 0) {
+            let statusBadge = '<span class="sesuai">Sesuai</span>';
+            if (it.selisih < 0) statusBadge = `<span class="kurang">Kurang (${it.selisih})</span>`;
+            if (it.selisih > 0) statusBadge = `<span class="lebih">Lebih (+${it.selisih})</span>`;
 
-          varRows.push(`
-            <tr>
+            varRows.push(`<tr>
               <td>${entry.tgl}</td>
-              <td><strong>${item.name}</strong></td>
-              <td class="text-right">${item.bongkarDus}</td>
-              <td class="text-right">${stdPcs}</td>
-              <td class="text-right">${item.aktualPcs}</td>
-              <td class="text-right">${selisih > 0 ? '+' + selisih : selisih}</td>
+              <td><b>${it.name}</b></td>
+              <td class="text-right">${it.bongkarDus}</td>
+              <td class="text-right">${it.standarPcs}</td>
+              <td class="text-right">${it.aktualPcs}</td>
+              <td class="text-right">${it.selisih > 0 ? '+' + it.selisih : it.selisih}</td>
               <td>${statusBadge}</td>
-            </tr>
-          `);
-        }
-      });
+            </tr>`);
+          }
+        });
+      }
     });
 
-    if (varRows.length === 0) {
-      varTbody.innerHTML = '<tr><td colspan="7" class="text-center" style="color: #999;">Belum ada data selisih bongkar</td></tr>';
+    varBody.innerHTML = varRows.length ? varRows.join('') : '<tr><td colspan="7" class="text-center" style="color: #999;">Belum ada data selisih bongkar</td></tr>';
+
+    // 2. History Data
+    const histBody = document.getElementById('tbl-kemasan-history-body');
+    if (!db.length) {
+      histBody.innerHTML = '<tr><td colspan="6" class="text-center" style="color: #999;">Belum ada history</td></tr>';
     } else {
-      varTbody.innerHTML = varRows.reverse().join('');
-    }
+      histBody.innerHTML = db.map(entry => {
+        const itemMap = {};
+        if (entry.items) entry.items.forEach(x => itemMap[x.name] = x);
 
-    // Render History Table
-    const histTbody = document.getElementById('tbl-kemasan-history-body');
-    if (db.length === 0) {
-      histTbody.innerHTML = '<tr><td colspan="6" class="text-center" style="color: #999;">Belum ada history</td></tr>';
-    } else {
-      db.sort((a, b) => new Date(b.tgl) - new Date(a.tgl));
-      histTbody.innerHTML = db.map(entry => {
-        const h0 = entry.items[0] || {};
-        const h1 = entry.items[1] || {};
-        const h2 = entry.items[2] || {};
+        const h = itemMap['Hatsu'] || {};
+        const a = itemMap['Grade A'] || {};
+        const b = itemMap['Grade B'] || {};
 
-        const outSummary = entry.items.map(it => `${it.name}: K ${it.kirim || 0}/R ${(it.rejectTutup || 0) + (it.rejectAlas || 0)}`).join(' | ');
-
-        return `
-          <tr>
-            <td>
-              <button class="btn btn-sm btn-secondary" onclick="editDataKemasan(${entry.id})">✏️</button>
-              <button class="btn btn-sm btn-danger" onclick="hapusDataKemasan(${entry.id})">🗑️</button>
-            </td>
-            <td>${entry.tgl}</td>
-            <td>${h0.bongkarDus || 0} Dus / ${h0.aktualPcs || 0} Pcs</td>
-            <td>${h1.bongkarDus || 0} Dus / ${h1.aktualPcs || 0} Pcs</td>
-            <td>${h2.bongkarDus || 0} Dus / ${h2.aktualPcs || 0} Pcs</td>
-            <td><small>${outSummary}</small></td>
-          </tr>
-        `;
+        return `<tr>
+          <td>
+            <button class="btn btn-sm btn-secondary" onclick="editKemasanHistory(${entry.id})">✏️</button>
+            <button class="btn btn-sm btn-danger" onclick="hapusKemasanHistory(${entry.id})">🗑️</button>
+          </td>
+          <td>${entry.tgl}</td>
+          <td>G:${h.masuk || 0}/${h.bongkarDus || 0}D | P:${h.aktualPcs || 0}Pcs</td>
+          <td>G:${a.masuk || 0}/${a.bongkarDus || 0}D | P:${a.aktualPcs || 0}Pcs</td>
+          <td>G:${b.masuk || 0}/${b.bongkarDus || 0}D | P:${b.aktualPcs || 0}Pcs</td>
+          <td><small>Kirim: ${(h.kirim || 0) + (a.kirim || 0) + (b.kirim || 0)} | Rej: ${(h.rejectTutup || 0) + (h.rejectAlas || 0) + (a.rejectTutup || 0) + (a.rejectAlas || 0) + (b.rejectTutup || 0) + (b.rejectAlas || 0)}</small></td>
+        </tr>`;
       }).join('');
     }
 
@@ -1918,176 +2054,99 @@
   }
 
   function renderKemasanMonthly() {
+    const filterBulan = document.getElementById('filter-bulan-kemasan').value;
     const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
-    const selectedMonth = document.getElementById('filter-bulan-kemasan').value;
+    
+    const filtered = db.filter(e => e.tgl.startsWith(filterBulan));
+    const mBody = document.getElementById('tbl-monthly-body');
+    const mRows = [];
 
-    const filtered = db.filter(x => x.tgl.startsWith(selectedMonth));
-    const monthlyTbody = document.getElementById('tbl-monthly-body');
-
-    let monthlyRows = [];
-    const monthlyStats = {
+    const statsPerJenis = {
       'Hatsu': { dus: 0, std: 0, akt: 0, sel: 0 },
       'Grade A': { dus: 0, std: 0, akt: 0, sel: 0 },
       'Grade B': { dus: 0, std: 0, akt: 0, sel: 0 }
     };
 
     filtered.forEach(entry => {
-      entry.items.forEach(item => {
-        if (item.bongkarDus > 0 || item.aktualPcs > 0) {
-          const stdPcs = item.bongkarDus * (item.std || 200);
-          const selisih = item.aktualPcs - stdPcs;
-          let statusBadge = '<span class="sesuai">Sesuai</span>';
-          if (selisih < 0) statusBadge = `<span class="kurang">Kurang ${Math.abs(selisih)}</span>`;
-          if (selisih > 0) statusBadge = `<span class="lebih">Lebih +${selisih}</span>`;
+      if (entry.items) {
+        entry.items.forEach(it => {
+          if (it.bongkarDus > 0 || it.aktualPcs > 0) {
+            if (statsPerJenis[it.name]) {
+              statsPerJenis[it.name].dus += it.bongkarDus;
+              statsPerJenis[it.name].std += it.standarPcs;
+              statsPerJenis[it.name].akt += it.aktualPcs;
+              statsPerJenis[it.name].sel += it.selisih;
+            }
 
-          monthlyRows.push(`
-            <tr>
+            let statusBadge = '<span class="sesuai">Sesuai</span>';
+            if (it.selisih < 0) statusBadge = `<span class="kurang">Kurang (${it.selisih})</span>`;
+            if (it.selisih > 0) statusBadge = `<span class="lebih">Lebih (+${it.selisih})</span>`;
+
+            mRows.push(`<tr>
               <td>${entry.tgl}</td>
-              <td><strong>${item.name}</strong></td>
-              <td class="text-right">${item.bongkarDus}</td>
-              <td class="text-right">${stdPcs}</td>
-              <td class="text-right">${item.aktualPcs}</td>
-              <td class="text-right">${selisih > 0 ? '+' + selisih : selisih}</td>
+              <td><b>${it.name}</b></td>
+              <td class="text-right">${it.bongkarDus}</td>
+              <td class="text-right">${it.standarPcs}</td>
+              <td class="text-right">${it.aktualPcs}</td>
+              <td class="text-right">${it.selisih > 0 ? '+' + it.selisih : it.selisih}</td>
               <td>${statusBadge}</td>
-            </tr>
-          `);
-
-          if (monthlyStats[item.name]) {
-            monthlyStats[item.name].dus += item.bongkarDus;
-            monthlyStats[item.name].std += stdPcs;
-            monthlyStats[item.name].akt += item.aktualPcs;
-            monthlyStats[item.name].sel += selisih;
+            </tr>`);
           }
-        }
-      });
+        });
+      }
     });
 
-    if (monthlyRows.length === 0) {
-      monthlyTbody.innerHTML = '<tr><td colspan="7" class="text-center" style="color: #999;">Belum ada data pada bulan ini</td></tr>';
-    } else {
-      monthlyTbody.innerHTML = monthlyRows.reverse().join('');
-    }
+    mBody.innerHTML = mRows.length ? mRows.join('') : '<tr><td colspan="7" class="text-center" style="color: #999;">Belum ada data selisih bulan ini</td></tr>';
 
-    // Cards Rekap Jenis
-    let cardsHtml = '';
-    masterJenisKemasan.forEach(m => {
-      const st = monthlyStats[m.name];
-      const cls = st.sel < 0 ? 'kurang' : (st.sel > 0 ? 'lebih' : 'sesuai');
-      cardsHtml += `
-        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem;">
-          <h4 style="margin: 0 0 0.5rem; color: #2d5016;">${m.name}</h4>
-          <div style="font-size: 0.875rem; color: #555;">
-            Total Bongkar: <b>${st.dus} Dus</b><br>
-            Standar / Aktual: <b>${st.std}</b> / <b>${st.akt}</b> Pcs<br>
-            Selisih: <span class="${cls}"><b>${st.sel > 0 ? '+' + st.sel : st.sel} Pcs</b></span>
-          </div>
+    // Cards Rekap Per Jenis
+    const cardsEl = document.getElementById('cards-rekap-jenis');
+    cardsEl.innerHTML = masterJenisKemasan.map(m => {
+      const st = statsPerJenis[m.name];
+      const cls = st.sel < 0 ? 'red' : st.sel > 0 ? 'blue' : 'green';
+      return `
+        <div class="stat-card ${cls}">
+          <div class="stat-label">Mika ${m.name}</div>
+          <div class="stat-value" style="font-size: 1.5rem;">${st.sel > 0 ? '+' + st.sel : st.sel} <small style="font-size: 0.8rem;">Pcs Selisih</small></div>
+          <div class="stat-meta">Total Bongkar: ${st.dus} Dus (${st.akt} Pcs)</div>
         </div>
       `;
-    });
-    document.getElementById('cards-rekap-jenis').innerHTML = cardsHtml;
+    }).join('');
   }
 
   function exportKemasanCSV() {
+    const filterBulan = document.getElementById('filter-bulan-kemasan').value;
     const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
-    const selectedMonth = document.getElementById('filter-bulan-kemasan').value;
-    const filtered = db.filter(x => x.tgl.startsWith(selectedMonth));
+    const filtered = db.filter(e => e.tgl.startsWith(filterBulan));
 
-    if (filtered.length === 0) {
-      showToast('Tidak ada data untuk diexport pada bulan ini!', 'error');
-      return;
-    }
+    if (!filtered.length) { showToast('Tidak ada data kemasan untuk diexport!', 'error'); return; }
 
-    let csvContent = 'data:text/csv;charset=utf-8,Tanggal,Jenis Grade,Dus Dibongkar,Standar PCS,Aktual PCS,Selisih,Kirim,Tamu,Reject Tutup,Reject Alas\n';
-
+    let csv = 'Tanggal,Jenis Grade,Bongkar (Dus),Standar (Pcs),Aktual (Pcs),Selisih (Pcs)\n';
     filtered.forEach(entry => {
-      entry.items.forEach(item => {
-        const stdPcs = item.bongkarDus * (item.std || 200);
-        const selisih = item.aktualPcs - stdPcs;
-        csvContent += `${entry.tgl},${item.name},${item.bongkarDus},${stdPcs},${item.aktualPcs},${selisih},${item.kirim},${item.tamu},${item.rejectTutup},${item.rejectAlas}\n`;
-      });
+      if (entry.items) {
+        entry.items.forEach(it => {
+          if (it.bongkarDus > 0 || it.aktualPcs > 0) {
+            csv += `"${entry.tgl}","${it.name}",${it.bongkarDus},${it.standarPcs},${it.aktualPcs},${it.selisih}\n`;
+          }
+        });
+      }
     });
 
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Rekap_Kemasan_${selectedMonth}.csv`);
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', `Rekap_Selisih_Kemasan_${filterBulan}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    showToast('📥 Berhasil mendownload CSV!');
   }
 
-  function editDataKemasan(id) {
-    const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
-    const item = db.find(x => x.id === id);
-    if (!item) return;
-
-    window.editingKemaId = id;
-    let body = '<div style="max-height: 500px; overflow-y: auto;">';
-    body += `<div class="input-group"><label>Tanggal</label><input type="date" id="edit-k-tgl" value="${item.tgl}"></div><hr>`;
-
-    item.items.forEach((it, i) => {
-      body += `
-        <h4 style="color: #2d5016; margin: 0.75rem 0 0.5rem;">${it.name}</h4>
-        <div class="row-2">
-          <div class="input-group"><label>Masuk (Dus)</label><input type="number" id="edit-k-masuk-${i}" value="${it.masuk || 0}"></div>
-          <div class="input-group"><label>Bongkar (Dus)</label><input type="number" id="edit-k-bongkar-${i}" value="${it.bongkarDus || 0}"></div>
-        </div>
-        <div class="row-2">
-          <div class="input-group"><label>PCS Aktual</label><input type="number" id="edit-k-aktual-${i}" value="${it.aktualPcs || 0}"></div>
-          <div class="input-group"><label>Kirim (PCS)</label><input type="number" id="edit-k-kirim-${i}" value="${it.kirim || 0}"></div>
-        </div>
-        <div class="row-2">
-          <div class="input-group"><label>Reject Tutup</label><input type="number" id="edit-k-rtutup-${i}" value="${it.rejectTutup || 0}"></div>
-          <div class="input-group"><label>Reject Alas</label><input type="number" id="edit-k-ralas-${i}" value="${it.rejectAlas || 0}"></div>
-        </div>
-        <hr>
-      `;
-    });
-    body += '</div>';
-
-    document.getElementById('modal-edit-kemasan-body').innerHTML = body;
-    document.getElementById('modal-edit-kemasan').classList.add('show');
-  }
-
-  function closeModalEditKemasan() {
-    document.getElementById('modal-edit-kemasan').classList.remove('show');
-    window.editingKemaId = null;
-  }
-
-  function saveEditKemasan() {
-    if (!window.editingKemaId) return;
-
-    const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
-    const idx = db.findIndex(x => x.id === window.editingKemaId);
-    if (idx === -1) return;
-
-    db[idx].tgl = document.getElementById('edit-k-tgl').value;
-    db[idx].items = db[idx].items.map((it, i) => ({
-      ...it,
-      masuk: parseFloat(document.getElementById(`edit-k-masuk-${i}`).value || 0),
-      bongkarDus: parseFloat(document.getElementById(`edit-k-bongkar-${i}`).value || 0),
-      aktualPcs: parseFloat(document.getElementById(`edit-k-aktual-${i}`).value || 0),
-      kirim: parseFloat(document.getElementById(`edit-k-kirim-${i}`).value || 0),
-      rejectTutup: parseFloat(document.getElementById(`edit-k-rtutup-${i}`).value || 0),
-      rejectAlas: parseFloat(document.getElementById(`edit-k-ralas-${i}`).value || 0)
-    }));
-
-    localStorage.setItem(KEMASAN_STORAGE_KEY, JSON.stringify(db));
-    showToast('✅ Transaksi kemasan berhasil diupdate!');
-    closeModalEditKemasan();
-    recalculateStockKemasan();
-    renderKemasanForms();
-    renderKemasanTables();
-    updateDashboard();
-  }
-
-  function hapusDataKemasan(id) {
-    if (!confirm('Yakin hapus data transaksi kemasan ini?')) return;
+  function hapusKemasanHistory(id) {
+    if (!confirm('Yakin hapus transaksi kemasan ini?')) return;
     const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
     const filtered = db.filter(x => x.id !== id);
     localStorage.setItem(KEMASAN_STORAGE_KEY, JSON.stringify(filtered));
-
-    showToast('✅ Data kemasan berhasil dihapus!');
+    showToast('✅ Transaksi kemasan berhasil dihapus!');
     recalculateStockKemasan();
     renderKemasanForms();
     renderKemasanTables();
@@ -2095,43 +2154,111 @@
   }
 
   function hapusSemuaHistoryKemasan() {
-    if (!confirm('⚠️ PERINGATAN! Semua history data stok kemasan akan dihapus permanen. Lanjutkan?')) return;
+    if (!confirm('⚠️ HATI-HATI! Yakin mau hapus SEMUA history transaksi kemasan?')) return;
     localStorage.removeItem(KEMASAN_STORAGE_KEY);
-    showToast('✅ Semua history kemasan berhasil dibersihkan!');
+    showToast('✅ Semua history kemasan dibersihkan!');
     recalculateStockKemasan();
     renderKemasanForms();
     renderKemasanTables();
     updateDashboard();
   }
 
-  // ========== DASHBOARD REFRESH ==========
+  function editKemasanHistory(id) {
+    const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
+    const entry = db.find(x => x.id === id);
+    if (!entry) return;
+
+    window.editingKemasanId = id;
+    const body = document.getElementById('modal-edit-kemasan-body');
+    
+    let html = `<div class="input-group"><label>Tanggal</label><input type="date" id="edit-k-tgl" value="${entry.tgl}"></div>`;
+
+    entry.items.forEach((it, idx) => {
+      html += `
+        <div style="border: 1px solid #e5e7eb; padding: 0.75rem; border-radius: 8px; margin-bottom: 0.75rem; background: #fafafa;">
+          <strong>Mika ${it.name}</strong>
+          <div class="row-2" style="margin-top: 0.5rem;">
+            <div class="input-group"><label>Masuk (Dus)</label><input type="number" id="edit-masuk-${idx}" value="${it.masuk || 0}"></div>
+            <div class="input-group"><label>Bongkar (Dus)</label><input type="number" id="edit-bongkar-${idx}" value="${it.bongkarDus || 0}"></div>
+          </div>
+          <div class="row-2">
+            <div class="input-group"><label>Aktual (Pcs)</label><input type="number" id="edit-aktual-${idx}" value="${it.aktualPcs || 0}"></div>
+            <div class="input-group"><label>Kirim (Pcs)</label><input type="number" id="edit-kirim-${idx}" value="${it.kirim || 0}"></div>
+          </div>
+        </div>
+      `;
+    });
+
+    body.innerHTML = html;
+    document.getElementById('modal-edit-kemasan').classList.add('show');
+  }
+
+  function closeModalEditKemasan() {
+    document.getElementById('modal-edit-kemasan').classList.remove('show');
+    window.editingKemasanId = null;
+  }
+
+  function saveEditKemasan() {
+    if (!window.editingKemasanId) return;
+    const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
+    const idx = db.findIndex(x => x.id === window.editingKemasanId);
+    if (idx === -1) return;
+
+    const tgl = document.getElementById('edit-k-tgl').value;
+    const updatedItems = masterJenisKemasan.map((m, i) => {
+      const masuk = parseFloat(document.getElementById(`edit-masuk-${i}`).value || 0);
+      const bongkar = parseFloat(document.getElementById(`edit-bongkar-${i}`).value || 0);
+      const aktual = parseFloat(document.getElementById(`edit-aktual-${i}`).value || 0);
+      const kirim = parseFloat(document.getElementById(`edit-kirim-${i}`).value || 0);
+      const stdPcs = bongkar * m.std;
+
+      return {
+        ...db[idx].items[i],
+        masuk,
+        bongkarDus: bongkar,
+        standarPcs: stdPcs,
+        aktualPcs: aktual,
+        selisih: aktual - stdPcs,
+        kirim
+      };
+    });
+
+    db[idx] = { id: window.editingKemasanId, tgl, items: updatedItems };
+    localStorage.setItem(KEMASAN_STORAGE_KEY, JSON.stringify(db));
+
+    showToast('✅ Transaksi kemasan diupdate!');
+    closeModalEditKemasan();
+    recalculateStockKemasan();
+    renderKemasanForms();
+    renderKemasanTables();
+    updateDashboard();
+  }
+
+  // ========== DASHBOARD UPDATER ==========
   function updateDashboard() {
     const panenDb = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
-    const now = new Date();
-    const thisMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    const nowMonth = new Date().toISOString().substring(0, 7);
 
-    // Total Panen Bulan Ini
-    const panenBulanIni = panenDb
-      .filter(x => x.tgl && x.tgl.startsWith(thisMonth))
-      .reduce((sum, x) => sum + x.p_hatsu + x.p_gradea + x.p_gradeb + x.rk_crack + x.rk_poli + x.rk_hpt, 0);
+    let totalPanenBulanIni = 0;
+    let totalBuahTerkirim = 0;
 
-    // Total Mika Terkirim Bulan Ini
-    const mikaBulanIni = panenDb
-      .filter(x => x.tgl && x.tgl.startsWith(thisMonth))
-      .reduce((sum, x) => sum + (x.m_hatsu || 0) + (x.m_a11 || 0) + (x.m_a15 || 0), 0);
+    panenDb.filter(x => x.tgl.startsWith(nowMonth)).forEach(item => {
+      totalPanenBulanIni += (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
+      totalBuahTerkirim += (item.m_hatsu || 0) + (item.m_a11 || 0) + (item.m_a15 || 0);
+    });
 
-    // Re-calculating Kemasan Stock
-    recalculateStockKemasan();
+    document.getElementById('stat-panen').textContent = totalPanenBulanIni.toFixed(2);
+    document.getElementById('stat-kirim').textContent = totalBuahTerkirim;
 
-    const totalGudang = Object.values(currentStockStateKemasan).reduce((sum, x) => sum + x.gudang, 0);
-    const totalProcessing = Object.values(currentStockStateKemasan).reduce((sum, x) => sum + x.processing, 0);
+    let totGudang = 0, totProc = 0;
+    masterJenisKemasan.forEach(m => {
+      totGudang += currentStockStateKemasan[m.name].gudang;
+      totProc += currentStockStateKemasan[m.name].processing;
+    });
 
-    document.getElementById('stat-panen').textContent = panenBulanIni.toFixed(2);
-    document.getElementById('stat-kirim').textContent = mikaBulanIni;
-    document.getElementById('stat-gudang').textContent = totalGudang;
-    document.getElementById('stat-processing').textContent = totalProcessing;
+    document.getElementById('stat-gudang').textContent = totGudang;
+    document.getElementById('stat-processing').textContent = totProc;
   }
 </script>
-
 </body>
 </html>
