@@ -5,9 +5,9 @@
 - `index.html` — seluruh UI, CSS, dan JavaScript aplikasi.
 - `manifest.json` — konfigurasi PWA.
 - `sw.js` — cache/offline app shell.
-- `assets/logo-awb.png` — logo Agri Wangi Berry yang diberikan.
-- `assets/icon-192.png` — ikon PWA 192 px.
-- `assets/icon-512.png` — ikon PWA 512 px.
+- `logo-awb.png` — logo Agri Wangi Berry.
+- `icon-192.png` — ikon PWA 192 px.
+- `icon-512.png` — ikon PWA 512 px.
 - `google-apps-script/Code.gs` — backend Google Sheets.
 - `vercel.json` — konfigurasi ringan Vercel.
 
@@ -38,19 +38,13 @@ Jika kode Apps Script diubah setelah deployment, lakukan **Deploy → Manage dep
 
 ## 2. Hubungkan PWA ke Apps Script
 
-Buka `index.html`, cari:
+Tidak ada lagi URL yang perlu diedit di `index.html`. Setelah aplikasi diakses dari Vercel:
 
-```js
-const SYNC_CONFIG = {
-  APPS_SCRIPT_URL: 'PASTE_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE',
-  API_KEY: 'AWB_PROCESSING_2026',
-  VERSION: '1.0.0'
-};
-```
+1. Buka aplikasi → tekan tombol **☁️ Connect Sheets** di header.
+2. Tempel URL `/exec` dari Apps Script.
+3. Pastikan `API_KEY` di `Code.gs` sama dengan `SYNC_CONFIG.API_KEY` di `index.html` (`AWB_PROCESSING_2026`).
 
-Ganti `APPS_SCRIPT_URL` dengan URL `/exec` Apps Script.
-
-`API_KEY` harus sama dengan yang ada di `Code.gs`.
+URL disimpan di `localStorage` perangkat, jadi tiap device cukup dikonfigurasi sekali.
 
 ## 3. Upload ke GitHub
 
@@ -64,60 +58,8 @@ repo/
 ├─ manifest.json
 ├─ sw.js
 ├─ vercel.json
-├─ assets/
-│  ├─ logo-awb.png
-│  ├─ icon-192.png
-│  └─ icon-512.png
+├─ logo-awb.png
+├─ icon-192.png
+├─ icon-512.png
 └─ google-apps-script/
    └─ Code.gs
-```
-
-## 4. Deploy ke Vercel
-
-1. Login ke Vercel.
-2. **Add New → Project**.
-3. Import repository GitHub.
-4. Framework: **Other** / static.
-5. Build Command: kosongkan.
-6. Output Directory: `.`.
-7. Deploy.
-
-Setelah deploy, buka URL HTTPS Vercel tersebut. PWA dapat dipasang dari browser yang mendukung instalasi PWA.
-
-## 5. Cara kerja offline
-
-Aplikasi tetap menggunakan penyimpanan lokal browser untuk data kerja.
-
-Saat user menekan **Simpan/Edit/Hapus**:
-
-1. Data langsung disimpan lokal.
-2. Jika online, perubahan masuk antrean dan dikirim ke Google Sheet.
-3. Jika offline, perubahan tetap berada di antrean.
-4. Saat koneksi kembali online dan aplikasi aktif, antrean dikirim otomatis.
-5. Setelah antrean kosong, aplikasi menarik data dari Google Sheet agar perangkat kembali sinkron.
-
-Aplikasi juga melakukan migrasi data lokal lama pada pembukaan pertama setelah versi sinkronisasi ini dipasang.
-
-> Catatan: jika aplikasi benar-benar ditutup saat offline, browser tidak dijamin menjalankan sinkronisasi latar belakang. Saat aplikasi dibuka kembali dan koneksi tersedia, antrean akan diproses.
-
-## 6. Sheet otomatis
-
-Apps Script membuat tiga sheet bila belum ada:
-
-- `LKS`
-- `PANEN`
-- `KEMASAN`
-
-Header dibuat otomatis berdasarkan field data yang masuk. Jika pada versi berikutnya muncul field baru, kolom header baru akan ditambahkan otomatis.
-
-Selain kolom hasil flattening, setiap baris menyimpan:
-
-- `ID`
-- `Updated_At`
-- `Data_JSON`
-
-`Data_JSON` dipakai aplikasi untuk mengambil kembali data asli dari Google Sheet.
-
-## 7. Catatan keamanan
-
-Web App Apps Script dengan akses `Anyone` berarti endpoint dapat diakses dari internet. `API_KEY` pada PWA membantu memfilter request, tetapi **bukan secret** karena kode PWA dapat dilihat pengguna. Untuk aplikasi internal dengan kebutuhan keamanan lebih tinggi, gunakan autentikasi Google/OAuth atau backend yang memiliki autentikasi server-side.
