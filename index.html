@@ -25,7 +25,7 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* HEADER (gaya IPM) */
+    /* HEADER */
     .app-header {
       background: linear-gradient(135deg, #2d5016 0%, #5a8f3a 100%);
       color: white;
@@ -48,7 +48,7 @@
     .btn-sync { background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.35); }
     .btn-logout { background: #fee2e2; color: #dc2626; }
 
-    /* HOME MENU (gaya IPM) */
+    /* MENU UTAMA */
     .view { display: none; }
     .view.active { display: block; }
     .menu-section-title {
@@ -74,7 +74,7 @@
     .menu-text p { margin: 2px 0 0; font-size: 0.8rem; color: #666; }
     .menu-arrow { color: #bbb; font-size: 1.2rem; flex: none; }
 
-    /* TOOLBAR KEMBALI */
+    /* TOOLBAR */
     .view-toolbar {
       display: flex; align-items: center; gap: 0.75rem;
       max-width: 720px; margin: 0 auto 0.75rem;
@@ -88,6 +88,16 @@
       padding: 1rem;
       padding-bottom: calc(100px + env(safe-area-inset-bottom));
     }
+
+    /* SUB TABS KEMASAN */
+    .sub-tabs {
+      display: flex; gap: 0.5rem; overflow-x: auto; margin-bottom: 1rem; padding-bottom: 0.25rem;
+    }
+    .sub-tab {
+      background: white; border: 1px solid #d1d5db; padding: 0.5rem 1rem; border-radius: 20px;
+      font-size: 0.85rem; font-weight: 600; cursor: pointer; white-space: nowrap; color: #4b5563;
+    }
+    .sub-tab.active { background: #2d5016; color: white; border-color: #2d5016; }
 
     .k-panel { display: none; }
     .k-panel.active { display: block; }
@@ -151,10 +161,7 @@
       color: #1a1a18;
       margin-bottom: 0.5rem;
     }
-    .stat-meta {
-      font-size: 0.8125rem;
-      color: #999;
-    }
+    .stat-meta { font-size: 0.8125rem; color: #999; }
 
     /* INFO & NOTIF BOXES */
     .info-box {
@@ -174,15 +181,6 @@
       margin-bottom: 1rem;
       font-size: 0.875rem;
       color: #78350f;
-    }
-    .success-box {
-      background: #eaf8ee;
-      border-left: 4px solid #16a34a;
-      padding: 0.875rem;
-      border-radius: 6px;
-      margin-bottom: 1rem;
-      font-size: 0.875rem;
-      color: #14532d;
     }
 
     /* INPUTS */
@@ -209,16 +207,12 @@
       font-family: inherit;
       transition: border-color 0.15s;
     }
-    .input-group input[readonly] {
-      background: #f1f3f2;
-      color: #4b5563;
-    }
+    .input-group input[readonly] { background: #f1f3f2; color: #4b5563; }
     .input-group input:focus, .input-group select:focus, .input-group textarea:focus {
       outline: none;
       border-color: #2d5016;
       box-shadow: 0 0 0 3px rgba(45,80,22,0.1);
     }
-    .input-group textarea { resize: vertical; min-height: 80px; }
 
     .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
     .row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
@@ -248,23 +242,11 @@
     .btn-secondary { background: #e5e7eb; color: #1a1a18; }
     .btn-secondary:hover { background: #d1d5db; }
     .btn-success { background: #16a34a; color: white; }
-    .btn-success:hover { background: #15803d; }
     .btn-danger { background: #dc2626; color: white; }
-    .btn-danger:hover { background: #b91c1c; }
-    .btn-sm {
-      padding: 0.5rem 0.75rem;
-      font-size: 0.875rem;
-      flex: none;
-    }
+    .btn-sm { padding: 0.5rem 0.75rem; font-size: 0.875rem; flex: none; }
 
     /* BADGES & TEXT FORMATTING */
-    .badge {
-      display: inline-block;
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
-      font-weight: bold;
-      font-size: 0.75rem;
-    }
+    .badge { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: bold; font-size: 0.75rem; }
     .hatsu { background: #dbeafe; color: #1e40af; }
     .gradea { background: #dcfce7; color: #15803d; }
     .gradeb { background: #fed7aa; color: #b45309; }
@@ -274,80 +256,32 @@
     .sesuai { color: #16a34a; font-weight: bold; }
 
     /* TABLE */
-    .table-container {
-      overflow-x: auto;
-      margin-top: 1rem;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.9375rem;
-    }
-    th {
-      background: #2d5016;
-      color: white;
-      padding: 0.875rem;
-      text-align: left;
-      font-weight: 600;
-      white-space: nowrap;
-    }
-    td {
-      padding: 0.875rem;
-      border-bottom: 1px solid #e5e7eb;
-      white-space: nowrap;
-    }
+    .table-container { overflow-x: auto; margin-top: 1rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9375rem; }
+    th { background: #2d5016; color: white; padding: 0.875rem; text-align: left; font-weight: 600; white-space: nowrap; }
+    td { padding: 0.875rem; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
     tr:hover { background: #f9fafb; }
     .text-center { text-align: center; }
     .text-right { text-align: right; }
 
     /* MODAL */
     .modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100;
+      align-items: center; justify-content: center; padding: 1rem;
     }
     .modal.show { display: flex; }
     .modal-content {
-      background: white;
-      border-radius: 12px;
-      width: 100%;
-      max-width: 500px;
-      max-height: 90vh;
-      overflow-y: auto;
-      padding: 2rem;
+      background: white; border-radius: 12px; width: 100%; max-width: 500px;
+      max-height: 90vh; overflow-y: auto; padding: 2rem;
     }
-    .modal-header {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: #2d5016;
-      margin-bottom: 1.5rem;
-      padding-bottom: 1rem;
-      border-bottom: 2px solid #e5e7eb;
-    }
+    .modal-header { font-size: 1.25rem; font-weight: 700; color: #2d5016; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid #e5e7eb; }
     .modal-body { margin-bottom: 1.5rem; }
-    .modal-footer {
-      display: flex;
-      gap: 0.75rem;
-      justify-content: flex-end;
-    }
+    .modal-footer { display: flex; gap: 0.75rem; justify-content: flex-end; }
 
     /* TOAST */
     .toast {
-      display: none;
-      position: fixed;
-      bottom: 1rem;
-      right: 1rem;
-      padding: 1rem 1.25rem;
-      border-radius: 8px;
-      color: white;
-      font-weight: 600;
-      z-index: 200;
-      animation: slideIn 0.3s ease;
+      display: none; position: fixed; bottom: 1rem; right: 1rem; padding: 1rem 1.25rem;
+      border-radius: 8px; color: white; font-weight: 600; z-index: 200; animation: slideIn 0.3s ease;
     }
     .toast.show { display: block; }
     .toast-success { background: #16a34a; }
@@ -361,7 +295,6 @@
     @media (max-width: 768px) {
       .row-2, .row-3, .row-4, .row-6 { grid-template-columns: 1fr; }
       .stats { grid-template-columns: 1fr; }
-      .modal-content { padding: 1.5rem; }
       table { font-size: 0.8125rem; }
       th, td { padding: 0.625rem; }
     }
@@ -376,7 +309,7 @@
   <div id="sync-status" class="auth-status"></div>
   <div class="header-actions">
     <button id="pushBtn" class="btn btn-sync" style="display:none" onclick="syncQueue(true)">⬆ Sync</button>
-    <button id="pullBtn" class="btn btn-sync" style="display:none" onclick="pullFromSheet()">⬇️️ Muat</button>
+    <button id="pullBtn" class="btn btn-sync" style="display:none" onclick="pullFromSheet()">⬇ Muat</button>
     <button id="authBtn" class="btn btn-primary" onclick="handleAuthClick()">☁️ Connect Sheets</button>
   </div>
 </header>
@@ -993,6 +926,7 @@
     showToast('✓ Tersambung — sinkronisasi...');
     syncQueue(true).then(() => pullFromSheet());
   }
+
   const SYNC_QUEUE_KEY = 'awb_sync_queue_v1';
   const SYNC_MIGRATION_KEY = 'awb_sync_migration_v1';
   const SYNC_LAST_KEY = 'awb_sync_last_v1';
@@ -1021,7 +955,6 @@
     return readArrayRaw(nativeStorage.getItem(SYNC_QUEUE_KEY));
   }
 
-  // SIMPAN ANTREAN DAN LANGSUNG JALANKAN SYNC OTOMATIS
   function saveSyncQueue(queue) {
     nativeStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
     updateSyncStatus();
@@ -1221,7 +1154,7 @@
   window.addEventListener('online', () => { updateSyncStatus(); if (isAuthenticated) syncQueue(); });
   window.addEventListener('offline', () => updateSyncStatus());
 
-  // ========== MAIN NAVIGATION (Home + Module) ==========
+  // ========== MAIN NAVIGATION ==========
   function openModule(id) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById(id).classList.add('active');
@@ -1301,7 +1234,7 @@
     div.className = 'activity-card';
     div.style.cssText = 'background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.875rem; margin-bottom: 0.625rem;';
     div.innerHTML = `
-      <div style="display: flex; justify-space-between; align-items: center; margin-bottom: 0.625rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.625rem;">
         <span class="activity-num" style="font-size: 0.75rem; font-weight: 700; color: #2d5016; background: #e8f5e9; padding: 0.25rem 0.5rem; border-radius: 6px;">Kegiatan #${idx}</span>
         <button type="button" class="btn btn-sm btn-danger" onclick="removeLksActivity(this)">Hapus</button>
       </div>
@@ -1526,6 +1459,7 @@
     if (!item) return;
 
     window.editingLksId = id;
+    window.editingPanenId = null;
     const body = document.getElementById('modal-edit-panen-body');
     const namaList = [
       'Astrin Julianti Kusmawan',
@@ -1561,7 +1495,7 @@
       <div class="input-group"><label>Keterangan</label><textarea id="edit-lks-ket" style="padding: 0.875rem; border: 1.5px solid #d1d5db; border-radius: 8px; min-height: 60px;">${item.keterangan || ''}</textarea></div>
     `;
     body.innerHTML = html;
-    document.getElementById('modal-edit-panen').querySelector('.modal-header').textContent = '✏️ Edit Data LKS';
+    document.getElementById('modal-edit-panen').querySelector('.modal-header').textContent = '✏️️ Edit Data LKS';
     document.getElementById('modal-edit-panen').classList.add('show');
   }
 
@@ -1698,7 +1632,7 @@
       return `
         <tr>
           <td>
-            <button class="btn btn-sm btn-secondary" onclick="editDataPanen(${item.id})">✏️️</button>
+            <button class="btn btn-sm btn-secondary" onclick="editDataPanen(${item.id})">✏</button>
             <button class="btn btn-sm btn-danger" onclick="hapusDataPanen(${item.id})">🗑️</button>
           </td>
           <td>${item.tgl}</td>
@@ -1791,7 +1725,7 @@
     updateDashboard();
   }
 
-  // ========== STOK KEMASAN FUNCTIONS (LENGKAP) ==========
+  // ========== STOK KEMASAN FUNCTIONS ==========
   function recalculateStockKemasan() {
     const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
     
@@ -1852,12 +1786,61 @@
     document.getElementById('k-stat-reject').textContent = totRej;
   }
 
-  function getValK(id) { return parseFloat(document.getElementById(id).value) || 0; }
+  function getValK(id) { 
+    const el = document.getElementById(id);
+    return el ? (parseFloat(el.value) || 0) : 0; 
+  }
 
   function renderKemasanForms() {
     const html = masterJenisKemasan.map((item, i) => {
       const gAwal = currentStockStateKemasan[item.name].gudang;
       const pAwal = currentStockStateKemasan[item.name].processing;
+
+      // Form Tambahan Netfoam khusus Hatsuhana
+      const isHatsu = item.name.includes('Hatsu');
+      const hatsuExtraForm = isHatsu ? `
+        <div class="sub-title">🧽 6. Stok Netfoam Hatsuhana</div>
+        <div class="row-2">
+          <div class="input-group">
+            <label>Netfoam Masuk (Ball)</label>
+            <input type="number" id="netfoam-ball-${i}" placeholder="0" oninput="hitungKemasan(${i})">
+          </div>
+          <div class="input-group">
+            <label>Netfoam Dipotong (Pcs)</label>
+            <input type="number" id="netfoam-potong-${i}" placeholder="0" oninput="hitungKemasan(${i})">
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="input-group">
+            <label>Netfoam Terpakai (Pcs)</label>
+            <input type="number" id="netfoam-terpakai-${i}" placeholder="0" oninput="hitungKemasan(${i})">
+          </div>
+          <div class="input-group">
+            <label>Stok Akhir Netfoam Potong (Pcs)</label>
+            <input readonly id="netfoam-akhir-${i}" value="0">
+          </div>
+        </div>
+      ` : '';
+
+      // Form Tambahan Layer khusus A11 (Grade A)
+      const isGradeA = item.name.includes('Grade A') || item.name.includes('A11');
+      const layerExtraForm = isGradeA ? `
+        <div class="sub-title">📄 6. Stok Layer A11</div>
+        <div class="row-3">
+          <div class="input-group">
+            <label>Layer Disiapkan (Pcs)</label>
+            <input type="number" id="layer-siap-${i}" placeholder="0" oninput="hitungKemasan(${i})">
+          </div>
+          <div class="input-group">
+            <label>Layer Terpakai (Pcs)</label>
+            <input type="number" id="layer-pakai-${i}" placeholder="0" oninput="hitungKemasan(${i})">
+          </div>
+          <div class="input-group">
+            <label>Stok Akhir Layer (Pcs)</label>
+            <input readonly id="layer-akhir-${i}" value="0">
+          </div>
+        </div>
+      ` : '';
 
       return `
         <div class="card" id="card-kemasan-${i}">
@@ -1906,6 +1889,9 @@
             <div class="input-group"><label>Reject Alas (PCS)</label><input type="number" id="reject-alas-${i}" placeholder="0" oninput="hitungKemasan(${i})"></div>
           </div>
           <div class="input-group"><label>Keterangan Reject</label><input type="text" id="ket-reject-${i}" placeholder="Contoh: Sobek, pecah, kotor, atau cacat pabrik"></div>
+
+          ${hatsuExtraForm}
+          ${layerExtraForm}
         </div>
       `;
     }).join('');
@@ -1954,6 +1940,24 @@
 
     const pAkhir = pAwal + aktualPcs - kirim - tamu - rejTutup - rejAlas;
     document.getElementById(`processing-akhir-${i}`).value = Math.max(0, pAkhir);
+
+    // Hitung Stok Akhir Netfoam Potong (Hatsuhana)
+    if (item.name.includes('Hatsu')) {
+      const potong = getValK(`netfoam-potong-${i}`);
+      const terpakai = getValK(`netfoam-terpakai-${i}`);
+      const netfoamAkhir = potong - terpakai;
+      const elNetfoamAkhir = document.getElementById(`netfoam-akhir-${i}`);
+      if (elNetfoamAkhir) elNetfoamAkhir.value = netfoamAkhir;
+    }
+
+    // Hitung Stok Akhir Layer (A11 / Grade A)
+    if (item.name.includes('Grade A') || item.name.includes('A11')) {
+      const siap = getValK(`layer-siap-${i}`);
+      const pakai = getValK(`layer-pakai-${i}`);
+      const layerAkhir = siap - pakai;
+      const elLayerAkhir = document.getElementById(`layer-akhir-${i}`);
+      if (elLayerAkhir) elLayerAkhir.value = layerAkhir;
+    }
   }
 
   function simpanDataKemasan() {
@@ -1970,13 +1974,27 @@
       selisih: getValK(`aktual-pcs-${i}`) - (getValK(`bongkar-dus-${i}`) * m.std),
       kirim: getValK(`kirim-${i}`),
       tamu: getValK(`tamu-${i}`),
-      ketTamu: document.getElementById(`ket-tamu-${i}`).value,
+      ketTamu: document.getElementById(`ket-tamu-${i}`) ? document.getElementById(`ket-tamu-${i}`).value : '',
       rejectTutup: getValK(`reject-tutup-${i}`),
       rejectAlas: getValK(`reject-alas-${i}`),
-      ketReject: document.getElementById(`ket-reject-${i}`).value
+      ketReject: document.getElementById(`ket-reject-${i}`) ? document.getElementById(`ket-reject-${i}`).value : '',
+
+      // Data Tambahan Netfoam (Hatsuhana)
+      netfoamBall: getValK(`netfoam-ball-${i}`),
+      netfoamPotong: getValK(`netfoam-potong-${i}`),
+      netfoamTerpakai: getValK(`netfoam-terpakai-${i}`),
+      netfoamAkhir: getValK(`netfoam-potong-${i}`) - getValK(`netfoam-terpakai-${i}`),
+
+      // Data Tambahan Layer (A11)
+      layerSiap: getValK(`layer-siap-${i}`),
+      layerPakai: getValK(`layer-pakai-${i}`),
+      layerAkhir: getValK(`layer-siap-${i}`) - getValK(`layer-pakai-${i}`)
     }));
 
-    const hasData = items.some(x => x.masuk > 0 || x.bongkarDus > 0 || x.aktualPcs > 0 || x.kirim > 0 || x.tamu > 0 || x.rejectTutup > 0 || x.rejectAlas > 0);
+    const hasData = items.some(x => 
+      x.masuk > 0 || x.bongkarDus > 0 || x.aktualPcs > 0 || x.kirim > 0 || x.tamu > 0 || 
+      x.rejectTutup > 0 || x.rejectAlas > 0 || x.netfoamBall > 0 || x.netfoamPotong > 0 || x.layerSiap > 0
+    );
     if (!hasData) { showToast('Isi minimal 1 data transaksi kemasan!', 'error'); return; }
 
     const entry = { id: Date.now(), tgl, items };
@@ -2003,7 +2021,7 @@
     const varBody = document.getElementById('tbl-variance-body');
     const varRows = [];
 
-    db.sort((a, b) => new Date(b.tgl) - new Date(a.tgl)).forEach(entry => {
+    [...db].sort((a, b) => new Date(b.tgl) - new Date(a.tgl)).forEach(entry => {
       if (entry.items) {
         entry.items.forEach(it => {
           if (it.bongkarDus > 0 || it.aktualPcs > 0) {
@@ -2060,7 +2078,6 @@
   function renderKemasanMonthly() {
     const filterBulan = document.getElementById('filter-bulan-kemasan').value;
     const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
-    
     const filtered = db.filter(e => e.tgl.startsWith(filterBulan));
     const mBody = document.getElementById('tbl-monthly-body');
     const mRows = [];
@@ -2102,7 +2119,6 @@
 
     mBody.innerHTML = mRows.length ? mRows.join('') : '<tr><td colspan="7" class="text-center" style="color: #999;">Belum ada data selisih bulan ini</td></tr>';
 
-    // Cards Rekap Per Jenis
     const cardsEl = document.getElementById('cards-rekap-jenis');
     cardsEl.innerHTML = masterJenisKemasan.map(m => {
       const st = statsPerJenis[m.name];
@@ -2246,7 +2262,7 @@
     let totalPanenBulanIni = 0;
     let totalBuahTerkirim = 0;
 
-    panenDb.filter(x => x.tgl.startsWith(nowMonth)).forEach(item => {
+    panenDb.filter(x => x.tgl && x.tgl.startsWith(nowMonth)).forEach(item => {
       totalPanenBulanIni += (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
       totalBuahTerkirim += (item.m_hatsu || 0) + (item.m_a11 || 0) + (item.m_a15 || 0);
     });
