@@ -282,6 +282,7 @@
     .toast {
       display: none; position: fixed; bottom: 1rem; right: 1rem; padding: 1rem 1.25rem;
       border-radius: 8px; color: white; font-weight: 600; z-index: 200; animation: slideIn 0.3s ease;
+      max-width: calc(100vw - 2rem);
     }
     .toast.show { display: block; }
     .toast-success { background: #16a34a; }
@@ -360,6 +361,7 @@
     <div class="view-toolbar">
       <button class="btn btn-sm btn-home" onclick="goHome()">← Menu</button>
       <span class="view-title">📝 Form Kerja Harian (LKS)</span>
+      <button class="btn btn-sm" onclick="openImportModal('lks')" style="margin-left:auto;flex:none;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;">📥 Import</button>
     </div>
     <div class="card">
       <div class="card-title">📅 Tanggal Kerja</div>
@@ -547,6 +549,7 @@
     <div class="view-toolbar">
       <button class="btn btn-sm btn-home" onclick="goHome()">← Menu</button>
       <span class="view-title">🌾 Rekap Panen & Sortir</span>
+      <button class="btn btn-sm" onclick="openImportModal('panen')" style="margin-left:auto;flex:none;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;">📥 Import</button>
     </div>
     <div class="card">
       <div class="card-title">📅 Tanggal Panen</div>
@@ -677,6 +680,7 @@
     <div class="view-toolbar">
       <button class="btn btn-sm btn-home" onclick="goHome()">← Menu</button>
       <span class="view-title">📦 Stok Kemasan (Mika)</span>
+      <button class="btn btn-sm" onclick="openImportModal('kemasan')" style="margin-left:auto;flex:none;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;">📥 Import</button>
     </div>
     <!-- SUB TABS KEMASAN -->
     <div class="sub-tabs">
@@ -871,6 +875,32 @@
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModalEditKemasan()">Batal</button>
       <button class="btn btn-primary" onclick="saveEditKemasan()">Simpan Perubahan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL IMPORT CSV -->
+<div id="modal-import" class="modal">
+  <div class="modal-content" style="max-width: 760px;">
+    <div class="modal-header" id="import-title">📥 Import CSV</div>
+    <div class="modal-body">
+      <div class="info-box" id="import-info"></div>
+      <div class="input-group">
+        <label>Pilih File CSV</label>
+        <input type="file" id="import-file" accept=".csv,text/csv" onchange="previewImport()">
+      </div>
+      <div class="input-group">
+        <label style="display:flex;align-items:center;gap:0.5rem;font-weight:normal;cursor:pointer;">
+          <input type="checkbox" id="import-clear" style="width:auto;">
+          <span>Hapus <b>semua data lama</b> tipe ini sebelum import (hati-hati!)</span>
+        </label>
+      </div>
+      <div id="import-preview"></div>
+    </div>
+    <div class="modal-footer" style="flex-wrap: wrap;">
+      <button class="btn btn-secondary" onclick="downloadTemplate()">📄 Download Template</button>
+      <button class="btn btn-secondary" onclick="closeImportModal()">Batal</button>
+      <button class="btn btn-primary" onclick="executeImport()">Import Sekarang</button>
     </div>
   </div>
 </div>
@@ -2278,6 +2308,274 @@
 
     document.getElementById('stat-gudang').textContent = totGudang;
     document.getElementById('stat-processing').textContent = totProc;
+  }
+
+  /* ============================================================
+     IMPORT CSV — bulk upload data ke localStorage → auto-queue sync
+     ============================================================ */
+  let importState = { type: null, rows: [] };
+  let __importCounter = 0;
+  const genImportId = () => Date.now() * 1000 + (__importCounter++);
+
+  function num(v) { const n = parseFloat(v); return isNaN(n) ? 0 : n; }
+
+  /* ---- CSV Parser (support quote escaping + auto delimiter , atau ;) ---- */
+  function parseCSV(text) {
+    const firstLine = text.split(/\r?\n/)[0] || '';
+    const commas = (firstLine.match(/,/g) || []).length;
+    const semis  = (firstLine.match(/;/g) || []).length;
+    const delim  = semis > commas ? ';' : ',';
+
+    const rows = [];
+    let row = [], cur = '', inQ = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (inQ) {
+        if (c === '"') {
+          if (text[i + 1] === '"') { cur += '"'; i++; }
+          else inQ = false;
+        } else cur += c;
+      } else {
+        if (c === '"') inQ = true;
+        else if (c === delim) { row.push(cur); cur = ''; }
+        else if (c === '\n' || c === '\r') {
+          if (c === '\r' && text[i + 1] === '\n') i++;
+          row.push(cur); cur = '';
+          if (row.some(x => x !== '')) rows.push(row);
+          row = [];
+        } else cur += c;
+      }
+    }
+    if (cur !== '' || row.length) { row.push(cur); if (row.some(x => x !== '')) rows.push(row); }
+    return rows;
+  }
+
+  /* ---- Buka Modal ---- */
+  function openImportModal(type) {
+    importState = { type, rows: [] };
+    document.getElementById('import-file').value = '';
+    document.getElementById('import-clear').checked = false;
+    document.getElementById('import-preview').innerHTML = '';
+    const titles = { lks: '📝 LKS', panen: '🌾 Panen', kemasan: '📦 Kemasan' };
+    document.getElementById('import-title').textContent = '📥 Import CSV — ' + titles[type];
+    const infos = {
+      lks: `<b>Format kolom:</b> <code>tanggal, nama, grade, kegiatan, material, jobTambahan, perbantuan, jenisPerbantuan, keterangan</code><br>
+            Multi-kegiatan/material dipisah dengan <b>|</b> (pipe). Contoh: <code>Packing Grade A|Persiapan Mika</code>`,
+      panen: `<b>Format kolom:</b> <code>tgl, p_hatsu, p_gradea, p_gradeb, rk_*, rp_*, k_*, m_*, t_*</code><br>
+            1 baris = 1 tanggal. Kolom kosong akan dianggap 0. Klik <b>Download Template</b> untuk lihat format lengkap.`,
+      kemasan: `<b>Format kolom:</b> <code>tgl, name, masuk, bongkarDus, aktualPcs, kirim, tamu, rejectTutup, rejectAlas</code><br>
+              Satu tanggal bisa punya 3 baris (Hatsu, Grade A, Grade B). Baris yang tidak diisi = 0.`
+    };
+    document.getElementById('import-info').innerHTML = infos[type];
+    document.getElementById('modal-import').classList.add('show');
+  }
+
+  function closeImportModal() {
+    document.getElementById('modal-import').classList.remove('show');
+    importState = { type: null, rows: [] };
+  }
+
+  /* ---- Download Template ---- */
+  function downloadTemplate() {
+    const t = importState.type;
+    let csv = '', filename = '';
+    if (t === 'panen') {
+      csv = 'tgl,p_hatsu,p_gradea,p_gradeb,rk_crack,rk_poli,rk_hpt,rp_crack,rp_poli,rp_hpt,rp_bruise,rp_overripe,rp_frozen,k_hatsu,k_a11,k_a15,k_frozen,m_hatsu,m_a11,m_a15,t_curah,t_hatsu,t_a11,t_a15,t_ket\n';
+      csv += '2026-04-01,10.5,5.2,3,0,0,0,0,0,0,0,0,0,8,4,2,0,40,20,10,0,0,0,0,\n';
+      csv += '2026-04-02,12,6,4,0.5,0,0,0.2,0,0,0,0,0,10,5,3,0,50,25,15,0,0,0,0,\n';
+      filename = 'template_panen.csv';
+    } else if (t === 'lks') {
+      csv = 'tanggal,nama,grade,kegiatan,material,jobTambahan,perbantuan,jenisPerbantuan,keterangan\n';
+      csv += '2026-04-01,Astrin Julianti Kusmawan,Hatsuhana,Packing Grade Hatsuhana|Persiapan Mika,Mika Grade Hatsuhana|Lakban,,,,\n';
+      filename = 'template_lks.csv';
+    } else if (t === 'kemasan') {
+      csv = 'tgl,name,masuk,bongkarDus,aktualPcs,kirim,tamu,rejectTutup,rejectAlas\n';
+      csv += '2026-04-01,Hatsu,0,5,1000,500,0,0,0\n';
+      csv += '2026-04-01,Grade A,0,3,600,300,0,0,0\n';
+      csv += '2026-04-01,Grade B,0,2,600,400,0,0,0\n';
+      filename = 'template_kemasan.csv';
+    }
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('📄 Template didownload');
+  }
+
+  /* ---- Preview ---- */
+  function previewImport() {
+    const file = document.getElementById('import-file').files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const text = String(ev.target.result).replace(/^\ufeff/, '');
+      const rows = parseCSV(text);
+      if (rows.length < 2) {
+        document.getElementById('import-preview').innerHTML =
+          '<div class="warn-box">File kosong atau tidak ada baris data.</div>';
+        importState.rows = [];
+        return;
+      }
+      const headers = rows[0].map(h => h.trim());
+      const dataRows = rows.slice(1).filter(r => r.some(c => String(c).trim() !== ''));
+      importState.rows = dataRows.map(r => {
+        const o = {};
+        headers.forEach((h, i) => o[h] = String(r[i] ?? '').trim());
+        return o;
+      });
+
+      let html = `<div class="info-box"><b>${importState.rows.length} baris</b> siap di-import. Preview 5 baris pertama:</div>`;
+      html += '<div style="overflow-x:auto;font-size:0.75rem;"><table style="width:100%;"><thead><tr>';
+      headers.forEach(h => html += `<th style="padding:4px;font-size:0.7rem;background:#2d5016;">${h}</th>`);
+      html += '</tr></thead><tbody>';
+      importState.rows.slice(0, 5).forEach(r => {
+        html += '<tr>';
+        headers.forEach(h => html += `<td style="padding:4px;font-size:0.7rem;white-space:nowrap;">${r[h] || ''}</td>`);
+        html += '</tr>';
+      });
+      html += '</tbody></table></div>';
+      document.getElementById('import-preview').innerHTML = html;
+    };
+    reader.readAsText(file);
+  }
+
+  /* ---- Builders ---- */
+  function buildPanenRecord(r) {
+    return {
+      id: genImportId(),
+      tgl: r.tgl,
+      p_hatsu: num(r.p_hatsu), p_gradea: num(r.p_gradea), p_gradeb: num(r.p_gradeb),
+      rk_crack: num(r.rk_crack), rk_poli: num(r.rk_poli), rk_hpt: num(r.rk_hpt),
+      rp_crack: num(r.rp_crack), rp_poli: num(r.rp_poli), rp_hpt: num(r.rp_hpt),
+      rp_bruise: num(r.rp_bruise), rp_overripe: num(r.rp_overripe), rp_frozen: num(r.rp_frozen),
+      k_hatsu: num(r.k_hatsu), k_a11: num(r.k_a11), k_a15: num(r.k_a15), k_frozen: num(r.k_frozen),
+      m_hatsu: num(r.m_hatsu), m_a11: num(r.m_a11), m_a15: num(r.m_a15),
+      t_curah: num(r.t_curah), t_hatsu: num(r.t_hatsu), t_a11: num(r.t_a11), t_a15: num(r.t_a15),
+      t_ket: r.t_ket || ''
+    };
+  }
+
+  function buildLksRecord(r) {
+    const kegs = String(r.kegiatan || '').split('|').map(s => s.trim()).filter(Boolean);
+    const mats = String(r.material || '').split('|').map(s => s.trim()).filter(Boolean);
+    return {
+      id: genImportId(),
+      tanggal: r.tanggal,
+      nama: r.nama,
+      grade: r.grade || '',
+      kegiatan: kegs.map(k => ({ kegiatan: k, hasil: '', ket: '' })),
+      jobTambahan: r.jobTambahan || '',
+      perbantuan: r.perbantuan || '',
+      jenisPerbantuan: r.jenisPerbantuan || '',
+      material: mats.map(m => ({ material: m, jumlah: 1, satuan: 'pcs' })),
+      keterangan: r.keterangan || ''
+    };
+  }
+
+  function emptyKemasanItem(name, std) {
+    return {
+      name, std,
+      masuk: 0, bongkarDus: 0, standarPcs: 0, aktualPcs: 0, selisih: 0,
+      kirim: 0, tamu: 0, ketTamu: '',
+      rejectTutup: 0, rejectAlas: 0, ketReject: '',
+      netfoamBall: 0, netfoamPotong: 0, netfoamTerpakai: 0, netfoamAkhir: 0,
+      layerSiap: 0, layerPakai: 0, layerAkhir: 0
+    };
+  }
+
+  /* ---- Execute ---- */
+  function executeImport() {
+    if (!importState.rows.length) { showToast('Pilih file CSV dulu!', 'error'); return; }
+    const type = importState.type;
+    const key = type === 'lks' ? LKS_STORAGE_KEY
+              : type === 'panen' ? PANEN_STORAGE_KEY
+              : KEMASAN_STORAGE_KEY;
+    const shouldClear = document.getElementById('import-clear').checked;
+
+    let db = readArrayRaw(nativeStorage.getItem(key));
+    if (shouldClear) db = [];
+
+    let count = 0;
+    try {
+      if (type === 'panen') {
+        importState.rows.forEach(r => {
+          if (!r.tgl) return;
+          db.push(buildPanenRecord(r));
+          count++;
+        });
+      } else if (type === 'lks') {
+        importState.rows.forEach(r => {
+          if (!r.tanggal || !r.nama) return;
+          db.push(buildLksRecord(r));
+          count++;
+        });
+      } else if (type === 'kemasan') {
+        const grouped = new Map();
+        importState.rows.forEach(r => {
+          if (!r.tgl || !r.name) return;
+          const std = r.name === 'Grade B' ? 300 : 200;
+          if (!grouped.has(r.tgl)) {
+            grouped.set(r.tgl, { id: genImportId(), tgl: r.tgl, items: [] });
+          }
+          const entry = grouped.get(r.tgl);
+          if (entry.items.find(x => x.name === r.name)) return;
+          const bongkar = num(r.bongkarDus);
+          const aktual = num(r.aktualPcs);
+          entry.items.push({
+            ...emptyKemasanItem(r.name, std),
+            masuk: num(r.masuk),
+            bongkarDus: bongkar,
+            standarPcs: bongkar * std,
+            aktualPcs: aktual,
+            selisih: aktual - bongkar * std,
+            kirim: num(r.kirim),
+            tamu: num(r.tamu),
+            rejectTutup: num(r.rejectTutup),
+            rejectAlas: num(r.rejectAlas)
+          });
+        });
+        grouped.forEach(entry => {
+          masterJenisKemasan.forEach(m => {
+            if (!entry.items.find(x => x.name === m.name)) {
+              entry.items.push(emptyKemasanItem(m.name, m.std));
+            }
+          });
+          db.push(entry);
+          count++;
+        });
+      }
+
+      if (count === 0) { showToast('Tidak ada baris valid untuk di-import.', 'error'); return; }
+
+      if (shouldClear) {
+        suppressSync = true;
+        nativeStorage.setItem(key, JSON.stringify([]));
+        suppressSync = false;
+        queueMutation(type, 'clear', '__clear__');
+      }
+
+      localStorage.setItem(key, JSON.stringify(db));
+
+      if (type === 'lks') { renderTableLks(); }
+      else if (type === 'panen') { renderTablePanen(); }
+      else { recalculateStockKemasan(); renderKemasanForms(); renderKemasanTables(); }
+      updateDashboard();
+      updateSyncStatus();
+
+      showToast(`✅ ${count} baris berhasil di-import!`);
+      if (isAuthenticated && currentScriptUrl()) {
+        setTimeout(() => syncQueue(true), 400);
+      } else {
+        showToast('Tekan "Connect Sheets" lalu Sync untuk kirim ke Google Sheet');
+      }
+      closeImportModal();
+    } catch (err) {
+      console.error(err);
+      showToast('Gagal import: ' + err.message, 'error');
+    }
   }
 </script>
 </body>
