@@ -375,7 +375,7 @@
   <p>PT. Agri Wangi Berry · Ciwidey</p>
   <div id="sync-status" class="auth-status"></div>
   <div class="header-actions">
-    <button id="pushBtn" class="btn btn-sync" style="display:none" onclick="syncQueue(true)">⬆️ Sync</button>
+    <button id="pushBtn" class="btn btn-sync" style="display:none" onclick="syncQueue(true)">⬆️️ Sync</button>
     <button id="pullBtn" class="btn btn-sync" style="display:none" onclick="pullFromSheet()">⬇️ Muat</button>
     <button id="authBtn" class="btn btn-primary" onclick="handleAuthClick()">☁️ Connect Sheets</button>
   </div>
@@ -1021,9 +1021,13 @@
     return readArrayRaw(nativeStorage.getItem(SYNC_QUEUE_KEY));
   }
 
+  // UPDATE AUTO SYNC: Langsung panggil syncQueue() ketika ada data baru dimasukkan
   function saveSyncQueue(queue) {
     nativeStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
     updateSyncStatus();
+    if (isAuthenticated && !syncBusy && queue.length > 0) {
+      syncQueue();
+    }
   }
 
   function queueMutation(type, action, recordOrId) {
@@ -2239,7 +2243,7 @@
     const panenDb = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
     const nowMonth = new Date().toISOString().substring(0, 7);
 
-    let totalPanenBulanIni = 0;
+    let totalPanenBulan Ini = 0;
     let totalBuahTerkirim = 0;
 
     panenDb.filter(x => x.tgl.startsWith(nowMonth)).forEach(item => {
