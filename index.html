@@ -375,8 +375,8 @@
   <p>PT. Agri Wangi Berry · Ciwidey</p>
   <div id="sync-status" class="auth-status"></div>
   <div class="header-actions">
-    <button id="pushBtn" class="btn btn-sync" style="display:none" onclick="syncQueue(true)">⬆️️ Sync</button>
-    <button id="pullBtn" class="btn btn-sync" style="display:none" onclick="pullFromSheet()">⬇️ Muat</button>
+    <button id="pushBtn" class="btn btn-sync" style="display:none" onclick="syncQueue(true)">⬆ Sync</button>
+    <button id="pullBtn" class="btn btn-sync" style="display:none" onclick="pullFromSheet()">⬇️️ Muat</button>
     <button id="authBtn" class="btn btn-primary" onclick="handleAuthClick()">☁️ Connect Sheets</button>
   </div>
 </header>
@@ -964,7 +964,7 @@
     'Grade B': { gudang: 0, processing: 0 }
   };
 
-  // ========== OFFLINE + GOOGLE SHEETS SYNC (gaya IPM) ==========
+  // ========== OFFLINE + GOOGLE SHEETS SYNC ==========
   const SYNC_CONFIG = {
     API_KEY: 'AWB_PROCESSING_2026',
     VERSION: '1.0.0'
@@ -1021,7 +1021,7 @@
     return readArrayRaw(nativeStorage.getItem(SYNC_QUEUE_KEY));
   }
 
-  // UPDATE AUTO SYNC: Langsung panggil syncQueue() ketika ada data baru dimasukkan
+  // SIMPAN ANTREAN DAN LANGSUNG JALANKAN SYNC OTOMATIS
   function saveSyncQueue(queue) {
     nativeStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
     updateSyncStatus();
@@ -1265,7 +1265,7 @@
     }
   });
 
-  // ========== LKS FUNCTIONS (UPDATED) ==========
+  // ========== LKS FUNCTIONS ==========
   function toggleManualKegiatan(selectEl) {
     const card = selectEl.closest('.activity-card');
     const manualInput = card.querySelector('[data-kegiatan-manual]');
@@ -1698,7 +1698,7 @@
       return `
         <tr>
           <td>
-            <button class="btn btn-sm btn-secondary" onclick="editDataPanen(${item.id})">✏️</button>
+            <button class="btn btn-sm btn-secondary" onclick="editDataPanen(${item.id})">✏️️</button>
             <button class="btn btn-sm btn-danger" onclick="hapusDataPanen(${item.id})">🗑️</button>
           </td>
           <td>${item.tgl}</td>
@@ -2243,7 +2243,7 @@
     const panenDb = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
     const nowMonth = new Date().toISOString().substring(0, 7);
 
-    let totalPanenBulan Ini = 0;
+    let totalPanenBulanIni = 0;
     let totalBuahTerkirim = 0;
 
     panenDb.filter(x => x.tgl.startsWith(nowMonth)).forEach(item => {
