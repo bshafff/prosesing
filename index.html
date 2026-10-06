@@ -163,6 +163,10 @@
       margin-bottom: 0.5rem;
     }
     .stat-meta { font-size: 0.8125rem; color: #999; }
+    .stats.stats-3 { grid-template-columns: repeat(3, 1fr); }
+    .stat-delta { font-size: 0.78rem; font-weight: 700; margin-top: 0.35rem; color: #999; }
+    .stat-delta.up { color: #16a34a; }
+    .stat-delta.down { color: #dc2626; }
 
     /* INFO & NOTIF BOXES */
     .info-box {
@@ -337,6 +341,7 @@
     @media (max-width: 768px) {
       .row-2, .row-3, .row-4, .row-6 { grid-template-columns: 1fr; }
       .stats { grid-template-columns: 1fr; }
+      .stats.stats-3 { grid-template-columns: repeat(2, 1fr); }
       table { font-size: 0.8125rem; }
       th, td { padding: 0.625rem; }
     }
@@ -366,7 +371,7 @@
         <div class="menu-icon" style="background:#fee2e2;">📊</div>
         <div class="menu-text">
           <h3>Dashboard Panen</h3>
-          <p>Statistik panen, reject, pengiriman & stok kemasan per bulan</p>
+          <p>Statistik panen, reject & pengiriman per bulan</p>
         </div>
         <span class="menu-arrow">›</span>
       </div>
@@ -580,11 +585,12 @@
     </div>
 
     <!-- STAT CARDS -->
-    <div class="stats" id="dashboard-stats">
+    <div class="stats stats-3" id="dashboard-stats">
       <div class="stat-card red">
         <div class="stat-label">Total Panen</div>
         <div class="stat-value" id="stat-panen">0.00</div>
         <div class="stat-meta">Kg</div>
+        <div class="stat-delta" id="stat-panen-delta"></div>
       </div>
       <div class="stat-card blue">
         <div class="stat-label">Total Dikirim</div>
@@ -597,19 +603,23 @@
         <div class="stat-meta">Pcs Mika</div>
       </div>
       <div class="stat-card green">
-        <div class="stat-label">Stok Kemasan Gudang</div>
-        <div class="stat-value" id="stat-gudang">0</div>
-        <div class="stat-meta">Dus Utuh</div>
+        <div class="stat-label">Rate Kirim</div>
+        <div class="stat-value" id="stat-rate-kirim">0.00%</div>
+        <div class="stat-meta">Total dikirim ÷ total panen</div>
       </div>
       <div class="stat-card orange">
-        <div class="stat-label">Stok Ready Processing</div>
-        <div class="stat-value" id="stat-processing">0</div>
-        <div class="stat-meta">Mika Siap Packing</div>
+        <div class="stat-label">Total Reject</div>
+        <div class="stat-value" id="stat-rej-total">0.00</div>
+        <div class="stat-meta" id="stat-rej-meta">Kg</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Reject Rate <span id="stat-rej-badge"></span></div>
+        <div class="stat-value" id="stat-rej-rate">0.00%</div>
+        <div class="stat-meta">Total reject ÷ total panen</div>
+        <div class="stat-delta" id="stat-rej-rate-delta"></div>
       </div>
     </div>
 
-    <!-- NOTE REJECT -->
-    <div id="reject-note"></div>
 
     <!-- GRAFIK BAR: PANEN VS KIRIM HARIAN -->
     <div class="chart-card">
@@ -2768,7 +2778,6 @@
     if (infoEl) infoEl.innerHTML = `Menampilkan data: <b>${formatBulanIndo(selectedMonth)}</b>`;
 
     const panenDb = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
-    const kemasanDb = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
 
     // Filter & urutkan data panen
     const filtered = panenDb
@@ -2825,27 +2834,66 @@
     document.getElementById('stat-panen').textContent = T.panen_total.toFixed(2);
     document.getElementById('stat-dikirim').textContent = T.kirim_total.toFixed(2);
     document.getElementById('stat-kirim').textContent = T.mika_total;
+    document.getElementById('stat-rate-kirim').textContent = rateKirim.toFixed(2) + '%';
 
-    // ============ NOTE REJECT ============
-    const noteEl = document.getElementById('reject-note');
-    let noteClass = 'good', noteMsg = '✓ Aman';
-    if (rejectRate > 10) { noteClass = 'bad'; noteMsg = '⚠️ Tinggi! Perlu evaluasi'; }
-    else if (rejectRate > 5) { noteClass = 'warn'; noteMsg = '⚠️ Perlu perhatian'; }
-    noteEl.innerHTML = `
-      <div class="info-box" style="margin-bottom:1rem;">
-        <div style="margin-bottom:0.35rem;">
-          <strong>📝 Catatan Reject — ${formatBulanIndo(selectedMonth)}:</strong><br>
-          Total Reject: <b style="color:#dc2626;">${T.rej_total.toFixed(2)} Kg</b> dari Panen <b>${T.panen_total.toFixed(2)} Kg</b>
-          → Reject Rate <b style="color:#dc2626;font-size:1.05rem;">${rejectRate.toFixed(2)}%</b>
-          <span class="notif-badge ${noteClass}">${noteMsg}</span>
-        </div>
-        <div>
-          <strong>📦 Rate Kirim:</strong> <b style="color:#16a34a;font-size:1.05rem;">${rateKirim.toFixed(2)}%</b>
-          &nbsp;|&nbsp; <strong>Total Kirim:</strong> <b>${T.kirim_total.toFixed(2)} Kg</b>
-          &nbsp;|&nbsp; <strong>Total Mika:</strong> <b>${T.mika_total} Pcs</b>
-        </div>
-      </div>
-    `;
+    // Total reject: kebun vs packing
+    const rejPacking = T.rej_total - T.rk_total;
+    document.getElementById('stat-rej-total').textContent = T.rej_total.toFixed(2);
+    document.getElementById('stat-rej-meta').textContent =
+      `Kg · Kebun ${T.rk_total.toFixed(2)} | Packing ${rejPacking.toFixed(2)}`;
+
+    // Reject rate + badge status
+    let badgeClass = 'good', badgeMsg = '✓ Aman';
+    if (rejectRate > 20) { badgeClass = 'bad'; badgeMsg = '⚠️ Tinggi'; }
+    else if (rejectRate > 10) { badgeClass = 'warn'; badgeMsg = '⚠️ Perhatian'; }
+    document.getElementById('stat-rej-rate').textContent = rejectRate.toFixed(2) + '%';
+    document.getElementById('stat-rej-badge').innerHTML =
+      T.panen_total > 0 ? `<span class="notif-badge ${badgeClass}">${badgeMsg}</span>` : '';
+
+    // ============ PERBANDINGAN VS BULAN LALU ============
+    // Bulan berjalan dibandingkan like-for-like (sampai tanggal yang sama), bulan lampau full.
+    const [selY2, selM2] = selectedMonth.split('-').map(Number);
+    const prevDate = new Date(selY2, selM2 - 2, 1);
+    const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+    const nowD = new Date();
+    const nowYM = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, '0')}`;
+    const cutoffDay = (selectedMonth === nowYM) ? nowD.getDate() : 31;
+    const cutoffLabel = (selectedMonth === nowYM) ? ` (s/d tgl ${cutoffDay})` : '';
+
+    let pPanen = 0, pRej = 0, pCount = 0;
+    panenDb.forEach(item => {
+      if (!item.tgl || !item.tgl.startsWith(prevMonth)) return;
+      if (parseInt(item.tgl.substring(8, 10), 10) > cutoffDay) return;
+      const rk = (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
+      const rp = (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0) +
+                 (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_frozen || 0);
+      pPanen += (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + rk;
+      pRej += rk + rp;
+      pCount++;
+    });
+
+    // Panen: naik = bagus (hijau)
+    const dPanenEl = document.getElementById('stat-panen-delta');
+    if (pCount === 0 || pPanen <= 0) {
+      dPanenEl.className = 'stat-delta';
+      dPanenEl.textContent = '– belum ada data bulan lalu';
+    } else {
+      const pct = (T.panen_total - pPanen) / pPanen * 100;
+      dPanenEl.className = 'stat-delta ' + (pct > 0 ? 'up' : pct < 0 ? 'down' : '');
+      dPanenEl.textContent = `${pct > 0 ? '▲' : pct < 0 ? '▼' : '='} ${Math.abs(pct).toFixed(1)}% vs bulan lalu${cutoffLabel}`;
+    }
+
+    // Reject rate: naik = jelek (merah), selisih dalam poin persen
+    const dRejEl = document.getElementById('stat-rej-rate-delta');
+    if (pCount === 0 || pPanen <= 0) {
+      dRejEl.className = 'stat-delta';
+      dRejEl.textContent = '– belum ada data bulan lalu';
+    } else {
+      const pRate = pRej / pPanen * 100;
+      const diff = rejectRate - pRate;
+      dRejEl.className = 'stat-delta ' + (diff > 0 ? 'down' : diff < 0 ? 'up' : '');
+      dRejEl.textContent = `${diff > 0 ? '▲' : diff < 0 ? '▼' : '='} ${Math.abs(diff).toFixed(2)} poin vs bulan lalu (${pRate.toFixed(2)}%)${cutoffLabel}`;
+    }
 
     // ============ RECAP TABLE ============
     const tbody = document.getElementById('recap-body');
@@ -2949,39 +2997,6 @@
         <td>${(T.mika_total / n).toFixed(0)}</td>
       </tr>
     `;
-
-    // ============ KEMASAN: stok kumulatif s/d akhir bulan ============
-    const accum = {};
-    masterJenisKemasan.forEach(m => { accum[m.name] = { gudang: 0, processing: 0 }; });
-
-    const [selY, selM] = selectedMonth.split('-').map(Number);
-    const endOfMonth = new Date(selY, selM, 0, 23, 59, 59);
-
-    const kemasanFiltered = kemasanDb
-      .filter(e => e.tgl && new Date(e.tgl) <= endOfMonth)
-      .sort((a, b) => new Date(a.tgl) - new Date(b.tgl));
-
-    kemasanFiltered.forEach(entry => {
-      if (entry.items && Array.isArray(entry.items)) {
-        entry.items.forEach(item => {
-          if (accum[item.name]) {
-            accum[item.name].gudang += (item.masuk || 0) - (item.bongkarDus || 0);
-            const totalOut = (item.kirim || 0) + (item.tamu || 0);
-            const totalRej = (item.rejectTutup || 0) + (item.rejectAlas || 0);
-            accum[item.name].processing += (item.aktualPcs || 0) - totalOut - totalRej;
-          }
-        });
-      }
-    });
-
-    let totGudang = 0, totProc = 0;
-    masterJenisKemasan.forEach(m => {
-      totGudang += Math.max(0, accum[m.name].gudang);
-      totProc += Math.max(0, accum[m.name].processing);
-    });
-
-    document.getElementById('stat-gudang').textContent = totGudang;
-    document.getElementById('stat-processing').textContent = totProc;
 
     // ============ RENDER GRAFIK ============
     renderChartPanenVsKirim(filtered);
