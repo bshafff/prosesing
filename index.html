@@ -146,6 +146,7 @@
     .stat-card.blue { border-left-color: #2563eb; }
     .stat-card.green { border-left-color: #16a34a; }
     .stat-card.orange { border-left-color: #ea580c; }
+    .stat-card.purple { border-left-color: #9333ea; }
 
     .stat-label {
       font-size: 0.75rem;
@@ -293,6 +294,46 @@
       to { transform: translateX(0); opacity: 1; }
     }
 
+    /* RECAP TABLE */
+    .recap-wrap { overflow-x: auto; margin-top: 0.5rem; border-radius: 8px; border: 1px solid #e5e7eb; }
+    .recap-table { border-collapse: collapse; font-size: 0.72rem; width: 100%; min-width: 1400px; }
+    .recap-table th, .recap-table td { padding: 0.45rem 0.55rem; border: 1px solid #e5e7eb; text-align: right; white-space: nowrap; }
+    .recap-table thead th { color: white; font-weight: 700; text-align: center; font-size: 0.7rem; padding: 0.4rem; }
+    .recap-table thead th.th-panen { background: #dc2626; }
+    .recap-table thead th.th-reject { background: #ea580c; }
+    .recap-table thead th.th-kirim { background: #2563eb; }
+    .recap-table thead th.th-mika { background: #9333ea; }
+    .recap-table thead th.th-base { background: #2d5016; }
+    .recap-table thead th.th-stok { background: #2563eb; }
+    .recap-table thead th.th-aks { background: #0d9488; }
+    .recap-table thead th.th-gdg { background: #475569; }
+    .recap-table thead th.th-mut { background: #ea580c; }
+    .recap-table td.row-awal { background: #f1f5f9; font-style: italic; color: #475569; }
+    .recap-table td.neg, .neg { color: #dc2626; font-weight: 800; }
+    .recap-table td.col-total { font-weight: 800; background: #eff6ff; }
+    .recap-table td.tgl-col { text-align: center; font-weight: 600; background: #f9fafb; }
+    .recap-table tbody tr:nth-child(even) { background: #fafcfa; }
+    .recap-table tbody tr:hover { background: #f0fdf4; }
+    .recap-table tfoot td { background: #1a1a18; color: white; font-weight: 800; text-align: right; font-size: 0.72rem; }
+    .recap-table tfoot td.tgl-col { text-align: center; }
+    .recap-table .reject-rate { color: #dc2626; font-weight: 700; }
+    .recap-table .rate-kirim { color: #16a34a; font-weight: 700; }
+
+    /* CHARTS */
+    .chart-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+    .chart-title { font-weight: 800; color: #2d5016; margin-bottom: 0.75rem; font-size: 0.875rem; letter-spacing: 0.3px; }
+    .chart-svg { width: 100%; height: auto; display: block; }
+    .chart-legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.75rem; font-size: 0.78rem; }
+    .chart-legend span { display: inline-flex; align-items: center; gap: 0.35rem; color: #444; }
+    .chart-legend .dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; flex: none; }
+    .chart-scroll { overflow-x: auto; }
+
+    /* NOTIF BADGE */
+    .notif-badge { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 20px; font-size: 0.72rem; font-weight: 700; margin-left: 0.35rem; }
+    .notif-badge.bad { background: #fee2e2; color: #dc2626; }
+    .notif-badge.good { background: #dcfce7; color: #16a34a; }
+    .notif-badge.warn { background: #fef3c7; color: #b45309; }
+
     @media (max-width: 768px) {
       .row-2, .row-3, .row-4, .row-6 { grid-template-columns: 1fr; }
       .stats { grid-template-columns: 1fr; }
@@ -324,8 +365,16 @@
       <div class="menu-card" onclick="openModule('dashboard')">
         <div class="menu-icon" style="background:#fee2e2;">📊</div>
         <div class="menu-text">
-          <h3>Dashboard Utama</h3>
-          <p>Statistik panen bulan ini, buah terkirim & stok kemasan</p>
+          <h3>Dashboard Panen</h3>
+          <p>Statistik panen, reject, pengiriman & stok kemasan per bulan</p>
+        </div>
+        <span class="menu-arrow">›</span>
+      </div>
+      <div class="menu-card" onclick="openModule('dash-mika')">
+        <div class="menu-icon" style="background:#f3e8ff;">🍓</div>
+        <div class="menu-text">
+          <h3>Dashboard Mika</h3>
+          <p>Stok harian mika, layer, sleeve, stiker & netfoam</p>
         </div>
         <span class="menu-arrow">›</span>
       </div>
@@ -511,15 +560,38 @@
   <div id="dashboard" class="view">
     <div class="view-toolbar">
       <button class="btn btn-sm btn-home" onclick="goHome()">← Menu</button>
-      <span class="view-title">📊 Dashboard Utama</span>
+      <span class="view-title">📊 Dashboard Panen</span>
+      <button class="btn btn-sm" onclick="openModule('dash-mika')" style="margin-left:auto;flex:none;background:#faf5ff;color:#7e22ce;border:1px solid #e9d5ff;">🍓 Dashboard Mika</button>
     </div>
+
+    <!-- FILTER BULAN -->
+    <div class="card">
+      <div class="card-title">📅 Pilih Periode Bulan</div>
+      <div class="row-2" style="align-items: flex-end;">
+        <div class="input-group" style="margin-bottom:0;">
+          <label>Bulan</label>
+          <input type="month" id="dashboard-bulan" onchange="updateDashboard()">
+        </div>
+        <button class="btn btn-secondary" onclick="setDashboardBulanIni()">📌 Bulan Ini</button>
+      </div>
+      <div class="info-box" style="margin-top:1rem;margin-bottom:0;" id="dashboard-period-info">
+        Menampilkan data: <b>-</b>
+      </div>
+    </div>
+
+    <!-- STAT CARDS -->
     <div class="stats" id="dashboard-stats">
       <div class="stat-card red">
-        <div class="stat-label">Total Panen (Bulan Ini)</div>
+        <div class="stat-label">Total Panen</div>
         <div class="stat-value" id="stat-panen">0.00</div>
         <div class="stat-meta">Kg</div>
       </div>
       <div class="stat-card blue">
+        <div class="stat-label">Total Dikirim</div>
+        <div class="stat-value" id="stat-dikirim">0.00</div>
+        <div class="stat-meta">Kg</div>
+      </div>
+      <div class="stat-card purple">
         <div class="stat-label">Total Buah Terkirim</div>
         <div class="stat-value" id="stat-kirim">0</div>
         <div class="stat-meta">Pcs Mika</div>
@@ -536,11 +608,135 @@
       </div>
     </div>
 
+    <!-- NOTE REJECT -->
+    <div id="reject-note"></div>
+
+    <!-- GRAFIK BAR: PANEN VS KIRIM HARIAN -->
+    <div class="chart-card">
+      <div class="chart-title">📊 Grafik Harian — Panen vs Kirim (Kg)</div>
+      <div class="chart-scroll" id="chart-main"></div>
+    </div>
+
+    <!-- GRAFIK PIE: KOMPOSISI REJECT -->
+    <div class="chart-card">
+      <div class="chart-title">🥧 Komposisi Reject Bulan Ini</div>
+      <div id="chart-reject"></div>
+    </div>
+
+    <!-- REKAP TABEL DETAIL -->
     <div class="card">
-      <div class="card-title">📊 Ringkasan Monitoring AWB Ciwidey</div>
-      <p style="color: #555; line-height: 1.6;">
-        Dashboard ini memantau rekapitulator panen harian, persentase reject (kebun & processing), serta ketersediaan stok fisik kemasan mika di gudang utama dan area kerja processing.
-      </p>
+      <div class="card-title">📋 Rekap Harian Panen, Reject & Pengiriman</div>
+      <div class="recap-wrap">
+        <table class="recap-table">
+          <thead>
+            <tr>
+              <th class="th-base" rowspan="2">Tanggal</th>
+              <th class="th-panen" colspan="5">PANEN (Kg)</th>
+              <th class="th-reject" colspan="8">TOTAL REJECT (Kg)</th>
+              <th class="th-kirim" colspan="6">BERAT PENGIRIMAN (Kg)</th>
+              <th class="th-mika" colspan="4">JUMLAH KIRIM (Pcs)</th>
+            </tr>
+            <tr>
+              <th class="th-panen">Hatsu</th>
+              <th class="th-panen">Grade A</th>
+              <th class="th-panen">Grade B</th>
+              <th class="th-panen">Reject</th>
+              <th class="th-panen">Total</th>
+
+              <th class="th-reject">Crack</th>
+              <th class="th-reject">Polinasi</th>
+              <th class="th-reject">HPT</th>
+              <th class="th-reject">Bruise</th>
+              <th class="th-reject">Overripe</th>
+              <th class="th-reject">Frozen</th>
+              <th class="th-reject">Total</th>
+              <th class="th-reject">Rej %</th>
+
+              <th class="th-kirim">Hatsu</th>
+              <th class="th-kirim">A11</th>
+              <th class="th-kirim">A15</th>
+              <th class="th-kirim">Frozen</th>
+              <th class="th-kirim">Total</th>
+              <th class="th-kirim">Rate %</th>
+
+              <th class="th-mika">Hatsu</th>
+              <th class="th-mika">A11</th>
+              <th class="th-mika">A15</th>
+              <th class="th-mika">Total</th>
+            </tr>
+          </thead>
+          <tbody id="recap-body">
+            <tr><td colspan="24" style="text-align:center;color:#999;padding:1rem;">Belum ada data bulan ini</td></tr>
+          </tbody>
+          <tfoot id="recap-foot"></tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ VIEW 2B: DASHBOARD MIKA ============ -->
+  <div id="dash-mika" class="view">
+    <div class="view-toolbar">
+      <button class="btn btn-sm btn-home" onclick="goHome()">← Menu</button>
+      <span class="view-title">🍓 Dashboard Mika</span>
+      <button class="btn btn-sm" onclick="openModule('dashboard')" style="margin-left:auto;flex:none;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;">📊 Dashboard Panen</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📅 Pilih Periode Bulan</div>
+      <div class="row-2" style="align-items: flex-end;">
+        <div class="input-group" style="margin-bottom:0;">
+          <label>Bulan</label>
+          <input type="month" id="mika-bulan" onchange="renderMikaDashboard()">
+        </div>
+        <button class="btn btn-secondary" onclick="setMikaBulanIni()">📌 Bulan Ini</button>
+      </div>
+      <div class="info-box" style="margin-top:1rem;margin-bottom:0;" id="mika-period-info">Menampilkan data: <b>-</b></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" id="mika-latest-title">📋 Stok Kemasan Terakhir</div>
+      <div class="stats" id="mika-latest-cards" style="margin-bottom:0.5rem;"></div>
+      <div id="mika-warning"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📅 Stok Harian (posisi akhir hari)</div>
+      <div class="recap-wrap">
+        <table class="recap-table" style="min-width:1150px;">
+          <thead>
+            <tr>
+              <th class="th-base" rowspan="2">Tanggal</th>
+              <th class="th-stok" colspan="4">MIKA SIAP PACKING (Pcs)</th>
+              <th class="th-aks" colspan="4">KEMASAN TAMBAHAN (Pcs)</th>
+              <th class="th-gdg" colspan="3">GUDANG (Dus)</th>
+              <th class="th-mut" colspan="2">MUTASI HARI INI (Pcs)</th>
+            </tr>
+            <tr>
+              <th class="th-stok">Hatsu</th>
+              <th class="th-stok">Hy 11</th>
+              <th class="th-stok">Hy 15</th>
+              <th class="th-stok">Total</th>
+              <th class="th-aks">Layer</th>
+              <th class="th-aks">Sleeve</th>
+              <th class="th-aks">Stiker</th>
+              <th class="th-aks">Netfoam</th>
+              <th class="th-gdg">Hatsu</th>
+              <th class="th-gdg">Hy 11</th>
+              <th class="th-gdg">Hy 15</th>
+              <th class="th-mut">Keluar</th>
+              <th class="th-mut">Reject</th>
+            </tr>
+          </thead>
+          <tbody id="mika-daily-body">
+            <tr><td colspan="14" style="text-align:center;color:#999;padding:1rem;">Belum ada data</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="info-box" style="margin-top:1rem;margin-bottom:0;">
+        Stok dihitung otomatis dari data di menu <b>Stok Kemasan (Mika)</b>. Hy 11 = Grade A, Hy 15 = Grade B.
+        Kalau stok fisik beda dengan hitungan, isi kolom <b>Koreksi Stok Fisik</b> saat input — stok langsung diset ke angka itu mulai tanggal tersebut.
+      </div>
     </div>
   </div>
 
@@ -1213,6 +1409,8 @@
     document.getElementById('panen-tgl').value = today;
     document.getElementById('kemasan-tgl').value = today;
     document.getElementById('filter-bulan-kemasan').value = today.substring(0, 7);
+    document.getElementById('dashboard-bulan').value = today.substring(0, 7);
+    document.getElementById('mika-bulan').value = today.substring(0, 7);
 
     renderTableLks();
     renderTablePanen();
@@ -1814,6 +2012,49 @@
     document.getElementById('k-stat-processing').textContent = totProc;
     document.getElementById('k-stat-keluar').textContent = totKeluar;
     document.getElementById('k-stat-reject').textContent = totRej;
+
+    // Stok berjalan kemasan tambahan (layer, sleeve, stiker, netfoam)
+    const tl = computeMikaTimeline();
+    const last = tl[tl.length - 1];
+    currentAksesoris = last
+      ? { layer: last.layer, sleeve: last.sleeve, stiker: last.stiker, netfoam: last.netfoam }
+      : { layer: 0, sleeve: 0, stiker: 0, netfoam: 0 };
+  }
+
+  function getOpname(id) {
+    const el = document.getElementById(id);
+    if (!el || el.value === '') return null;
+    const n = parseFloat(el.value);
+    return isNaN(n) ? null : n;
+  }
+
+  // Stok akhir = koreksi fisik (jika diisi) atau stok berjalan + masuk - pakai
+  function akhirAks(awal, masuk, pakai, opId) {
+    const op = getOpname(opId);
+    return op !== null ? op : (awal + masuk - pakai);
+  }
+
+  function stikerCardHtml() {
+    const acc = currentAksesoris;
+    return `
+      <div class="card" id="card-stiker">
+        <div class="card-title">🏷️ Stok Stiker</div>
+        <div class="info-box">Stok Stiker saat ini: <b>${acc.stiker}</b> Pcs</div>
+        <div class="row-2">
+          <div class="input-group"><label>Stiker Masuk (Pcs)</label><input type="number" id="stiker-masuk" placeholder="0" oninput="hitungStiker()"></div>
+          <div class="input-group"><label>Stiker Terpakai (Pcs)</label><input type="number" id="stiker-pakai" placeholder="0" oninput="hitungStiker()"></div>
+        </div>
+        <div class="row-2">
+          <div class="input-group"><label>Stok Akhir Stiker (Pcs)</label><input readonly id="stiker-akhir" value="${acc.stiker}"></div>
+          <div class="input-group"><label>Koreksi Stok Fisik (opsional)</label><input type="number" id="stiker-opname" placeholder="Isi hanya jika beda" oninput="hitungStiker()"></div>
+        </div>
+      </div>
+    `;
+  }
+
+  function hitungStiker() {
+    const el = document.getElementById('stiker-akhir');
+    if (el) el.value = akhirAks(currentAksesoris.stiker, getValK('stiker-masuk'), getValK('stiker-pakai'), 'stiker-opname');
   }
 
   function getValK(id) { 
@@ -1826,10 +2067,13 @@
       const gAwal = currentStockStateKemasan[item.name].gudang;
       const pAwal = currentStockStateKemasan[item.name].processing;
 
+      const acc = currentAksesoris;
+
       // Form Tambahan Netfoam khusus Hatsuhana
       const isHatsu = item.name.includes('Hatsu');
       const hatsuExtraForm = isHatsu ? `
         <div class="sub-title">🧽 6. Stok Netfoam Hatsuhana</div>
+        <div class="info-box">Stok Netfoam Potong saat ini: <b>${acc.netfoam}</b> Pcs</div>
         <div class="row-2">
           <div class="input-group">
             <label>Netfoam Masuk (Ball)</label>
@@ -1847,8 +2091,12 @@
           </div>
           <div class="input-group">
             <label>Stok Akhir Netfoam Potong (Pcs)</label>
-            <input readonly id="netfoam-akhir-${i}" value="0">
+            <input readonly id="netfoam-akhir-${i}" value="${acc.netfoam}">
           </div>
+        </div>
+        <div class="input-group">
+          <label>Koreksi Stok Fisik Netfoam (opsional)</label>
+          <input type="number" id="netfoam-opname-${i}" placeholder="Isi hanya jika stok fisik beda dengan hitungan" oninput="hitungKemasan(${i})">
         </div>
       ` : '';
 
@@ -1856,6 +2104,7 @@
       const isGradeA = item.name.includes('Grade A') || item.name.includes('A11');
       const layerExtraForm = isGradeA ? `
         <div class="sub-title">📄 6. Stok Layer A11</div>
+        <div class="info-box">Stok Layer saat ini: <b>${acc.layer}</b> Pcs</div>
         <div class="row-3">
           <div class="input-group">
             <label>Layer Disiapkan (Pcs)</label>
@@ -1867,8 +2116,37 @@
           </div>
           <div class="input-group">
             <label>Stok Akhir Layer (Pcs)</label>
-            <input readonly id="layer-akhir-${i}" value="0">
+            <input readonly id="layer-akhir-${i}" value="${acc.layer}">
           </div>
+        </div>
+        <div class="input-group">
+          <label>Koreksi Stok Fisik Layer (opsional)</label>
+          <input type="number" id="layer-opname-${i}" placeholder="Isi hanya jika stok fisik beda dengan hitungan" oninput="hitungKemasan(${i})">
+        </div>
+      ` : '';
+
+      // Form Tambahan Sleeve khusus Grade B (hitungannya sama seperti Layer)
+      const isGradeB = item.name.includes('Grade B');
+      const sleeveExtraForm = isGradeB ? `
+        <div class="sub-title">📄 6. Stok Sleeve Grade B</div>
+        <div class="info-box">Stok Sleeve saat ini: <b>${acc.sleeve}</b> Pcs</div>
+        <div class="row-3">
+          <div class="input-group">
+            <label>Sleeve Disiapkan (Pcs)</label>
+            <input type="number" id="sleeve-siap-${i}" placeholder="0" oninput="hitungKemasan(${i})">
+          </div>
+          <div class="input-group">
+            <label>Sleeve Terpakai (Pcs)</label>
+            <input type="number" id="sleeve-pakai-${i}" placeholder="0" oninput="hitungKemasan(${i})">
+          </div>
+          <div class="input-group">
+            <label>Stok Akhir Sleeve (Pcs)</label>
+            <input readonly id="sleeve-akhir-${i}" value="${acc.sleeve}">
+          </div>
+        </div>
+        <div class="input-group">
+          <label>Koreksi Stok Fisik Sleeve (opsional)</label>
+          <input type="number" id="sleeve-opname-${i}" placeholder="Isi hanya jika stok fisik beda dengan hitungan" oninput="hitungKemasan(${i})">
         </div>
       ` : '';
 
@@ -1922,11 +2200,12 @@
 
           ${hatsuExtraForm}
           ${layerExtraForm}
+          ${sleeveExtraForm}
         </div>
       `;
     }).join('');
 
-    document.getElementById('forms-kemasan').innerHTML = html;
+    document.getElementById('forms-kemasan').innerHTML = html + stikerCardHtml();
   }
 
   function hitungKemasan(i) {
@@ -1971,22 +2250,23 @@
     const pAkhir = pAwal + aktualPcs - kirim - tamu - rejTutup - rejAlas;
     document.getElementById(`processing-akhir-${i}`).value = Math.max(0, pAkhir);
 
-    // Hitung Stok Akhir Netfoam Potong (Hatsuhana)
+    // Stok akhir Netfoam Potong (Hatsuhana) — berjalan, bukan per hari
     if (item.name.includes('Hatsu')) {
-      const potong = getValK(`netfoam-potong-${i}`);
-      const terpakai = getValK(`netfoam-terpakai-${i}`);
-      const netfoamAkhir = potong - terpakai;
-      const elNetfoamAkhir = document.getElementById(`netfoam-akhir-${i}`);
-      if (elNetfoamAkhir) elNetfoamAkhir.value = netfoamAkhir;
+      const el = document.getElementById(`netfoam-akhir-${i}`);
+      if (el) el.value = akhirAks(currentAksesoris.netfoam, getValK(`netfoam-potong-${i}`), getValK(`netfoam-terpakai-${i}`), `netfoam-opname-${i}`);
+      hitungStiker();
     }
 
-    // Hitung Stok Akhir Layer (A11 / Grade A)
+    // Stok akhir Layer (Grade A)
     if (item.name.includes('Grade A') || item.name.includes('A11')) {
-      const siap = getValK(`layer-siap-${i}`);
-      const pakai = getValK(`layer-pakai-${i}`);
-      const layerAkhir = siap - pakai;
-      const elLayerAkhir = document.getElementById(`layer-akhir-${i}`);
-      if (elLayerAkhir) elLayerAkhir.value = layerAkhir;
+      const el = document.getElementById(`layer-akhir-${i}`);
+      if (el) el.value = akhirAks(currentAksesoris.layer, getValK(`layer-siap-${i}`), getValK(`layer-pakai-${i}`), `layer-opname-${i}`);
+    }
+
+    // Stok akhir Sleeve (Grade B) — sama seperti Layer
+    if (item.name.includes('Grade B')) {
+      const el = document.getElementById(`sleeve-akhir-${i}`);
+      if (el) el.value = akhirAks(currentAksesoris.sleeve, getValK(`sleeve-siap-${i}`), getValK(`sleeve-pakai-${i}`), `sleeve-opname-${i}`);
     }
   }
 
@@ -2018,12 +2298,28 @@
       // Data Tambahan Layer (A11)
       layerSiap: getValK(`layer-siap-${i}`),
       layerPakai: getValK(`layer-pakai-${i}`),
-      layerAkhir: getValK(`layer-siap-${i}`) - getValK(`layer-pakai-${i}`)
+      layerAkhir: getValK(`layer-siap-${i}`) - getValK(`layer-pakai-${i}`),
+      layerOpname: getOpname(`layer-opname-${i}`),
+
+      // Data Tambahan Sleeve (Grade B) — dihitung sama seperti layer
+      sleeveSiap: getValK(`sleeve-siap-${i}`),
+      sleevePakai: getValK(`sleeve-pakai-${i}`),
+      sleeveAkhir: getValK(`sleeve-siap-${i}`) - getValK(`sleeve-pakai-${i}`),
+      sleeveOpname: getOpname(`sleeve-opname-${i}`),
+
+      netfoamOpname: getOpname(`netfoam-opname-${i}`),
+
+      // Stiker: satu kartu untuk semua grade, disimpan di item pertama (Hatsu)
+      stikerMasuk: i === 0 ? getValK('stiker-masuk') : 0,
+      stikerPakai: i === 0 ? getValK('stiker-pakai') : 0,
+      stikerOpname: i === 0 ? getOpname('stiker-opname') : null
     }));
 
     const hasData = items.some(x => 
       x.masuk > 0 || x.bongkarDus > 0 || x.aktualPcs > 0 || x.kirim > 0 || x.tamu > 0 || 
-      x.rejectTutup > 0 || x.rejectAlas > 0 || x.netfoamBall > 0 || x.netfoamPotong > 0 || x.layerSiap > 0
+      x.rejectTutup > 0 || x.rejectAlas > 0 || x.netfoamBall > 0 || x.netfoamPotong > 0 || x.netfoamTerpakai > 0 ||
+      x.layerSiap > 0 || x.layerPakai > 0 || x.sleeveSiap > 0 || x.sleevePakai > 0 || x.stikerMasuk > 0 || x.stikerPakai > 0 ||
+      x.netfoamOpname !== null || x.layerOpname !== null || x.sleeveOpname !== null || x.stikerOpname !== null
     );
     if (!hasData) { showToast('Isi minimal 1 data transaksi kemasan!', 'error'); return; }
 
@@ -2213,6 +2509,12 @@
     updateDashboard();
   }
 
+  const AKS_EDIT_FIELDS = {
+    'Hatsu': [['netfoamPotong', 'Netfoam Dipotong'], ['netfoamTerpakai', 'Netfoam Terpakai'], ['stikerMasuk', 'Stiker Masuk'], ['stikerPakai', 'Stiker Terpakai']],
+    'Grade A': [['layerSiap', 'Layer Disiapkan'], ['layerPakai', 'Layer Terpakai']],
+    'Grade B': [['sleeveSiap', 'Sleeve Disiapkan'], ['sleevePakai', 'Sleeve Terpakai']]
+  };
+
   function editKemasanHistory(id) {
     const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
     const entry = db.find(x => x.id === id);
@@ -2234,6 +2536,10 @@
           <div class="row-2">
             <div class="input-group"><label>Aktual (Pcs)</label><input type="number" id="edit-aktual-${idx}" value="${it.aktualPcs || 0}"></div>
             <div class="input-group"><label>Kirim (Pcs)</label><input type="number" id="edit-kirim-${idx}" value="${it.kirim || 0}"></div>
+          </div>
+          <div class="row-2">
+            ${(AKS_EDIT_FIELDS[it.name] || []).map(([f, lbl]) =>
+              `<div class="input-group"><label>${lbl} (Pcs)</label><input type="number" id="edit-aks-${idx}-${f}" value="${it[f] || 0}"></div>`).join('')}
           </div>
         </div>
       `;
@@ -2261,6 +2567,11 @@
       const aktual = parseFloat(document.getElementById(`edit-aktual-${i}`).value || 0);
       const kirim = parseFloat(document.getElementById(`edit-kirim-${i}`).value || 0);
       const stdPcs = bongkar * m.std;
+      const aksEdit = {};
+      (AKS_EDIT_FIELDS[m.name] || []).forEach(([f]) => {
+        const el = document.getElementById(`edit-aks-${i}-${f}`);
+        if (el) aksEdit[f] = parseFloat(el.value || 0);
+      });
 
       return {
         ...db[idx].items[i],
@@ -2269,7 +2580,8 @@
         standarPcs: stdPcs,
         aktualPcs: aktual,
         selisih: aktual - stdPcs,
-        kirim
+        kirim,
+        ...aksEdit
       };
     });
 
@@ -2284,30 +2596,529 @@
     updateDashboard();
   }
 
-  // ========== DASHBOARD UPDATER ==========
-  function updateDashboard() {
-    const panenDb = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+  // ========== DASHBOARD MIKA ==========
+  let currentAksesoris = { layer: 0, sleeve: 0, stiker: 0, netfoam: 0 };
+
+  function opnameVal(v) { return (typeof v === 'number' && !isNaN(v)) ? v : null; }
+
+  // Hitung posisi stok di akhir tiap hari yang ada transaksinya (kumulatif sejak data pertama)
+  function computeMikaTimeline() {
+    const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]')
+      .filter(e => e && e.tgl && Array.isArray(e.items))
+      .sort((a, b) => a.tgl.localeCompare(b.tgl) || ((a.id || 0) - (b.id || 0)));
+
+    const names = masterJenisKemasan.map(m => m.name);
+    const st = { gudang: {}, proc: {}, layer: 0, sleeve: 0, stiker: 0, netfoam: 0 };
+    names.forEach(n => { st.gudang[n] = 0; st.proc[n] = 0; });
+
+    const byDate = new Map();
+    db.forEach(e => { if (!byDate.has(e.tgl)) byDate.set(e.tgl, []); byDate.get(e.tgl).push(e); });
+
+    const snaps = [];
+    byDate.forEach((entries, tgl) => {
+      let keluar = 0, reject = 0;
+      const rejectBy = {};
+      names.forEach(n => { rejectBy[n] = 0; });
+
+      entries.forEach(entry => {
+        entry.items.forEach(it => {
+          if (!(it.name in st.proc)) return;
+          st.gudang[it.name] += (it.masuk || 0) - (it.bongkarDus || 0);
+          const out = (it.kirim || 0) + (it.tamu || 0);
+          const rej = (it.rejectTutup || 0) + (it.rejectAlas || 0);
+          st.proc[it.name] += (it.aktualPcs || 0) - out - rej;
+          keluar += out; reject += rej; rejectBy[it.name] += rej;
+
+          st.layer   += (it.layerSiap || 0)   - (it.layerPakai || 0);
+          st.sleeve  += (it.sleeveSiap || 0)  - (it.sleevePakai || 0);
+          st.stiker  += (it.stikerMasuk || 0) - (it.stikerPakai || 0);
+          st.netfoam += (it.netfoamPotong || 0) - (it.netfoamTerpakai || 0);
+        });
+        // Koreksi stok fisik menimpa hitungan berjalan
+        entry.items.forEach(it => {
+          ['layer', 'sleeve', 'stiker', 'netfoam'].forEach(k => {
+            const o = opnameVal(it[k + 'Opname']);
+            if (o !== null) st[k] = o;
+          });
+        });
+      });
+
+      snaps.push({
+        tgl, keluar, reject, rejectBy,
+        proc: { ...st.proc }, gudang: { ...st.gudang },
+        layer: st.layer, sleeve: st.sleeve, stiker: st.stiker, netfoam: st.netfoam
+      });
+    });
+    return snaps;
+  }
+
+  function setMikaBulanIni() {
+    document.getElementById('mika-bulan').value = new Date().toISOString().substring(0, 7);
+    renderMikaDashboard();
+  }
+
+  function renderMikaDashboard() {
+    const bulanEl = document.getElementById('mika-bulan');
+    if (!bulanEl) return;
+    if (!bulanEl.value) bulanEl.value = new Date().toISOString().substring(0, 7);
+    const month = bulanEl.value;
+
+    document.getElementById('mika-period-info').innerHTML = `Menampilkan data: <b>${formatBulanIndo(month)}</b>`;
+
+    const fmt = n => Number(n || 0).toLocaleString('id-ID');
+    const cell = n => n < 0 ? `<span class="neg">${fmt(n)}</span>` : fmt(n);
+
+    const timeline = computeMikaTimeline();
+    const upToMonth = timeline.filter(x => x.tgl.substring(0, 7) <= month);
+    const inMonth = timeline.filter(x => x.tgl.substring(0, 7) === month);
+    const before = timeline.filter(x => x.tgl.substring(0, 7) < month);
+    const opening = before.length ? before[before.length - 1] : null;
+    const latest = upToMonth.length ? upToMonth[upToMonth.length - 1] : null;
+
+    // ----- Kartu stok terakhir -----
+    const cardsEl = document.getElementById('mika-latest-cards');
+    const titleEl = document.getElementById('mika-latest-title');
+    const warnEl = document.getElementById('mika-warning');
+
+    if (!latest) {
+      titleEl.textContent = '📋 Stok Kemasan Terakhir';
+      cardsEl.innerHTML = '<div style="color:#999;padding:0.5rem;">Belum ada data kemasan.</div>';
+      warnEl.innerHTML = '';
+    } else {
+      titleEl.textContent = `📋 Stok Kemasan per ${latest.tgl}`;
+      const items = [
+        { label: 'Hatsu',  val: latest.proc['Hatsu'],   cls: 'blue',   meta: `Gudang ${fmt(Math.max(0, latest.gudang['Hatsu']))} dus · Reject hari itu ${fmt(latest.rejectBy['Hatsu'])}` },
+        { label: 'Hy 11 (Grade A)', val: latest.proc['Grade A'], cls: 'green',  meta: `Gudang ${fmt(Math.max(0, latest.gudang['Grade A']))} dus · Reject hari itu ${fmt(latest.rejectBy['Grade A'])}` },
+        { label: 'Hy 15 (Grade B)', val: latest.proc['Grade B'], cls: 'orange', meta: `Gudang ${fmt(Math.max(0, latest.gudang['Grade B']))} dus · Reject hari itu ${fmt(latest.rejectBy['Grade B'])}` },
+        { label: 'Layer',  val: latest.layer,   cls: 'purple', meta: 'Pcs · untuk Grade A' },
+        { label: 'Sleeve', val: latest.sleeve,  cls: 'orange', meta: 'Pcs · untuk Grade B' },
+        { label: 'Stiker', val: latest.stiker,  cls: 'blue',   meta: 'Pcs' },
+        { label: 'Netfoam', val: latest.netfoam, cls: 'green', meta: 'Pcs potong · untuk Hatsu' }
+      ];
+      cardsEl.innerHTML = items.map(x => `
+        <div class="stat-card ${x.cls}">
+          <div class="stat-label">${x.label}</div>
+          <div class="stat-value">${cell(x.val)}</div>
+          <div class="stat-meta">${x.meta}</div>
+        </div>`).join('');
+
+      const minus = items.filter(x => x.val < 0).map(x => x.label);
+      warnEl.innerHTML = minus.length
+        ? `<div class="warn-box" style="margin-top:0.5rem;">⚠️ Stok minus: <b>${minus.join(', ')}</b>. Cek input harian, atau isi <b>Koreksi Stok Fisik</b> di menu Stok Kemasan.</div>`
+        : '';
+    }
+
+    // ----- Tabel harian -----
+    const body = document.getElementById('mika-daily-body');
+    if (!inMonth.length) {
+      body.innerHTML = '<tr><td colspan="14" style="text-align:center;color:#999;padding:1rem;">Belum ada data bulan ini</td></tr>';
+      return;
+    }
+
+    const row = (label, x, isOpening) => {
+      const total = x.proc['Hatsu'] + x.proc['Grade A'] + x.proc['Grade B'];
+      return `<tr>
+        <td class="tgl-col ${isOpening ? 'row-awal' : ''}">${label}</td>
+        <td>${cell(x.proc['Hatsu'])}</td>
+        <td>${cell(x.proc['Grade A'])}</td>
+        <td>${cell(x.proc['Grade B'])}</td>
+        <td class="col-total">${cell(total)}</td>
+        <td>${cell(x.layer)}</td>
+        <td>${cell(x.sleeve)}</td>
+        <td>${cell(x.stiker)}</td>
+        <td>${cell(x.netfoam)}</td>
+        <td>${fmt(Math.max(0, x.gudang['Hatsu']))}</td>
+        <td>${fmt(Math.max(0, x.gudang['Grade A']))}</td>
+        <td>${fmt(Math.max(0, x.gudang['Grade B']))}</td>
+        <td>${isOpening ? '-' : fmt(x.keluar)}</td>
+        <td>${isOpening ? '-' : fmt(x.reject)}</td>
+      </tr>`;
+    };
+
+    let html = '';
+    if (opening) html += row('Stok awal bulan', opening, true);
+    html += inMonth.map(x => row(x.tgl.substring(8) + '/' + x.tgl.substring(5, 7), x, false)).join('');
+    body.innerHTML = html;
+  }
+
+  // ========== DASHBOARD UPDATER (dengan filter bulan + rekap + grafik) ==========
+  function setDashboardBulanIni() {
     const nowMonth = new Date().toISOString().substring(0, 7);
+    document.getElementById('dashboard-bulan').value = nowMonth;
+    updateDashboard();
+  }
 
-    let totalPanenBulanIni = 0;
-    let totalBuahTerkirim = 0;
+  function formatBulanIndo(ym) {
+    if (!ym) return '-';
+    const [y, m] = ym.split('-');
+    const namaBulan = ['Januari','Februari','Maret','April','Mei','Juni',
+                       'Juli','Agustus','September','Oktober','November','Desember'];
+    return `${namaBulan[parseInt(m, 10) - 1]} ${y}`;
+  }
 
-    panenDb.filter(x => x.tgl && x.tgl.startsWith(nowMonth)).forEach(item => {
-      totalPanenBulanIni += (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
-      totalBuahTerkirim += (item.m_hatsu || 0) + (item.m_a11 || 0) + (item.m_a15 || 0);
+  function updateDashboard() {
+    const bulanEl = document.getElementById('dashboard-bulan');
+    if (bulanEl && !bulanEl.value) {
+      bulanEl.value = new Date().toISOString().substring(0, 7);
+    }
+    const selectedMonth = bulanEl ? bulanEl.value : new Date().toISOString().substring(0, 7);
+
+    // Info periode
+    const infoEl = document.getElementById('dashboard-period-info');
+    if (infoEl) infoEl.innerHTML = `Menampilkan data: <b>${formatBulanIndo(selectedMonth)}</b>`;
+
+    const panenDb = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+    const kemasanDb = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
+
+    // Filter & urutkan data panen
+    const filtered = panenDb
+      .filter(x => x.tgl && x.tgl.startsWith(selectedMonth))
+      .sort((a, b) => new Date(a.tgl) - new Date(b.tgl));
+
+    // ============ AKUMULASI TOTAL BULAN ============
+    const T = {
+      p_hatsu: 0, p_gradea: 0, p_gradeb: 0, rk_total: 0, panen_total: 0,
+      rp_crack: 0, rp_poli: 0, rp_hpt: 0, rp_bruise: 0, rp_overripe: 0, rp_frozen: 0, rej_total: 0,
+      k_hatsu: 0, k_a11: 0, k_a15: 0, k_frozen: 0, kirim_total: 0,
+      m_hatsu: 0, m_a11: 0, m_a15: 0, mika_total: 0
+    };
+
+    filtered.forEach(item => {
+      const rk = (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
+      const rp = (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0) +
+                 (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_frozen || 0);
+
+      T.p_hatsu += item.p_hatsu || 0;
+      T.p_gradea += item.p_gradea || 0;
+      T.p_gradeb += item.p_gradeb || 0;
+      T.rk_total += rk;
+      T.panen_total += (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + rk;
+
+      T.rp_crack += item.rp_crack || 0;
+      T.rp_poli += item.rp_poli || 0;
+      T.rp_hpt += item.rp_hpt || 0;
+      T.rp_bruise += item.rp_bruise || 0;
+      T.rp_overripe += item.rp_overripe || 0;
+      T.rp_frozen += item.rp_frozen || 0;
+      T.rej_total += rk + rp;
+
+      T.k_hatsu += item.k_hatsu || 0;
+      T.k_a11 += item.k_a11 || 0;
+      T.k_a15 += item.k_a15 || 0;
+      T.k_frozen += item.k_frozen || 0;
+      T.kirim_total += (item.k_hatsu || 0) + (item.k_a11 || 0) + (item.k_a15 || 0) + (item.k_frozen || 0);
+
+      T.m_hatsu += item.m_hatsu || 0;
+      T.m_a11 += item.m_a11 || 0;
+      T.m_a15 += item.m_a15 || 0;
+      T.mika_total += (item.m_hatsu || 0) + (item.m_a11 || 0) + (item.m_a15 || 0);
     });
 
-    document.getElementById('stat-panen').textContent = totalPanenBulanIni.toFixed(2);
-    document.getElementById('stat-kirim').textContent = totalBuahTerkirim;
+    const rejectRate = T.panen_total > 0 ? (T.rej_total / T.panen_total * 100) : 0;
+    const rateKirim = T.panen_total > 0 ? (T.kirim_total / T.panen_total * 100) : 0;
+
+    // ============ UPDATE STAT CARDS ============
+    document.getElementById('stat-panen').textContent = T.panen_total.toFixed(2);
+    document.getElementById('stat-dikirim').textContent = T.kirim_total.toFixed(2);
+    document.getElementById('stat-kirim').textContent = T.mika_total;
+
+    // ============ NOTE REJECT ============
+    const noteEl = document.getElementById('reject-note');
+    let noteClass = 'good', noteMsg = '✓ Aman';
+    if (rejectRate > 10) { noteClass = 'bad'; noteMsg = '⚠️ Tinggi! Perlu evaluasi'; }
+    else if (rejectRate > 5) { noteClass = 'warn'; noteMsg = '⚠️ Perlu perhatian'; }
+    noteEl.innerHTML = `
+      <div class="info-box" style="margin-bottom:1rem;">
+        <div style="margin-bottom:0.35rem;">
+          <strong>📝 Catatan Reject — ${formatBulanIndo(selectedMonth)}:</strong><br>
+          Total Reject: <b style="color:#dc2626;">${T.rej_total.toFixed(2)} Kg</b> dari Panen <b>${T.panen_total.toFixed(2)} Kg</b>
+          → Reject Rate <b style="color:#dc2626;font-size:1.05rem;">${rejectRate.toFixed(2)}%</b>
+          <span class="notif-badge ${noteClass}">${noteMsg}</span>
+        </div>
+        <div>
+          <strong>📦 Rate Kirim:</strong> <b style="color:#16a34a;font-size:1.05rem;">${rateKirim.toFixed(2)}%</b>
+          &nbsp;|&nbsp; <strong>Total Kirim:</strong> <b>${T.kirim_total.toFixed(2)} Kg</b>
+          &nbsp;|&nbsp; <strong>Total Mika:</strong> <b>${T.mika_total} Pcs</b>
+        </div>
+      </div>
+    `;
+
+    // ============ RECAP TABLE ============
+    const tbody = document.getElementById('recap-body');
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="24" style="text-align:center;color:#999;padding:1rem;">Belum ada data bulan ini</td></tr>`;
+    } else {
+      tbody.innerHTML = filtered.map(item => {
+        const rk = (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
+        const panenTotal = (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + rk;
+        const rpTotal = (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0) +
+                        (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_frozen || 0);
+        const totalRej = rk + rpTotal;
+        const rejRate = panenTotal > 0 ? (totalRej / panenTotal * 100) : 0;
+        const kirimTotal = (item.k_hatsu || 0) + (item.k_a11 || 0) + (item.k_a15 || 0) + (item.k_frozen || 0);
+        const rKirim = panenTotal > 0 ? (kirimTotal / panenTotal * 100) : 0;
+        const mikaTotal = (item.m_hatsu || 0) + (item.m_a11 || 0) + (item.m_a15 || 0);
+        const tglFmt = item.tgl.split('-').reverse().join('/');
+
+        return `<tr>
+          <td class="tgl-col">${tglFmt}</td>
+          <td>${(item.p_hatsu || 0).toFixed(2)}</td>
+          <td>${(item.p_gradea || 0).toFixed(2)}</td>
+          <td>${(item.p_gradeb || 0).toFixed(2)}</td>
+          <td>${rk.toFixed(2)}</td>
+          <td><strong>${panenTotal.toFixed(2)}</strong></td>
+          <td>${(item.rp_crack || 0).toFixed(2)}</td>
+          <td>${(item.rp_poli || 0).toFixed(2)}</td>
+          <td>${(item.rp_hpt || 0).toFixed(2)}</td>
+          <td>${(item.rp_bruise || 0).toFixed(2)}</td>
+          <td>${(item.rp_overripe || 0).toFixed(2)}</td>
+          <td>${(item.rp_frozen || 0).toFixed(2)}</td>
+          <td>${totalRej.toFixed(2)}</td>
+          <td class="reject-rate">${rejRate.toFixed(2)}%</td>
+          <td>${(item.k_hatsu || 0).toFixed(2)}</td>
+          <td>${(item.k_a11 || 0).toFixed(2)}</td>
+          <td>${(item.k_a15 || 0).toFixed(2)}</td>
+          <td>${(item.k_frozen || 0).toFixed(2)}</td>
+          <td><strong>${kirimTotal.toFixed(2)}</strong></td>
+          <td class="rate-kirim">${rKirim.toFixed(2)}%</td>
+          <td>${item.m_hatsu || 0}</td>
+          <td>${item.m_a11 || 0}</td>
+          <td>${item.m_a15 || 0}</td>
+          <td><strong>${mikaTotal}</strong></td>
+        </tr>`;
+      }).join('');
+    }
+
+    // Footer TOTAL & RATA-RATA
+    const n = filtered.length || 1;
+    document.getElementById('recap-foot').innerHTML = `
+      <tr>
+        <td class="tgl-col">TOTAL</td>
+        <td>${T.p_hatsu.toFixed(2)}</td>
+        <td>${T.p_gradea.toFixed(2)}</td>
+        <td>${T.p_gradeb.toFixed(2)}</td>
+        <td>${T.rk_total.toFixed(2)}</td>
+        <td>${T.panen_total.toFixed(2)}</td>
+        <td>${T.rp_crack.toFixed(2)}</td>
+        <td>${T.rp_poli.toFixed(2)}</td>
+        <td>${T.rp_hpt.toFixed(2)}</td>
+        <td>${T.rp_bruise.toFixed(2)}</td>
+        <td>${T.rp_overripe.toFixed(2)}</td>
+        <td>${T.rp_frozen.toFixed(2)}</td>
+        <td>${T.rej_total.toFixed(2)}</td>
+        <td style="color:#fca5a5;">${rejectRate.toFixed(2)}%</td>
+        <td>${T.k_hatsu.toFixed(2)}</td>
+        <td>${T.k_a11.toFixed(2)}</td>
+        <td>${T.k_a15.toFixed(2)}</td>
+        <td>${T.k_frozen.toFixed(2)}</td>
+        <td>${T.kirim_total.toFixed(2)}</td>
+        <td style="color:#86efac;">${rateKirim.toFixed(2)}%</td>
+        <td>${T.m_hatsu}</td>
+        <td>${T.m_a11}</td>
+        <td>${T.m_a15}</td>
+        <td>${T.mika_total}</td>
+      </tr>
+      <tr style="background:#4b5563;">
+        <td class="tgl-col">RATA-RATA</td>
+        <td>${(T.p_hatsu / n).toFixed(2)}</td>
+        <td>${(T.p_gradea / n).toFixed(2)}</td>
+        <td>${(T.p_gradeb / n).toFixed(2)}</td>
+        <td>${(T.rk_total / n).toFixed(2)}</td>
+        <td>${(T.panen_total / n).toFixed(2)}</td>
+        <td>${(T.rp_crack / n).toFixed(2)}</td>
+        <td>${(T.rp_poli / n).toFixed(2)}</td>
+        <td>${(T.rp_hpt / n).toFixed(2)}</td>
+        <td>${(T.rp_bruise / n).toFixed(2)}</td>
+        <td>${(T.rp_overripe / n).toFixed(2)}</td>
+        <td>${(T.rp_frozen / n).toFixed(2)}</td>
+        <td>${(T.rej_total / n).toFixed(2)}</td>
+        <td>${rejectRate.toFixed(2)}%</td>
+        <td>${(T.k_hatsu / n).toFixed(2)}</td>
+        <td>${(T.k_a11 / n).toFixed(2)}</td>
+        <td>${(T.k_a15 / n).toFixed(2)}</td>
+        <td>${(T.k_frozen / n).toFixed(2)}</td>
+        <td>${(T.kirim_total / n).toFixed(2)}</td>
+        <td>${rateKirim.toFixed(2)}%</td>
+        <td>${(T.m_hatsu / n).toFixed(0)}</td>
+        <td>${(T.m_a11 / n).toFixed(0)}</td>
+        <td>${(T.m_a15 / n).toFixed(0)}</td>
+        <td>${(T.mika_total / n).toFixed(0)}</td>
+      </tr>
+    `;
+
+    // ============ KEMASAN: stok kumulatif s/d akhir bulan ============
+    const accum = {};
+    masterJenisKemasan.forEach(m => { accum[m.name] = { gudang: 0, processing: 0 }; });
+
+    const [selY, selM] = selectedMonth.split('-').map(Number);
+    const endOfMonth = new Date(selY, selM, 0, 23, 59, 59);
+
+    const kemasanFiltered = kemasanDb
+      .filter(e => e.tgl && new Date(e.tgl) <= endOfMonth)
+      .sort((a, b) => new Date(a.tgl) - new Date(b.tgl));
+
+    kemasanFiltered.forEach(entry => {
+      if (entry.items && Array.isArray(entry.items)) {
+        entry.items.forEach(item => {
+          if (accum[item.name]) {
+            accum[item.name].gudang += (item.masuk || 0) - (item.bongkarDus || 0);
+            const totalOut = (item.kirim || 0) + (item.tamu || 0);
+            const totalRej = (item.rejectTutup || 0) + (item.rejectAlas || 0);
+            accum[item.name].processing += (item.aktualPcs || 0) - totalOut - totalRej;
+          }
+        });
+      }
+    });
 
     let totGudang = 0, totProc = 0;
     masterJenisKemasan.forEach(m => {
-      totGudang += currentStockStateKemasan[m.name].gudang;
-      totProc += currentStockStateKemasan[m.name].processing;
+      totGudang += Math.max(0, accum[m.name].gudang);
+      totProc += Math.max(0, accum[m.name].processing);
     });
 
     document.getElementById('stat-gudang').textContent = totGudang;
     document.getElementById('stat-processing').textContent = totProc;
+
+    // ============ RENDER GRAFIK ============
+    renderChartPanenVsKirim(filtered);
+    renderChartRejectPie(T);
+
+    // Dashboard Mika ikut diperbarui
+    renderMikaDashboard();
+  }
+
+  // ========== GRAFIK 1: BAR CHART PANEN VS KIRIM HARIAN ==========
+  function renderChartPanenVsKirim(data) {
+    const el = document.getElementById('chart-main');
+    if (!data.length) {
+      el.innerHTML = '<div style="text-align:center;color:#999;padding:2rem;">Belum ada data untuk grafik bulan ini</div>';
+      return;
+    }
+
+    const W = Math.max(600, data.length * 70);
+    const H = 280;
+    const padL = 55, padR = 20, padT = 20, padB = 60;
+    const chartW = W - padL - padR;
+    const chartH = H - padT - padB;
+
+    let maxVal = 0;
+    data.forEach(d => {
+      const panen = (d.p_hatsu || 0) + (d.p_gradea || 0) + (d.p_gradeb || 0) +
+                    (d.rk_crack || 0) + (d.rk_poli || 0) + (d.rk_hpt || 0);
+      const kirim = (d.k_hatsu || 0) + (d.k_a11 || 0) + (d.k_a15 || 0) + (d.k_frozen || 0);
+      maxVal = Math.max(maxVal, panen, kirim);
+    });
+    maxVal = maxVal || 1;
+    maxVal = Math.ceil(maxVal * 1.1);
+
+    const slotW = chartW / data.length;
+    const barW = Math.min(30, slotW / 3);
+
+    let svg = `<svg viewBox="0 0 ${W} ${H}" class="chart-svg" preserveAspectRatio="xMidYMid meet" style="min-width:${W}px;">`;
+
+    // Grid lines + Y axis labels
+    for (let i = 0; i <= 4; i++) {
+      const y = padT + (chartH * i / 4);
+      const val = maxVal * (1 - i / 4);
+      svg += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#e5e7eb" stroke-width="1"/>`;
+      svg += `<text x="${padL - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="#888">${val.toFixed(0)}</text>`;
+    }
+
+    // Bars
+    data.forEach((d, i) => {
+      const panen = (d.p_hatsu || 0) + (d.p_gradea || 0) + (d.p_gradeb || 0) +
+                    (d.rk_crack || 0) + (d.rk_poli || 0) + (d.rk_hpt || 0);
+      const kirim = (d.k_hatsu || 0) + (d.k_a11 || 0) + (d.k_a15 || 0) + (d.k_frozen || 0);
+
+      const slotX = padL + (chartW * i / data.length);
+      const xP = slotX + slotW / 2 - barW - 1;
+      const xK = slotX + slotW / 2 + 1;
+
+      const hP = (panen / maxVal) * chartH;
+      const hK = (kirim / maxVal) * chartH;
+      const yP = padT + chartH - hP;
+      const yK = padT + chartH - hK;
+
+      svg += `<rect x="${xP}" y="${yP}" width="${barW}" height="${hP}" fill="#dc2626" rx="2"><title>${d.tgl} · Panen: ${panen.toFixed(2)} Kg</title></rect>`;
+      svg += `<rect x="${xK}" y="${yK}" width="${barW}" height="${hK}" fill="#2563eb" rx="2"><title>${d.tgl} · Kirim: ${kirim.toFixed(2)} Kg</title></rect>`;
+
+      const dayLabel = d.tgl.substring(8, 10);
+      svg += `<text x="${slotX + slotW / 2}" y="${H - padB + 15}" text-anchor="middle" font-size="10" fill="#666">${dayLabel}</text>`;
+    });
+
+    // Axis line
+    svg += `<line x1="${padL}" y1="${padT + chartH}" x2="${W - padR}" y2="${padT + chartH}" stroke="#999" stroke-width="1"/>`;
+    svg += `</svg>`;
+
+    el.innerHTML = svg + `
+      <div class="chart-legend">
+        <span><span class="dot" style="background:#dc2626;"></span> Panen (Kg)</span>
+        <span><span class="dot" style="background:#2563eb;"></span> Kirim (Kg)</span>
+      </div>`;
+  }
+
+  // ========== GRAFIK 2: PIE CHART KOMPOSISI REJECT ==========
+  function renderChartRejectPie(T) {
+    const el = document.getElementById('chart-reject');
+    const total = T.rej_total;
+
+    if (total <= 0) {
+      el.innerHTML = '<div style="text-align:center;color:#16a34a;padding:2rem;font-weight:600;">✓ Tidak ada reject bulan ini</div>';
+      return;
+    }
+
+    const segments = [
+      { label: 'Cracking', value: T.rp_crack, color: '#dc2626' },
+      { label: 'Polinasi', value: T.rp_poli, color: '#ea580c' },
+      { label: 'HPT', value: T.rp_hpt, color: '#f59e0b' },
+      { label: 'Bruise', value: T.rp_bruise, color: '#84cc16' },
+      { label: 'Overripe', value: T.rp_overripe, color: '#0891b2' },
+      { label: 'Frozen', value: T.rp_frozen, color: '#7c3aed' }
+    ].filter(s => s.value > 0);
+
+    if (!segments.length) {
+      el.innerHTML = '<div style="text-align:center;color:#999;padding:2rem;">Tidak ada rincian reject</div>';
+      return;
+    }
+
+    const W = 240, H = 240, cx = W / 2, cy = H / 2, R = 90;
+    let startAngle = -Math.PI / 2;
+
+    let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:240px;height:240px;flex:none;">`;
+
+    segments.forEach(s => {
+      const angle = (s.value / total) * Math.PI * 2;
+      const endAngle = startAngle + angle;
+
+      if (angle >= Math.PI * 1.999) {
+        svg += `<circle cx="${cx}" cy="${cy}" r="${R}" fill="${s.color}"/>`;
+      } else {
+        const x1 = cx + R * Math.cos(startAngle);
+        const y1 = cy + R * Math.sin(startAngle);
+        const x2 = cx + R * Math.cos(endAngle);
+        const y2 = cy + R * Math.sin(endAngle);
+        const largeArc = angle > Math.PI ? 1 : 0;
+        svg += `<path d="M ${cx} ${cy} L ${x1} ${y1} A ${R} ${R} 0 ${largeArc} 1 ${x2} ${y2} Z" fill="${s.color}" stroke="white" stroke-width="2"><title>${s.label}: ${s.value.toFixed(2)} Kg (${(s.value / total * 100).toFixed(1)}%)</title></path>`;
+      }
+      startAngle = endAngle;
+    });
+
+    // Center hole (donut)
+    svg += `<circle cx="${cx}" cy="${cy}" r="50" fill="white"/>`;
+    svg += `<text x="${cx}" y="${cy - 5}" text-anchor="middle" font-size="11" fill="#888" font-weight="600">TOTAL</text>`;
+    svg += `<text x="${cx}" y="${cy + 13}" text-anchor="middle" font-size="16" fill="#dc2626" font-weight="800">${total.toFixed(1)}</text>`;
+    svg += `<text x="${cx}" y="${cy + 27}" text-anchor="middle" font-size="10" fill="#999">Kg</text>`;
+    svg += `</svg>`;
+
+    const legend = segments.map(s =>
+      `<span><span class="dot" style="background:${s.color};"></span> ${s.label}: <b>${s.value.toFixed(2)}</b> Kg (${(s.value / total * 100).toFixed(1)}%)</span>`
+    ).join('');
+
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;justify-content:center;">
+        ${svg}
+        <div class="chart-legend" style="flex-direction:column;gap:0.5rem;flex:1;min-width:200px;">${legend}</div>
+      </div>`;
   }
 
   /* ============================================================
@@ -2319,7 +3130,6 @@
 
   function num(v) { const n = parseFloat(v); return isNaN(n) ? 0 : n; }
 
-  /* ---- CSV Parser (support quote escaping + auto delimiter , atau ;) ---- */
   function parseCSV(text) {
     const firstLine = text.split(/\r?\n/)[0] || '';
     const commas = (firstLine.match(/,/g) || []).length;
@@ -2350,7 +3160,6 @@
     return rows;
   }
 
-  /* ---- Buka Modal ---- */
   function openImportModal(type) {
     importState = { type, rows: [] };
     document.getElementById('import-file').value = '';
@@ -2363,8 +3172,12 @@
             Multi-kegiatan/material dipisah dengan <b>|</b> (pipe). Contoh: <code>Packing Grade A|Persiapan Mika</code>`,
       panen: `<b>Format kolom:</b> <code>tgl, p_hatsu, p_gradea, p_gradeb, rk_*, rp_*, k_*, m_*, t_*</code><br>
             1 baris = 1 tanggal. Kolom kosong akan dianggap 0. Klik <b>Download Template</b> untuk lihat format lengkap.`,
-      kemasan: `<b>Format kolom:</b> <code>tgl, name, masuk, bongkarDus, aktualPcs, kirim, tamu, rejectTutup, rejectAlas</code><br>
-              Satu tanggal bisa punya 3 baris (Hatsu, Grade A, Grade B). Baris yang tidak diisi = 0.`
+      kemasan: `<b>Kolom utama:</b> <code>tgl, name, masuk, bongkarDus, aktualPcs, kirim, tamu, rejectTutup, rejectAlas, ketTamu, ketReject</code><br>
+              <b>Kemasan tambahan:</b> <code>netfoamBall, netfoamPotong, netfoamTerpakai</code> (baris Hatsu) ·
+              <code>layerSiap, layerPakai</code> (baris Grade A) · <code>sleeveSiap, sleevePakai</code> (baris Grade B) ·
+              <code>stikerMasuk, stikerPakai</code> (baris Hatsu)<br>
+              <b>Koreksi stok fisik (opsional):</b> <code>netfoamOpname, layerOpname, sleeveOpname, stikerOpname</code> — kosongkan kalau tidak perlu; kalau diisi, stok diset ke angka itu.<br>
+              Satu tanggal bisa punya 3 baris. Kolom <code>name</code> boleh: <b>Hatsu</b>, <b>Grade A</b> (atau Hy 11 / A11), <b>Grade B</b> (atau Hy 15 / A15). Kolom yang tidak diisi = 0. Template lama (9 kolom) tetap bisa dipakai.`
     };
     document.getElementById('import-info').innerHTML = infos[type];
     document.getElementById('modal-import').classList.add('show');
@@ -2375,7 +3188,6 @@
     importState = { type: null, rows: [] };
   }
 
-  /* ---- Download Template ---- */
   function downloadTemplate() {
     const t = importState.type;
     let csv = '', filename = '';
@@ -2389,10 +3201,17 @@
       csv += '2026-04-01,Astrin Julianti Kusmawan,Hatsuhana,Packing Grade Hatsuhana|Persiapan Mika,Mika Grade Hatsuhana|Lakban,,,,\n';
       filename = 'template_lks.csv';
     } else if (t === 'kemasan') {
-      csv = 'tgl,name,masuk,bongkarDus,aktualPcs,kirim,tamu,rejectTutup,rejectAlas\n';
-      csv += '2026-04-01,Hatsu,0,5,1000,500,0,0,0\n';
-      csv += '2026-04-01,Grade A,0,3,600,300,0,0,0\n';
-      csv += '2026-04-01,Grade B,0,2,600,400,0,0,0\n';
+      csv = 'tgl,name,masuk,bongkarDus,aktualPcs,kirim,tamu,rejectTutup,rejectAlas,ketTamu,ketReject,' +
+            'netfoamBall,netfoamPotong,netfoamTerpakai,netfoamOpname,' +
+            'layerSiap,layerPakai,layerOpname,' +
+            'sleeveSiap,sleevePakai,sleeveOpname,' +
+            'stikerMasuk,stikerPakai,stikerOpname\n';
+      csv += '2026-04-01,Hatsu,0,5,1000,500,0,0,0,,,0,1000,500,,,,,,,,900,500,\n';
+      csv += '2026-04-01,Grade A,0,3,600,300,0,0,0,,,,,,,600,300,,,,,,,\n';
+      csv += '2026-04-01,Grade B,0,2,600,400,0,0,0,,,,,,,,,,600,400,,,,\n';
+      csv += '2026-04-02,Hatsu,0,0,0,200,0,2,0,,Tutup sobek,0,0,200,,,,,,,,0,200,\n';
+      csv += '2026-04-02,Grade A,0,0,0,150,0,0,0,,,,,,,0,150,,,,,,,\n';
+      csv += '2026-04-02,Grade B,0,0,0,100,0,0,1,,Alas pecah,,,,,,,,0,100,,,,\n';
       filename = 'template_kemasan.csv';
     }
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -2405,7 +3224,6 @@
     showToast('📄 Template didownload');
   }
 
-  /* ---- Preview ---- */
   function previewImport() {
     const file = document.getElementById('import-file').files[0];
     if (!file) return;
@@ -2442,7 +3260,6 @@
     reader.readAsText(file);
   }
 
-  /* ---- Builders ---- */
   function buildPanenRecord(r) {
     return {
       id: genImportId(),
@@ -2475,6 +3292,21 @@
     };
   }
 
+  function numOrNull(v) {
+    if (v === undefined || v === null || String(v).trim() === '') return null;
+    const n = parseFloat(String(v).replace(',', '.'));
+    return isNaN(n) ? null : n;
+  }
+
+  // Samakan penulisan nama: Hy 11 / A11 -> Grade A, Hy 15 / A15 -> Grade B
+  function normKemasanName(v) {
+    const k = String(v || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (['hatsu', 'hatsuhana'].includes(k)) return 'Hatsu';
+    if (['gradea', 'a', 'a11', 'hy11'].includes(k)) return 'Grade A';
+    if (['gradeb', 'b', 'a15', 'hy15'].includes(k)) return 'Grade B';
+    return null;
+  }
+
   function emptyKemasanItem(name, std) {
     return {
       name, std,
@@ -2482,11 +3314,13 @@
       kirim: 0, tamu: 0, ketTamu: '',
       rejectTutup: 0, rejectAlas: 0, ketReject: '',
       netfoamBall: 0, netfoamPotong: 0, netfoamTerpakai: 0, netfoamAkhir: 0,
-      layerSiap: 0, layerPakai: 0, layerAkhir: 0
+      layerSiap: 0, layerPakai: 0, layerAkhir: 0, layerOpname: null,
+      sleeveSiap: 0, sleevePakai: 0, sleeveAkhir: 0, sleeveOpname: null,
+      netfoamOpname: null,
+      stikerMasuk: 0, stikerPakai: 0, stikerOpname: null
     };
   }
 
-  /* ---- Execute ---- */
   function executeImport() {
     if (!importState.rows.length) { showToast('Pilih file CSV dulu!', 'error'); return; }
     const type = importState.type;
@@ -2515,17 +3349,18 @@
       } else if (type === 'kemasan') {
         const grouped = new Map();
         importState.rows.forEach(r => {
-          if (!r.tgl || !r.name) return;
-          const std = r.name === 'Grade B' ? 300 : 200;
+          const nm = normKemasanName(r.name);
+          if (!r.tgl || !nm) return;
+          const std = nm === 'Grade B' ? 300 : 200;
           if (!grouped.has(r.tgl)) {
             grouped.set(r.tgl, { id: genImportId(), tgl: r.tgl, items: [] });
           }
           const entry = grouped.get(r.tgl);
-          if (entry.items.find(x => x.name === r.name)) return;
+          if (entry.items.find(x => x.name === nm)) return;
           const bongkar = num(r.bongkarDus);
           const aktual = num(r.aktualPcs);
           entry.items.push({
-            ...emptyKemasanItem(r.name, std),
+            ...emptyKemasanItem(nm, std),
             masuk: num(r.masuk),
             bongkarDus: bongkar,
             standarPcs: bongkar * std,
@@ -2534,7 +3369,25 @@
             kirim: num(r.kirim),
             tamu: num(r.tamu),
             rejectTutup: num(r.rejectTutup),
-            rejectAlas: num(r.rejectAlas)
+            rejectAlas: num(r.rejectAlas),
+            ketTamu: r.ketTamu || '',
+            ketReject: r.ketReject || '',
+            netfoamBall: num(r.netfoamBall),
+            netfoamPotong: num(r.netfoamPotong),
+            netfoamTerpakai: num(r.netfoamTerpakai),
+            netfoamAkhir: num(r.netfoamPotong) - num(r.netfoamTerpakai),
+            netfoamOpname: numOrNull(r.netfoamOpname),
+            layerSiap: num(r.layerSiap),
+            layerPakai: num(r.layerPakai),
+            layerAkhir: num(r.layerSiap) - num(r.layerPakai),
+            layerOpname: numOrNull(r.layerOpname),
+            sleeveSiap: num(r.sleeveSiap),
+            sleevePakai: num(r.sleevePakai),
+            sleeveAkhir: num(r.sleeveSiap) - num(r.sleevePakai),
+            sleeveOpname: numOrNull(r.sleeveOpname),
+            stikerMasuk: num(r.stikerMasuk),
+            stikerPakai: num(r.stikerPakai),
+            stikerOpname: numOrNull(r.stikerOpname)
           });
         });
         grouped.forEach(entry => {
@@ -2543,6 +3396,9 @@
               entry.items.push(emptyKemasanItem(m.name, m.std));
             }
           });
+          // urutan item harus sama dengan master (Hatsu, Grade A, Grade B)
+          entry.items.sort((x, y) =>
+            masterJenisKemasan.findIndex(m => m.name === x.name) - masterJenisKemasan.findIndex(m => m.name === y.name));
           db.push(entry);
           count++;
         });
