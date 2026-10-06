@@ -2778,6 +2778,7 @@
     // ============ AKUMULASI TOTAL BULAN ============
     const T = {
       p_hatsu: 0, p_gradea: 0, p_gradeb: 0, rk_total: 0, panen_total: 0,
+      rk_crack: 0, rk_poli: 0, rk_hpt: 0,
       rp_crack: 0, rp_poli: 0, rp_hpt: 0, rp_bruise: 0, rp_overripe: 0, rp_frozen: 0, rej_total: 0,
       k_hatsu: 0, k_a11: 0, k_a15: 0, k_frozen: 0, kirim_total: 0,
       m_hatsu: 0, m_a11: 0, m_a15: 0, mika_total: 0
@@ -2792,6 +2793,9 @@
       T.p_gradea += item.p_gradea || 0;
       T.p_gradeb += item.p_gradeb || 0;
       T.rk_total += rk;
+      T.rk_crack += item.rk_crack || 0;
+      T.rk_poli += item.rk_poli || 0;
+      T.rk_hpt += item.rk_hpt || 0;
       T.panen_total += (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + rk;
 
       T.rp_crack += item.rp_crack || 0;
@@ -3068,9 +3072,9 @@
     }
 
     const segments = [
-      { label: 'Cracking', value: T.rp_crack, color: '#dc2626' },
-      { label: 'Polinasi', value: T.rp_poli, color: '#ea580c' },
-      { label: 'HPT', value: T.rp_hpt, color: '#f59e0b' },
+      { label: 'Cracking', value: (T.rk_crack || 0) + T.rp_crack, color: '#dc2626' },
+      { label: 'Polinasi', value: (T.rk_poli || 0) + T.rp_poli, color: '#ea580c' },
+      { label: 'HPT', value: (T.rk_hpt || 0) + T.rp_hpt, color: '#f59e0b' },
       { label: 'Bruise', value: T.rp_bruise, color: '#84cc16' },
       { label: 'Overripe', value: T.rp_overripe, color: '#0891b2' },
       { label: 'Frozen', value: T.rp_frozen, color: '#7c3aed' }
