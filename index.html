@@ -322,7 +322,6 @@
     .notif-badge.good { background: #dcfce7; color: #16a34a; }
     .notif-badge.warn { background: #fef3c7; color: #b45309; }
 
-    /* WEEKLY PANEN (persebaran per minggu + forecast) */
     .recap-table td.wk-periode {
       white-space: normal; text-align: left;
       font-size: 0.66rem; line-height: 1.35; min-width: 130px;
@@ -1167,7 +1166,13 @@
   // ========== STORAGE KEYS ==========
   const LKS_STORAGE_KEY = 'lks_awb_v1';
   const PANEN_STORAGE_KEY = 'panen_awb_v1';
-  // ===== Greenhouse (GH 1 / GH 2). Data lama tanpa field gh dianggap GH 1 =====
+  const KEMASAN_STORAGE_KEY = 'kemasan_awb_v1';
+
+  // FIX: Pastikan ID selalu string agar tidak jadi scientific notation
+  function generateId() {
+    return String(Date.now()) + String(Math.floor(Math.random() * 1000));
+  }
+
   function ghOf(item) { return item && item.gh === 'GH 2' ? 'GH 2' : 'GH 1'; }
   function filterGh(arr, gh) { return (!gh || gh === 'all') ? arr : arr.filter(x => ghOf(x) === gh); }
   function dashGh() { const el = document.getElementById('dashboard-gh'); return el ? el.value : 'all'; }
@@ -1182,7 +1187,6 @@
     });
     return [...m.values()];
   }
-  const KEMASAN_STORAGE_KEY = 'kemasan_awb_v1';
 
   const masterJenisKemasan = [
     { name: 'Hatsu', std: 200, badge: 'hatsu' },
@@ -1196,9 +1200,6 @@
     'Grade B': { gudang: 0, processing: 0 }
   };
 
-  // ========== HELPER REJECT MIKA (backward-compatible) ==========
-  // Data baru pakai field `reject` (satu angka). Data lama masih pakai
-  // rejectTutup + rejectAlas — keduanya tetap dijumlahkan biar tidak hilang.
   function rejMika(it) {
     if (!it) return 0;
     return (it.reject || 0) + (it.rejectTutup || 0) + (it.rejectAlas || 0);
@@ -1269,8 +1270,9 @@
   function queueMutation(type, action, recordOrId) {
     if (!type || suppressSync) return;
     let queue = getSyncQueue();
-    const id = typeof recordOrId === 'object' ? recordOrId.id : recordOrId;
-    queue = queue.filter(x => !(x.type === type && String(x.id) === String(id)));
+    // FIX: Pastikan ID selalu string
+    const id = typeof recordOrId === 'object' ? String(recordOrId.id) : String(recordOrId);
+    queue = queue.filter(x => !(x.type === type && String(x.id) === id));
     if (action === 'clear') {
       queue = queue.filter(x => x.type !== type);
       queue.push({ type, action: 'clear', id: '__clear__', queuedAt: Date.now() });
@@ -1308,7 +1310,7 @@
     nativeStorage.removeItem(key);
     if (type && !suppressSync) {
       if (type === 'kemasan') queueMutation(type, 'clear', '__clear__');
-      else readArrayRaw(oldRaw).forEach(record => queueMutation(type, 'delete', record.id));
+      else readArrayRaw(oldRaw).forEach(record => queueMutation(type, 'delete', String(record.id)));
     }
     if (type) updateSyncStatus();
   };
@@ -1356,7 +1358,8 @@
     }
     syncBusy = true;
     updateSyncStatus('syncing');
-    const BATCH_SIZE = 50, MAX_RETRY = 3;
+    // FIX: Ubah BATCH_SIZE menjadi 5 agar URL tidak terlalu panjang
+    const BATCH_SIZE = 5, MAX_RETRY = 3;
     let totalProcessed = 0;
     try {
       while (true) {
@@ -1379,6 +1382,8 @@
         totalProcessed += batch.length;
         saveSyncQueue(remaining);
         nativeStorage.setItem(SYNC_LAST_KEY, new Date().toISOString());
+        // Jeda 1 detik antar batch agar Google tidak rate limit
+        await new Promise(r => setTimeout(r, 1000));
       }
       updateSyncStatus();
       if (manual) showToast(`✓ Sinkronisasi selesai (${totalProcessed} data)`);
@@ -1422,7 +1427,7 @@
     const all = [];
     sources.forEach(([type, key]) => {
       readArrayRaw(nativeStorage.getItem(key)).forEach(record => {
-        all.push({ type, action: 'upsert', id: record.id, record, queuedAt: Date.now() });
+        all.push({ type, action: 'upsert', id: String(record.id), record, queuedAt: Date.now() });
       });
     });
     if (all.length) {
@@ -1654,7 +1659,7 @@
     const data = collectLksData();
     if (!data.tanggal || !data.nama || !data.grade) { showToast('Isi Tanggal, Nama Pekerja, dan Grade!', 'error'); return; }
     if (!data.kegiatan || data.kegiatan.length === 0 || !data.kegiatan[0].kegiatan) { showToast('Isi minimal 1 kegiatan!', 'error'); return; }
-    const entry = { id: Date.now(), ...data };
+    const entry = { id: generateId(), ...data };
     let db = JSON.parse(localStorage.getItem(LKS_STORAGE_KEY) || '[]');
     db.push(entry);
     localStorage.setItem(LKS_STORAGE_KEY, JSON.stringify(db));
@@ -1740,8 +1745,8 @@
       return `
         <tr>
           <td>
-            <button class="btn btn-sm btn-secondary" onclick="editDataLks(${item.id})">✏️</button>
-            <button class="btn btn-sm btn-danger" onclick="hapusDataLks(${item.id})">🗑️</button>
+            <button class="btn btn-sm btn-secondary" onclick="editDataLks('${item.id}')">✏️</button>
+            <button class="btn btn-sm btn-danger" onclick="hapusDataLks('${item.id}')">🗑️</button>
           </td>
           <td>${item.tanggal}</td>
           <td>${item.nama}</td>
@@ -1755,7 +1760,7 @@
 
   function editDataLks(id) {
     const db = JSON.parse(localStorage.getItem(LKS_STORAGE_KEY) || '[]');
-    const item = db.find(x => x.id === id);
+    const item = db.find(x => String(x.id) === String(id));
     if (!item) return;
     window.editingLksId = id;
     window.editingPanenId = null;
@@ -1793,7 +1798,7 @@
   function hapusDataLks(id) {
     if (!confirm('Yakin hapus LKS ini?')) return;
     const db = JSON.parse(localStorage.getItem(LKS_STORAGE_KEY) || '[]');
-    const filtered = db.filter(x => x.id !== id);
+    const filtered = db.filter(x => String(x.id) !== String(id));
     localStorage.setItem(LKS_STORAGE_KEY, JSON.stringify(filtered));
     showToast('✅ LKS berhasil dihapus!');
     renderTableLks();
@@ -1803,7 +1808,7 @@
   function saveEditLks() {
     if (!window.editingLksId) return;
     const db = JSON.parse(localStorage.getItem(LKS_STORAGE_KEY) || '[]');
-    const idx = db.findIndex(x => x.id === window.editingLksId);
+    const idx = db.findIndex(x => String(x.id) === String(window.editingLksId));
     if (idx === -1) return;
     db[idx] = {
       id: window.editingLksId,
@@ -1855,7 +1860,7 @@
     const tgl = document.getElementById('panen-tgl').value;
     if (!tgl) { showToast('Pilih tanggal panen terlebih dahulu!', 'error'); return; }
     const entry = {
-      id: Date.now(), tgl: tgl, gh: document.getElementById('panen-gh').value || 'GH 1',
+      id: generateId(), tgl: tgl, gh: document.getElementById('panen-gh').value || 'GH 1',
       p_hatsu: getValP('p-hatsu'), p_gradea: getValP('p-gradea'), p_gradeb: getValP('p-gradeb'),
       rk_crack: getValP('rk-crack'), rk_poli: getValP('rk-poli'), rk_hpt: getValP('rk-hpt'),
       rp_crack: getValP('rp-crack'), rp_poli: getValP('rp-poli'), rp_hpt: getValP('rp-hpt'),
@@ -1904,8 +1909,8 @@
       return `
         <tr>
           <td>
-            <button class="btn btn-sm btn-secondary" onclick="editDataPanen(${item.id})">✏</button>
-            <button class="btn btn-sm btn-danger" onclick="hapusDataPanen(${item.id})">🗑️</button>
+            <button class="btn btn-sm btn-secondary" onclick="editDataPanen('${item.id}')">✏</button>
+            <button class="btn btn-sm btn-danger" onclick="hapusDataPanen('${item.id}')">🗑️</button>
           </td>
           <td>${item.tgl}</td>
           <td>${ghOf(item)}</td>
@@ -1924,7 +1929,7 @@
 
   function editDataPanen(id) {
     const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
-    const item = db.find(x => x.id === id);
+    const item = db.find(x => String(x.id) === String(id));
     if (!item) return;
     window.editingPanenId = id;
     window.editingLksId = null;
@@ -1961,7 +1966,7 @@
     if (window.editingLksId) { saveEditLks(); return; }
     if (!window.editingPanenId) return;
     const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
-    const idx = db.findIndex(x => x.id === window.editingPanenId);
+    const idx = db.findIndex(x => String(x.id) === String(window.editingPanenId));
     if (idx === -1) return;
     db[idx] = {
       ...db[idx],
@@ -1989,7 +1994,7 @@
   function hapusDataPanen(id) {
     if (!confirm('Yakin hapus data panen ini?')) return;
     const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
-    const filtered = db.filter(x => x.id !== id);
+    const filtered = db.filter(x => String(x.id) !== String(id));
     localStorage.setItem(PANEN_STORAGE_KEY, JSON.stringify(filtered));
     showToast('✅ Data panen berhasil dihapus!');
     renderTablePanen();
@@ -2265,7 +2270,7 @@
       x.netfoamOpname !== null || x.layerOpname !== null || x.sleeveOpname !== null || x.stikerOpname !== null
     );
     if (!hasData) { showToast('Isi minimal 1 data transaksi kemasan!', 'error'); return; }
-    const entry = { id: Date.now(), tgl, items };
+    const entry = { id: generateId(), tgl, items };
     let db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
     db.push(entry);
     localStorage.setItem(KEMASAN_STORAGE_KEY, JSON.stringify(db));
@@ -2319,8 +2324,8 @@
         const b = itemMap['Grade B'] || {};
         return `<tr>
           <td>
-            <button class="btn btn-sm btn-secondary" onclick="editKemasanHistory(${entry.id})">✏️</button>
-            <button class="btn btn-sm btn-danger" onclick="hapusKemasanHistory(${entry.id})">🗑️</button>
+            <button class="btn btn-sm btn-secondary" onclick="editKemasanHistory('${entry.id}')">✏️</button>
+            <button class="btn btn-sm btn-danger" onclick="hapusKemasanHistory('${entry.id}')">🗑️</button>
           </td>
           <td>${entry.tgl}</td>
           <td>G:${h.masuk || 0}/${h.bongkarDus || 0}D | P:${h.aktualPcs || 0}Pcs</td>
@@ -2413,7 +2418,7 @@
   function hapusKemasanHistory(id) {
     if (!confirm('Yakin hapus transaksi kemasan ini?')) return;
     const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
-    const filtered = db.filter(x => x.id !== id);
+    const filtered = db.filter(x => String(x.id) !== String(id));
     localStorage.setItem(KEMASAN_STORAGE_KEY, JSON.stringify(filtered));
     showToast('✅ Transaksi kemasan berhasil dihapus!');
     recalculateStockKemasan();
@@ -2440,7 +2445,7 @@
 
   function editKemasanHistory(id) {
     const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
-    const entry = db.find(x => x.id === id);
+    const entry = db.find(x => String(x.id) === String(id));
     if (!entry) return;
     window.editingKemasanId = id;
     const body = document.getElementById('modal-edit-kemasan-body');
@@ -2479,7 +2484,7 @@
   function saveEditKemasan() {
     if (!window.editingKemasanId) return;
     const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
-    const idx = db.findIndex(x => x.id === window.editingKemasanId);
+    const idx = db.findIndex(x => String(x.id) === String(window.editingKemasanId));
     if (idx === -1) return;
     const tgl = document.getElementById('edit-k-tgl').value;
     const updatedItems = masterJenisKemasan.map((m, i) => {
@@ -2494,7 +2499,6 @@
         const el = document.getElementById(`edit-aks-${i}-${f}`);
         if (el) aksEdit[f] = parseFloat(el.value || 0);
       });
-      // Buang field lama supaya tidak dobel hitung
       const base = { ...db[idx].items[i] };
       delete base.rejectTutup;
       delete base.rejectAlas;
@@ -2522,7 +2526,7 @@
   function computeMikaTimeline() {
     const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]')
       .filter(e => e && e.tgl && Array.isArray(e.items))
-      .sort((a, b) => a.tgl.localeCompare(b.tgl) || ((a.id || 0) - (b.id || 0)));
+      .sort((a, b) => a.tgl.localeCompare(b.tgl) || (String(a.id).localeCompare(String(b.id))));
     const names = masterJenisKemasan.map(m => m.name);
     const st = { gudang: {}, proc: {}, layer: 0, sleeve: 0, stiker: 0, netfoam: 0 };
     names.forEach(n => { st.gudang[n] = 0; st.proc[n] = 0; });
@@ -3423,7 +3427,6 @@
      ============================================================ */
   let importState = { type: null, rows: [] };
   let __importCounter = 0;
-  const genImportId = () => Date.now() * 1000 + (__importCounter++);
 
   function num(v) { const n = parseFloat(v); return isNaN(n) ? 0 : n; }
 
@@ -3555,7 +3558,7 @@
 
   function buildPanenRecord(r) {
     return {
-      id: genImportId(), tgl: r.tgl, gh: /2/.test(String(r.gh || '')) ? 'GH 2' : 'GH 1',
+      id: generateId(), tgl: r.tgl, gh: /2/.test(String(r.gh || '')) ? 'GH 2' : 'GH 1',
       p_hatsu: num(r.p_hatsu), p_gradea: num(r.p_gradea), p_gradeb: num(r.p_gradeb),
       rk_crack: num(r.rk_crack), rk_poli: num(r.rk_poli), rk_hpt: num(r.rk_hpt),
       rp_crack: num(r.rp_crack), rp_poli: num(r.rp_poli), rp_hpt: num(r.rp_hpt),
@@ -3571,7 +3574,7 @@
     const kegs = String(r.kegiatan || '').split('|').map(s => s.trim()).filter(Boolean);
     const mats = String(r.material || '').split('|').map(s => s.trim()).filter(Boolean);
     return {
-      id: genImportId(),
+      id: generateId(),
       tanggal: r.tanggal, nama: r.nama, grade: r.grade || '',
       kegiatan: kegs.map(k => ({ kegiatan: k, hasil: '', ket: '' })),
       jobTambahan: r.jobTambahan || '',
@@ -3637,12 +3640,11 @@
           const nm = normKemasanName(r.name);
           if (!r.tgl || !nm) return;
           const std = nm === 'Grade B' ? 300 : 200;
-          if (!grouped.has(r.tgl)) grouped.set(r.tgl, { id: genImportId(), tgl: r.tgl, items: [] });
+          if (!grouped.has(r.tgl)) grouped.set(r.tgl, { id: generateId(), tgl: r.tgl, items: [] });
           const entry = grouped.get(r.tgl);
           if (entry.items.find(x => x.name === nm)) return;
           const bongkar = num(r.bongkarDus);
           const aktual = num(r.aktualPcs);
-          // reject: field baru `reject`, tapi tetap kompatibel dengan CSV lama
           const rejectVal = num(r.reject) + num(r.rejectTutup) + num(r.rejectAlas);
           entry.items.push({
             ...emptyKemasanItem(nm, std),
