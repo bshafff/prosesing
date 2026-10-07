@@ -1196,6 +1196,14 @@
     'Grade B': { gudang: 0, processing: 0 }
   };
 
+  // ========== HELPER REJECT MIKA (backward-compatible) ==========
+  // Data baru pakai field `reject` (satu angka). Data lama masih pakai
+  // rejectTutup + rejectAlas — keduanya tetap dijumlahkan biar tidak hilang.
+  function rejMika(it) {
+    if (!it) return 0;
+    return (it.reject || 0) + (it.rejectTutup || 0) + (it.rejectAlas || 0);
+  }
+
   // ========== OFFLINE + SHEETS SYNC ==========
   const SYNC_CONFIG = { API_KEY: 'AWB_PROCESSING_2026', VERSION: '1.0.0' };
   let scriptUrl = localStorage.getItem('awb_script_url') || '';
@@ -2000,7 +2008,7 @@
           if (accum[item.name]) {
             accum[item.name].gudang += (item.masuk || 0) - (item.bongkarDus || 0);
             const totalOut = (item.kirim || 0) + (item.tamu || 0);
-            const totalRej = (item.rejectTutup || 0) + (item.rejectAlas || 0);
+            const totalRej = rejMika(item);
             accum[item.name].processing += (item.aktualPcs || 0) - totalOut - totalRej;
             accum[item.name].keluar += totalOut;
             accum[item.name].reject += totalRej;
@@ -2155,10 +2163,10 @@
           </div>
           <div class="input-group"><label>Keterangan Tamu / Sample</label><input type="text" id="ket-tamu-${i}" placeholder="Contoh: Demo customer / kunjungan dinas"></div>
           <div class="sub-title">❌ 5. Reject Mika Hari Ini</div>
-          <div class="row-2">
-            <div class="input-group"><label>Reject Tutup (PCS)</label><input type="number" id="reject-tutup-${i}" placeholder="0" oninput="hitungKemasan(${i})"></div>
-            <div class="input-group"><label>Reject Alas (PCS)</label><input type="number" id="reject-alas-${i}" placeholder="0" oninput="hitungKemasan(${i})"></div>
+          <div class="info-box" style="background:#fef2f2;border-left-color:#dc2626;color:#991b1b;">
+            Reject Mika otomatis <b>mengurangi stok Processing</b> (sama seperti Kirim Packing & Mika Tamu).
           </div>
+          <div class="input-group"><label>Reject Mika (PCS)</label><input type="number" id="reject-${i}" placeholder="0" oninput="hitungKemasan(${i})"></div>
           <div class="input-group"><label>Keterangan Reject</label><input type="text" id="ket-reject-${i}" placeholder="Contoh: Sobek, pecah, kotor, atau cacat pabrik"></div>
           ${hatsuExtraForm}
           ${layerExtraForm}
@@ -2200,9 +2208,8 @@
     }
     const kirim = getValK(`kirim-${i}`);
     const tamu = getValK(`tamu-${i}`);
-    const rejTutup = getValK(`reject-tutup-${i}`);
-    const rejAlas = getValK(`reject-alas-${i}`);
-    const pAkhir = pAwal + aktualPcs - kirim - tamu - rejTutup - rejAlas;
+    const rej = getValK(`reject-${i}`);
+    const pAkhir = pAwal + aktualPcs - kirim - tamu - rej;
     document.getElementById(`processing-akhir-${i}`).value = Math.max(0, pAkhir);
     if (item.name.includes('Hatsu')) {
       const el = document.getElementById(`netfoam-akhir-${i}`);
@@ -2232,8 +2239,7 @@
       kirim: getValK(`kirim-${i}`),
       tamu: getValK(`tamu-${i}`),
       ketTamu: document.getElementById(`ket-tamu-${i}`) ? document.getElementById(`ket-tamu-${i}`).value : '',
-      rejectTutup: getValK(`reject-tutup-${i}`),
-      rejectAlas: getValK(`reject-alas-${i}`),
+      reject: getValK(`reject-${i}`),
       ketReject: document.getElementById(`ket-reject-${i}`) ? document.getElementById(`ket-reject-${i}`).value : '',
       netfoamBall: getValK(`netfoam-ball-${i}`),
       netfoamPotong: getValK(`netfoam-potong-${i}`),
@@ -2254,7 +2260,7 @@
     }));
     const hasData = items.some(x =>
       x.masuk > 0 || x.bongkarDus > 0 || x.aktualPcs > 0 || x.kirim > 0 || x.tamu > 0 ||
-      x.rejectTutup > 0 || x.rejectAlas > 0 || x.netfoamBall > 0 || x.netfoamPotong > 0 || x.netfoamTerpakai > 0 ||
+      x.reject > 0 || x.netfoamBall > 0 || x.netfoamPotong > 0 || x.netfoamTerpakai > 0 ||
       x.layerSiap > 0 || x.layerPakai > 0 || x.sleeveSiap > 0 || x.sleevePakai > 0 || x.stikerMasuk > 0 || x.stikerPakai > 0 ||
       x.netfoamOpname !== null || x.layerOpname !== null || x.sleeveOpname !== null || x.stikerOpname !== null
     );
@@ -2320,7 +2326,7 @@
           <td>G:${h.masuk || 0}/${h.bongkarDus || 0}D | P:${h.aktualPcs || 0}Pcs</td>
           <td>G:${a.masuk || 0}/${a.bongkarDus || 0}D | P:${a.aktualPcs || 0}Pcs</td>
           <td>G:${b.masuk || 0}/${b.bongkarDus || 0}D | P:${b.aktualPcs || 0}Pcs</td>
-          <td><small>Kirim: ${(h.kirim || 0) + (a.kirim || 0) + (b.kirim || 0)} | Rej: ${(h.rejectTutup || 0) + (h.rejectAlas || 0) + (a.rejectTutup || 0) + (a.rejectAlas || 0) + (b.rejectTutup || 0) + (b.rejectAlas || 0)}</small></td>
+          <td><small>Kirim: ${(h.kirim || 0) + (a.kirim || 0) + (b.kirim || 0)} | Rej: ${rejMika(h) + rejMika(a) + rejMika(b)}</small></td>
         </tr>`;
       }).join('');
     }
@@ -2452,6 +2458,9 @@
             <div class="input-group"><label>Kirim (Pcs)</label><input type="number" id="edit-kirim-${idx}" value="${it.kirim || 0}"></div>
           </div>
           <div class="row-2">
+            <div class="input-group"><label>Reject Mika (Pcs)</label><input type="number" id="edit-reject-${idx}" value="${rejMika(it)}"></div>
+          </div>
+          <div class="row-2">
             ${(AKS_EDIT_FIELDS[it.name] || []).map(([f, lbl]) =>
               `<div class="input-group"><label>${lbl} (Pcs)</label><input type="number" id="edit-aks-${idx}-${f}" value="${it[f] || 0}"></div>`).join('')}
           </div>
@@ -2478,16 +2487,21 @@
       const bongkar = parseFloat(document.getElementById(`edit-bongkar-${i}`).value || 0);
       const aktual = parseFloat(document.getElementById(`edit-aktual-${i}`).value || 0);
       const kirim = parseFloat(document.getElementById(`edit-kirim-${i}`).value || 0);
+      const reject = parseFloat((document.getElementById(`edit-reject-${i}`) || {}).value || 0);
       const stdPcs = bongkar * m.std;
       const aksEdit = {};
       (AKS_EDIT_FIELDS[m.name] || []).forEach(([f]) => {
         const el = document.getElementById(`edit-aks-${i}-${f}`);
         if (el) aksEdit[f] = parseFloat(el.value || 0);
       });
+      // Buang field lama supaya tidak dobel hitung
+      const base = { ...db[idx].items[i] };
+      delete base.rejectTutup;
+      delete base.rejectAlas;
       return {
-        ...db[idx].items[i],
+        ...base,
         masuk, bongkarDus: bongkar, standarPcs: stdPcs, aktualPcs: aktual,
-        selisih: aktual - stdPcs, kirim, ...aksEdit
+        selisih: aktual - stdPcs, kirim, reject, ...aksEdit
       };
     });
     db[idx] = { id: window.editingKemasanId, tgl, items: updatedItems };
@@ -2524,7 +2538,7 @@
           if (!(it.name in st.proc)) return;
           st.gudang[it.name] += (it.masuk || 0) - (it.bongkarDus || 0);
           const out = (it.kirim || 0) + (it.tamu || 0);
-          const rej = (it.rejectTutup || 0) + (it.rejectAlas || 0);
+          const rej = rejMika(it);
           st.proc[it.name] += (it.aktualPcs || 0) - out - rej;
           keluar += out; reject += rej; rejectBy[it.name] += rej;
           st.layer   += (it.layerSiap || 0)   - (it.layerPakai || 0);
@@ -2954,9 +2968,6 @@
 
   /* ============================================================
      PERSEBARAN PANEN PER MINGGU (SENIN–SABTU) + FORECAST TREN
-     - Minggu berjalan Senin s/d Sabtu (6 hari)
-     - Bisa lintas bulan, mis. 28 Sep – 3 Okt
-     - Setiap sel menampilkan: Kg · % persebaran · Δ vs minggu lalu
      ============================================================ */
   const BULAN_SINGKAT = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
   const WEEK_GRADES = [
@@ -2965,7 +2976,7 @@
     { key: 'gradeB', label: 'Grade B',   color: '#ea580c' },
     { key: 'reject', label: 'Reject',    color: '#64748b' }
   ];
-  const WEEK_LEN = 6; // Senin–Sabtu
+  const WEEK_LEN = 6;
 
   function formatYMD(d) {
     const y = d.getFullYear();
@@ -2974,7 +2985,6 @@
     return `${y}-${m}-${dd}`;
   }
 
-  // Senin = 1, Minggu = 0, dst.
   function mondayOf(d) {
     const copy = new Date(d);
     const dow = copy.getDay();
@@ -2994,7 +3004,7 @@
     while (cursor <= monthEnd) {
       const ws = new Date(cursor);
       const we = new Date(cursor);
-      we.setDate(we.getDate() + (WEEK_LEN - 1)); // +5 hari → Sabtu
+      we.setDate(we.getDate() + (WEEK_LEN - 1));
       out.push({
         idx: idx++,
         startStr: formatYMD(ws),
@@ -3020,7 +3030,6 @@
   function computeWeeklyPanenForMonth(ym) {
     const monthRanges = getWeekRanges(ym);
     if (!monthRanges.length) return [];
-    // Tambahkan 1 minggu sebelumnya untuk hitung delta minggu pertama
     const first = monthRanges[0];
     const prevStart = new Date(first.startDate);
     prevStart.setDate(prevStart.getDate() - 7);
@@ -3054,7 +3063,6 @@
       w.total = w.hatsu + w.gradeA + w.gradeB + w.reject;
       w.daysWithData = w.daysSet.size;
     });
-    // Hitung delta minggu ke minggu
     for (let i = 1; i < result.length; i++) {
       const w = result[i], p = result[i - 1];
       WEEK_GRADES.forEach(g => {
@@ -3096,7 +3104,6 @@
 
     const weeks = computeWeeklyPanenForMonth(ym);
 
-    // Info periode: tulis eksplisit tanggal berapa–berapa, berapa hari
     if (weeks.length) {
       document.getElementById('minggu-period-info').innerHTML =
         `<b>${ghLabelOf(weekGh())}</b> · Menampilkan minggu <b>(Senin–Sabtu)</b> yang beririsan dengan <b>${formatBulanIndo(ym)}</b> — ` +
@@ -3119,7 +3126,6 @@
       return;
     }
 
-    // Total untuk hitung % persebaran
     const totals = { hatsu: 0, gradeA: 0, gradeB: 0, reject: 0, total: 0 };
     weeks.forEach(w => {
       totals.hatsu += w.hatsu;
@@ -3139,7 +3145,6 @@
       return `<div class="wk-delta ${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'} ${Math.abs(d).toFixed(1)}% vs minggu lalu</div>`;
     };
 
-    // Kategori: % dari total minggu itu sendiri. Kolom Total: % dari total bulan.
     const pctHtml = (v, total, label) => {
       if (total <= 0) return '<div class="wk-pct">0%</div>';
       return `<div class="wk-pct">${(v / total * 100).toFixed(1)}% ${label || 'dari total minggu'}</div>`;
@@ -3166,18 +3171,15 @@
         </td>
       </tr>`).join('');
 
-    // ===== FORECAST minggu berikutnya =====
     const active = weeks.filter(w => w.daysWithData > 0);
     const lastActive = active[active.length - 1];
 
-    // Normalisasi ke rata-rata per hari (pakai 6 hari sebagai panjang minggu)
     const fcRate = {};
     WEEK_GRADES.forEach(g => {
       fcRate[g.key] = linForecast(active.map(w => w[g.key] / Math.max(1, w.daysWithData)));
     });
     const fcTotalRate = linForecast(active.map(w => w.total / Math.max(1, w.daysWithData)));
 
-    // Baseline minggu terakhir dinormalisasi ke 6 hari penuh
     const lastFull = {};
     WEEK_GRADES.forEach(g => {
       lastFull[g.key] = lastActive[g.key] / Math.max(1, lastActive.daysWithData) * WEEK_LEN;
@@ -3195,7 +3197,6 @@
         const col = pct > 0 ? '#86efac' : pct < 0 ? '#fecaca' : '#cbd5e1';
         d = `<div class="wk-delta" style="color:${col};">${pct > 0 ? '▲' : pct < 0 ? '▼' : '='} ${Math.abs(pct).toFixed(1)}% vs minggu lalu</div>`;
       }
-      // Kategori: % dari estimasi total minggu depan. Total: % dari total bulan.
       const base = isTotalCol ? totals.total : estWeekTotal;
       const lbl = isTotalCol ? 'dari total bulan' : 'dari total minggu';
       const share = base > 0 ? `<div class="wk-pct" style="color:#ccfbf1;">≈ ${(est / base * 100).toFixed(1)}% ${lbl}</div>` : '';
@@ -3213,7 +3214,6 @@
       <td style="background:#0d9488;color:#fff;">${fcCell(fcTotalRate, lastFull.total, 'total')}</td>
     </tr>`;
 
-    // ===== Simpan data untuk download CSV (semua minggu bulan ini, tidak terpengaruh filter) =====
     const fcInfo = (rate, lastVal, totalsKey) => {
       if (rate === null || !isFinite(rate)) return { est: '', pct: '', delta: '' };
       const est = rate * WEEK_LEN;
@@ -3271,7 +3271,7 @@
     const W = cols.reduce((a, c) => a + c.w, 0);
     const rowH = 64, headH = 34, topH = 86, noteH = 64;
     const rows = d.list;
-    const H = topH + headH + rows.length * rowH + rowH /* total bulan */ + rowH /* estimasi */ + noteH;
+    const H = topH + headH + rows.length * rowH + rowH + rowH + noteH;
     const sc = 2;
     const cv = document.createElement('canvas');
     cv.width = W * sc; cv.height = H * sc;
@@ -3294,7 +3294,6 @@
     txt(`${ghLabel} · ${formatBulanIndo(d.ym)} · Hatsuhana · Grade A · Grade B · Reject`, 16, 54, { s: 13, c: '#e2f0d9' });
     txt('PT. Agri Wangi Berry — Processing', 16, 72, { s: 11, c: '#bbd8a5' });
 
-    // header kolom
     let x = 0;
     c.fillStyle = '#e8f0e2'; c.fillRect(0, topH, W, headH);
     const heads = ['Minggu', 'Periode'].concat(cols.slice(2).map(z => z.label));
@@ -3408,7 +3407,6 @@
         }
       });
       svg += `<text x="${cx}" y="${H - padB + 18}" text-anchor="middle" font-size="11" font-weight="700" fill="#444">Minggu ${w.idx}</text>`;
-      // Tampilkan label rentang tanggal (mis. 28 Sep–3 Okt)
       const label = (w.sm === w.em) ? `${w.sd}–${w.ed} ${mS[w.sm - 1]}` : `${w.sd} ${mS[w.sm - 1]}–${w.ed} ${mS[w.em - 1]}`;
       svg += `<text x="${cx}" y="${H - padB + 32}" text-anchor="middle" font-size="9.5" fill="#888">${label}</text>`;
       svg += `<text x="${cx}" y="${H - padB + 46}" text-anchor="middle" font-size="9" fill="#aaa">${w.daysWithData}/${w.days} hari</text>`;
@@ -3470,12 +3468,14 @@
             Multi-kegiatan/material dipisah dengan <b>|</b> (pipe). Contoh: <code>Packing Grade A|Persiapan Mika</code>`,
       panen: `<b>Format kolom:</b> <code>tgl, p_hatsu, p_gradea, p_gradeb, rk_*, rp_*, k_*, m_*, t_*</code><br>
             1 baris = 1 tanggal. Kolom kosong akan dianggap 0. Klik <b>Download Template</b> untuk lihat format lengkap.`,
-      kemasan: `<b>Kolom utama:</b> <code>tgl, name, masuk, bongkarDus, aktualPcs, kirim, tamu, rejectTutup, rejectAlas, ketTamu, ketReject</code><br>
+      kemasan: `<b>Kolom utama:</b> <code>tgl, name, masuk, bongkarDus, aktualPcs, kirim, tamu, reject, ketTamu, ketReject</code><br>
+              Kolom <code>reject</code> = jumlah PCS mika yang di-reject hari itu (otomatis mengurangi stok Processing, untuk semua grade).<br>
               <b>Kemasan tambahan:</b> <code>netfoamBall, netfoamPotong, netfoamTerpakai</code> (baris Hatsu) ·
               <code>layerSiap, layerPakai</code> (baris Grade A) · <code>sleeveSiap, sleevePakai</code> (baris Grade B) ·
               <code>stikerMasuk, stikerPakai</code> (baris Hatsu)<br>
               <b>Koreksi stok fisik (opsional):</b> <code>netfoamOpname, layerOpname, sleeveOpname, stikerOpname</code> — kosongkan kalau tidak perlu; kalau diisi, stok diset ke angka itu.<br>
-              Satu tanggal bisa punya 3 baris. Kolom <code>name</code> boleh: <b>Hatsu</b>, <b>Grade A</b> (atau Hy 11 / A11), <b>Grade B</b> (atau Hy 15 / A15).`
+              Satu tanggal bisa punya 3 baris. Kolom <code>name</code> boleh: <b>Hatsu</b>, <b>Grade A</b> (atau Hy 11 / A11), <b>Grade B</b> (atau Hy 15 / A15).<br>
+              Kolom lama <code>rejectTutup, rejectAlas</code> tetap diterima dan otomatis dijumlahkan ke <code>reject</code>.`
     };
     document.getElementById('import-info').innerHTML = infos[type];
     document.getElementById('modal-import').classList.add('show');
@@ -3499,14 +3499,14 @@
       csv += '2026-04-01,Astrin Julianti Kusmawan,Hatsuhana,Packing Grade Hatsuhana|Persiapan Mika,Mika Grade Hatsuhana|Lakban,,,,\n';
       filename = 'template_lks.csv';
     } else if (t === 'kemasan') {
-      csv = 'tgl,name,masuk,bongkarDus,aktualPcs,kirim,tamu,rejectTutup,rejectAlas,ketTamu,ketReject,' +
+      csv = 'tgl,name,masuk,bongkarDus,aktualPcs,kirim,tamu,reject,ketTamu,ketReject,' +
             'netfoamBall,netfoamPotong,netfoamTerpakai,netfoamOpname,' +
             'layerSiap,layerPakai,layerOpname,' +
             'sleeveSiap,sleevePakai,sleeveOpname,' +
             'stikerMasuk,stikerPakai,stikerOpname\n';
-      csv += '2026-04-01,Hatsu,0,5,1000,500,0,0,0,,,0,1000,500,,,,,,,,900,500,\n';
-      csv += '2026-04-01,Grade A,0,3,600,300,0,0,0,,,,,,,600,300,,,,,,,\n';
-      csv += '2026-04-01,Grade B,0,2,600,400,0,0,0,,,,,,,,,,600,400,,,,\n';
+      csv += '2026-04-01,Hatsu,0,5,1000,500,0,0,,,0,1000,500,,,,,,,,900,500,\n';
+      csv += '2026-04-01,Grade A,0,3,600,300,0,0,,,,,,,600,300,,,,,,,\n';
+      csv += '2026-04-01,Grade B,0,2,600,400,0,0,,,,,,,,,,600,400,,,,\n';
       filename = 'template_kemasan.csv';
     }
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -3601,7 +3601,7 @@
       name, std,
       masuk: 0, bongkarDus: 0, standarPcs: 0, aktualPcs: 0, selisih: 0,
       kirim: 0, tamu: 0, ketTamu: '',
-      rejectTutup: 0, rejectAlas: 0, ketReject: '',
+      reject: 0, ketReject: '',
       netfoamBall: 0, netfoamPotong: 0, netfoamTerpakai: 0, netfoamAkhir: 0,
       layerSiap: 0, layerPakai: 0, layerAkhir: 0, layerOpname: null,
       sleeveSiap: 0, sleevePakai: 0, sleeveAkhir: 0, sleeveOpname: null,
@@ -3642,6 +3642,8 @@
           if (entry.items.find(x => x.name === nm)) return;
           const bongkar = num(r.bongkarDus);
           const aktual = num(r.aktualPcs);
+          // reject: field baru `reject`, tapi tetap kompatibel dengan CSV lama
+          const rejectVal = num(r.reject) + num(r.rejectTutup) + num(r.rejectAlas);
           entry.items.push({
             ...emptyKemasanItem(nm, std),
             masuk: num(r.masuk),
@@ -3651,8 +3653,7 @@
             selisih: aktual - bongkar * std,
             kirim: num(r.kirim),
             tamu: num(r.tamu),
-            rejectTutup: num(r.rejectTutup),
-            rejectAlas: num(r.rejectAlas),
+            reject: rejectVal,
             ketTamu: r.ketTamu || '',
             ketReject: r.ketReject || '',
             netfoamBall: num(r.netfoamBall),
