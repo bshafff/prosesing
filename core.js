@@ -85,7 +85,6 @@ function opnameVal(v) { return (typeof v === 'number' && !isNaN(v)) ? v : null; 
 // ========== OFFLINE + SHEETS SYNC ==========
 const SYNC_CONFIG = { API_KEY: 'AWB_PROCESSING_2026', VERSION: '1.3.0' };
 
-// AUTO-CONNECT: pakai default URL kalau user tidak override
 function getEffectiveUrl() {
   return localStorage.getItem('awb_script_url') || DEFAULT_SCRIPT_URL || '';
 }
@@ -97,18 +96,14 @@ function currentScriptUrl() { return scriptUrl; }
 
 function handleAuthClick() {
   if (isAuthenticated) {
-    // Putuskan (logout)
     isAuthenticated = false;
     localStorage.setItem('awb_sync_auth', '0');
     updateSyncStatus();
     showToast('Koneksi Google Sheet diputus. Klik Connect lagi untuk menyambung.');
     return;
   }
-  
-  // Kalau ada URL default dan user belum override → langsung sambung
   const existingCustomUrl = localStorage.getItem('awb_script_url');
   let url;
-  
   if (DEFAULT_SCRIPT_URL && !existingCustomUrl) {
     url = DEFAULT_SCRIPT_URL;
     if (!confirm('Sambung ke Google Sheet default?\n\n' + url)) return;
@@ -117,16 +112,13 @@ function handleAuthClick() {
     if (!url || !url.trim()) return;
     url = url.trim().replace(/\/$/, '');
   }
-  
   if (url.indexOf('/exec') < 0) { showToast('URL harus mengandung /exec', 'error'); return; }
-  
   scriptUrl = url;
   if (url !== DEFAULT_SCRIPT_URL) {
     localStorage.setItem('awb_script_url', url);
   } else {
-    localStorage.removeItem('awb_script_url'); // pakai default saja
+    localStorage.removeItem('awb_script_url');
   }
-  
   isAuthenticated = true;
   localStorage.setItem('awb_sync_auth', '1');
   updateSyncStatus();
@@ -452,8 +444,9 @@ function downloadTemplate() {
   const t = importState.type;
   let csv = '', filename = '';
   if (t === 'panen') {
-    csv = 'tgl,p_hatsu,p_gradea,p_gradeb,rk_crack,rk_poli,rk_hpt,rp_crack,rp_poli,rp_hpt,rp_bruise,rp_overripe,rp_frozen,k_hatsu,k_a11,k_a15,k_frozen,m_hatsu,m_a11,m_a15,t_curah,t_hatsu,t_a11,t_a15,t_ket,gh\n';
-    csv += '2026-04-01,10.5,5.2,3,0,0,0,0,0,0,0,0,0,8,4,2,0,40,20,10,0,0,0,0,,GH 1\n';
+    csv = 'tgl,p_hatsu,p_gradea,p_gradeb,rk_crack,rk_poli,rk_hpt,rp_crack,rp_poli,rp_hpt,rp_bruise,rp_overripe,rp_kuning,rp_frozen,k_hatsu,k_a11,k_a15,k_frozen,m_hatsu,m_a11,m_a15,t_curah,t_hatsu,t_a11,t_a15,t_ket,gh\n';
+    csv += '2026-04-01,10.5,5.2,3,0,0,0,0,0,0,0,0,0,0,8,4,2,0,40,20,10,0,0,0,0,,GH 1\n';
+    csv += '2026-04-02,12,6,4,0.5,0,0,0.2,0,0,0,0,0,0,10,5,3,0,50,25,15,0,0,0,0,,GH 2\n';
     filename = 'template_panen.csv';
   } else if (t === 'lks') {
     csv = 'tanggal,nama,grade,kegiatan,material,jobTambahan,perbantuan,jenisPerbantuan,keterangan\n';
@@ -514,7 +507,7 @@ function buildPanenRecord(r) {
     p_hatsu: num(r.p_hatsu), p_gradea: num(r.p_gradea), p_gradeb: num(r.p_gradeb),
     rk_crack: num(r.rk_crack), rk_poli: num(r.rk_poli), rk_hpt: num(r.rk_hpt),
     rp_crack: num(r.rp_crack), rp_poli: num(r.rp_poli), rp_hpt: num(r.rp_hpt),
-    rp_bruise: num(r.rp_bruise), rp_overripe: num(r.rp_overripe), rp_frozen: num(r.rp_frozen),
+    rp_bruise: num(r.rp_bruise), rp_overripe: num(r.rp_overripe), rp_kuning: num(r.rp_kuning), rp_frozen: num(r.rp_frozen),
     k_hatsu: num(r.k_hatsu), k_a11: num(r.k_a11), k_a15: num(r.k_a15), k_frozen: num(r.k_frozen),
     m_hatsu: num(r.m_hatsu), m_a11: num(r.m_a11), m_a15: num(r.m_a15),
     t_curah: num(r.t_curah), t_hatsu: num(r.t_hatsu), t_a11: num(r.t_a11), t_a15: num(r.t_a15),
