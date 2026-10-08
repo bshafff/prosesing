@@ -3,11 +3,32 @@ const LKS_STORAGE_KEY = 'lks_awb_v1';
 const PANEN_STORAGE_KEY = 'panen_awb_v1';
 const KEMASAN_STORAGE_KEY = 'kemasan_awb_v1';
 
-// ========== HELPERS ==========
+// ========== HELPER: ID GENERATOR (FIXED) ==========
+// FIX: Pakai counter + pad 3 digit agar SELALU 16 digit dan unik
+let __idCounter = 0;
 function generateId() {
-  return String(Date.now()) + String(Math.floor(Math.random() * 1000));
+  __idCounter = (__idCounter + 1) % 1000;
+  return String(Date.now()) + String(__idCounter).padStart(3, '0');
 }
 
+// FIX: Validasi & auto-fix ID agar selalu 16 digit unik
+function ensureValidId(rec, usedIds) {
+  usedIds = usedIds || new Set();
+  const id = String(rec.id || '');
+  if (id.length === 16 && !usedIds.has(id)) {
+    usedIds.add(id);
+    return rec;
+  }
+  let newId, attempts = 0;
+  do {
+    newId = generateId();
+    attempts++;
+  } while (usedIds.has(newId) && attempts < 100);
+  usedIds.add(newId);
+  return { ...rec, id: newId };
+}
+
+// ========== HELPERS ==========
 function ghOf(item) { return item && item.gh === 'GH 2' ? 'GH 2' : 'GH 1'; }
 function filterGh(arr, gh) { return (!gh || gh === 'all') ? arr : arr.filter(x => ghOf(x) === gh); }
 function dashGh() { const el = document.getElementById('dashboard-gh'); return el ? el.value : 'all'; }
@@ -60,7 +81,7 @@ function rejMika(it) {
 function opnameVal(v) { return (typeof v === 'number' && !isNaN(v)) ? v : null; }
 
 // ========== OFFLINE + SHEETS SYNC ==========
-const SYNC_CONFIG = { API_KEY: 'AWB_PROCESSING_2026', VERSION: '1.0.0' };
+const SYNC_CONFIG = { API_KEY: 'AWB_PROCESSING_2026', VERSION: '1.3.0' };
 let scriptUrl = localStorage.getItem('awb_script_url') || '';
 let isAuthenticated = localStorage.getItem('awb_sync_auth') === '1';
 
@@ -95,6 +116,9 @@ const SYNC_LAST_KEY = 'awb_sync_last_v1';
 let syncBusy = false;
 let suppressSync = false;
 
+// FIX: Flag bulk mode untuk mencegah race condition saat import/force-queue
+let __bulkMode = false;
+
 const nativeStorage = {
   getItem: localStorage.getItem.bind(localStorage),
   setItem: localStorage.setItem.bind(localStorage),
@@ -115,10 +139,11 @@ function readArrayRaw(raw) {
 
 function getSyncQueue() { return readArrayRaw(nativeStorage.getItem(SYNC_QUEUE_KEY)); }
 
+// FIX: Hanya auto-sync kalau tidak dalam bulk mode
 function saveSyncQueue(queue) {
   nativeStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
   updateSyncStatus();
-  if (isAuthenticated && !syncBusy && queue.length > 0) syncQueue();
+  if (isAuthenticated && !syncBusy && !__bulkMode && queue.length > 0) syncQueue();
 }
 
 function queueMutation(type, action, recordOrId) {
@@ -386,18 +411,9 @@ function openImportModal(type) {
   const titles = { lks: '📝 LKS', panen: '🌾 Panen', kemasan: '📦 Kemasan' };
   document.getElementById('import-title').textContent = '📥 Import CSV — ' + titles[type];
   const infos = {
-    lks: `<b>Format kolom:</b> <code>tanggal, nama, grade, kegiatan, material, jobTambahan, perbantuan, jenisPerbantuan, keterangan</code><br>
-          Multi-kegiatan/material dipisah dengan <b>|</b> (pipe). Contoh: <code>Packing Grade A|Persiapan Mika</code>`,
-    panen: `<b>Format kolom:</b> <code>tgl, p_hatsu, p_gradea, p_gradeb, rk_*, rp_*, k_*, m_*, t_*</code><br>
-          1 baris = 1 tanggal. Kolom kosong akan dianggap 0. Klik <b>Download Template</b> untuk lihat format lengkap.`,
-    kemasan: `<b>Kolom utama:</b> <code>tgl, name, masuk, bongkarDus, aktualPcs, kirim, tamu, reject, ketTamu, ketReject</code><br>
-            Kolom <code>reject</code> = jumlah PCS mika yang di-reject hari itu (otomatis mengurangi stok Processing, untuk semua grade).<br>
-            <b>Kemasan tambahan:</b> <code>netfoamBall, netfoamPotong, netfoamTerpakai</code> (baris Hatsu) ·
-            <code>layerSiap, layerPakai</code> (baris Grade A) · <code>sleeveSiap, sleevePakai</code> (baris Grade B) ·
-            <code>stikerMasuk, stikerPakai</code> (baris Hatsu)<br>
-            <b>Koreksi stok fisik (opsional):</b> <code>netfoamOpname, layerOpname, sleeveOpname, stikerOpname</code> — kosongkan kalau tidak perlu; kalau diisi, stok diset ke angka itu.<br>
-            Satu tanggal bisa punya 3 baris. Kolom <code>name</code> boleh: <b>Hatsu</b>, <b>Grade A</b> (atau Hy 11 / A11), <b>Grade B</b> (atau Hy 15 / A15).<br>
-            Kolom lama <code>rejectTutup, rejectAlas</code> tetap diterima dan otomatis dijumlahkan ke <code>reject</code>.`
+    lks: `<b>Format kolom:</b> <code>tanggal, nama, grade, kegiatan, material, jobTambahan, perbantuan, jenisPerbantuan, keterangan</code><br>Multi-kegiatan/material dipisah dengan <b>|</b> (pipe).`,
+    panen: `<b>Format kolom:</b> <code>tgl, p_hatsu, p_gradea, p_gradeb, rk_*, rp_*, k_*, m_*, t_*</code><br>1 baris = 1 tanggal. Kolom kosong akan dianggap 0.`,
+    kemasan: `<b>Kolom utama:</b> <code>tgl, name, masuk, bongkarDus, aktualPcs, kirim, tamu, reject, ketTamu, ketReject</code><br>Kolom <code>reject</code> = PCS mika reject.<br>Kolom tambahan: <code>netfoamBall, netfoamPotong, netfoamTerpakai, layerSiap, layerPakai, sleeveSiap, sleevePakai, stikerMasuk, stikerPakai</code><br><b>Koreksi stok fisik (opsional):</b> <code>netfoamOpname, layerOpname, sleeveOpname, stikerOpname</code>`
   };
   document.getElementById('import-info').innerHTML = infos[type];
   document.getElementById('modal-import').classList.add('show');
@@ -414,21 +430,14 @@ function downloadTemplate() {
   if (t === 'panen') {
     csv = 'tgl,p_hatsu,p_gradea,p_gradeb,rk_crack,rk_poli,rk_hpt,rp_crack,rp_poli,rp_hpt,rp_bruise,rp_overripe,rp_frozen,k_hatsu,k_a11,k_a15,k_frozen,m_hatsu,m_a11,m_a15,t_curah,t_hatsu,t_a11,t_a15,t_ket,gh\n';
     csv += '2026-04-01,10.5,5.2,3,0,0,0,0,0,0,0,0,0,8,4,2,0,40,20,10,0,0,0,0,,GH 1\n';
-    csv += '2026-04-02,12,6,4,0.5,0,0,0.2,0,0,0,0,0,10,5,3,0,50,25,15,0,0,0,0,,GH 2\n';
     filename = 'template_panen.csv';
   } else if (t === 'lks') {
     csv = 'tanggal,nama,grade,kegiatan,material,jobTambahan,perbantuan,jenisPerbantuan,keterangan\n';
     csv += '2026-04-01,Astrin Julianti Kusmawan,Hatsuhana,Packing Grade Hatsuhana|Persiapan Mika,Mika Grade Hatsuhana|Lakban,,,,\n';
     filename = 'template_lks.csv';
   } else if (t === 'kemasan') {
-    csv = 'tgl,name,masuk,bongkarDus,aktualPcs,kirim,tamu,reject,ketTamu,ketReject,' +
-          'netfoamBall,netfoamPotong,netfoamTerpakai,netfoamOpname,' +
-          'layerSiap,layerPakai,layerOpname,' +
-          'sleeveSiap,sleevePakai,sleeveOpname,' +
-          'stikerMasuk,stikerPakai,stikerOpname\n';
+    csv = 'tgl,name,masuk,bongkarDus,aktualPcs,kirim,tamu,reject,ketTamu,ketReject,netfoamBall,netfoamPotong,netfoamTerpakai,netfoamOpname,layerSiap,layerPakai,layerOpname,sleeveSiap,sleevePakai,sleeveOpname,stikerMasuk,stikerPakai,stikerOpname\n';
     csv += '2026-04-01,Hatsu,0,5,1000,500,0,0,,,0,1000,500,,,,,,,,900,500,\n';
-    csv += '2026-04-01,Grade A,0,3,600,300,0,0,,,,,,,600,300,,,,,,,\n';
-    csv += '2026-04-01,Grade B,0,2,600,400,0,0,,,,,,,,,,600,400,,,,\n';
     filename = 'template_kemasan.csv';
   }
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -526,6 +535,7 @@ function emptyKemasanItem(name, std) {
   };
 }
 
+// FIX: executeImport dengan bulk mode + auto-fix ID
 function executeImport() {
   if (!importState.rows.length) { showToast('Pilih file CSV dulu!', 'error'); return; }
   const type = importState.type;
@@ -533,6 +543,10 @@ function executeImport() {
   const shouldClear = document.getElementById('import-clear').checked;
   let db = readArrayRaw(nativeStorage.getItem(key));
   if (shouldClear) db = [];
+  
+  // FIX: Aktifkan bulk mode supaya auto-sync tidak trigger di tengah
+  __bulkMode = true;
+  
   let count = 0;
   try {
     if (type === 'panen') {
@@ -599,7 +613,20 @@ function executeImport() {
         count++;
       });
     }
-    if (count === 0) { showToast('Tidak ada baris valid untuk di-import.', 'error'); return; }
+    
+    if (count === 0) { showToast('Tidak ada baris valid untuk di-import.', 'error'); __bulkMode = false; return; }
+    
+    // FIX: Auto-fix semua ID agar 16 digit & unik
+    const usedIds = new Set();
+    db = db.map(rec => {
+      const fixed = ensureValidId(rec, usedIds);
+      // Update juga entry.items.id kalau ada (untuk kemasan)
+      if (fixed.items && Array.isArray(fixed.items)) {
+        fixed.items = fixed.items.map(it => ({ ...it }));
+      }
+      return fixed;
+    });
+    
     if (shouldClear) {
       suppressSync = true;
       nativeStorage.setItem(key, JSON.stringify([]));
@@ -607,17 +634,56 @@ function executeImport() {
       queueMutation(type, 'clear', '__clear__');
     }
     localStorage.setItem(key, JSON.stringify(db));
+    
+    // FIX: Queue ulang SEMUA record yang baru diimport (biar tidak ada yang tertinggal)
+    if (count > 0) {
+      const newRecords = shouldClear ? db : db.slice(-count);
+      newRecords.forEach(rec => queueMutation(type, 'upsert', rec));
+    }
+    
     if (type === 'lks') renderTableLks();
     else if (type === 'panen') renderTablePanen();
     else { recalculateStockKemasan(); renderKemasanForms(); renderKemasanTables(); }
     updateDashboard();
     updateSyncStatus();
     showToast(`✅ ${count} baris berhasil di-import!`);
-    if (isAuthenticated && currentScriptUrl()) setTimeout(() => syncQueue(true), 400);
-    else showToast('Tekan "Connect Sheets" lalu Sync untuk kirim ke Google Sheet');
+    
+    if (isAuthenticated && currentScriptUrl()) {
+      // Setelah bulk mode off, baru sync
+      __bulkMode = false;
+      setTimeout(() => syncQueue(true), 500);
+    } else {
+      __bulkMode = false;
+      showToast('Tekan "Connect Sheets" lalu Sync untuk kirim ke Google Sheet');
+    }
     closeImportModal();
   } catch (err) {
+    __bulkMode = false;
     console.error(err);
     showToast('Gagal import: ' + err.message, 'error');
   }
+}
+
+// ========== FIX TOOLS (untuk cleanup data lama) ==========
+// Jalankan di Console kalau ada data dengan ID rusak
+function regenerateAllIds() {
+  const types = [
+    { type: 'panen', key: PANEN_STORAGE_KEY },
+    { type: 'kemasan', key: KEMASAN_STORAGE_KEY },
+    { type: 'lks', key: LKS_STORAGE_KEY }
+  ];
+  types.forEach(({ type, key }) => {
+    const data = readArrayRaw(nativeStorage.getItem(key));
+    if (!data.length) { console.log(`${type}: kosong`); return; }
+    const usedIds = new Set();
+    const fixed = data.map(rec => ensureValidId(rec, usedIds));
+    const lengths = {};
+    fixed.forEach(x => {
+      const l = String(x.id).length;
+      lengths[l] = (lengths[l] || 0) + 1;
+    });
+    localStorage.setItem(key, JSON.stringify(fixed));
+    console.log(`${type}: ${fixed.length} record · ID:`, lengths);
+  });
+  console.log('✅ Selesai. Silakan reload halaman.');
 }
