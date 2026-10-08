@@ -46,6 +46,7 @@
       <div class="input-group"><label>HPT</label><input type="number" step="0.01" id="rp-hpt" placeholder="0.00" oninput="hitungAllPanen()"></div>
       <div class="input-group"><label>Bruise</label><input type="number" step="0.01" id="rp-bruise" placeholder="0.00" oninput="hitungAllPanen()"></div>
       <div class="input-group"><label>Overripe</label><input type="number" step="0.01" id="rp-overripe" placeholder="0.00" oninput="hitungAllPanen()"></div>
+      <div class="input-group"><label>Buah Kuning (&lt;80%)</label><input type="number" step="0.01" id="rp-kuning" placeholder="0.00" oninput="hitungAllPanen()"></div>
       <div class="input-group"><label>Frozen (&lt;11 gr)</label><input type="number" step="0.01" id="rp-frozen" placeholder="0.00" oninput="hitungAllPanen()"></div>
     </div>
     <div style="background: #fee2e2; border-left: 4px solid #dc2626; padding: 1rem; border-radius: 6px; margin-top: 0.75rem;">
@@ -104,7 +105,7 @@
     <div class="card-title">📋 Data Panen Tersimpan</div>
     <div class="input-group" style="max-width:220px;">
       <label>Filter Greenhouse</label>
-      <select id="panen-hist-gh" onchange="renderTablePanen()">
+      <select id="panen-hist-gh" onchange="panenResetPage()">
         <option value="all">Semua GH</option><option value="GH 1">GH 1</option><option value="GH 2">GH 2</option>
       </select>
     </div>
@@ -130,5 +131,6 @@
         </tbody>
       </table>
     </div>
+    <div id="panen-pagination" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;margin-top:1rem;"></div>
   </div>
 </div>
