@@ -1,0 +1,180 @@
+<div id="dashboard" class="view">
+  <div class="view-toolbar">
+    <button class="btn btn-sm btn-home" onclick="goHome()">← Menu</button>
+    <span class="view-title">📊 Dashboard Panen</span>
+    <button class="btn btn-sm" onclick="openModule('dash-mika')" style="margin-left:auto;flex:none;background:#faf5ff;color:#7e22ce;border:1px solid #e9d5ff;">🍓 Dashboard Mika</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📅 Pilih Periode Bulan</div>
+    <div class="row-2" style="align-items: flex-end;">
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Bulan</label>
+        <input type="month" id="dashboard-bulan" onchange="onDashboardMonthChange()">
+      </div>
+      <button class="btn btn-secondary" onclick="setDashboardBulanIni()">📌 Bulan Ini</button>
+    </div>
+    <div class="input-group" style="margin:1rem 0 0;">
+      <label>Greenhouse</label>
+      <select id="dashboard-gh" onchange="updateDashboard()">
+        <option value="all">Semua GH</option>
+        <option value="GH 1">GH 1</option>
+        <option value="GH 2">GH 2</option>
+      </select>
+    </div>
+    <div class="info-box" style="margin-top:1rem;margin-bottom:0;" id="dashboard-period-info">
+      Menampilkan data: <b>-</b>
+    </div>
+  </div>
+
+  <div class="stats stats-3" id="dashboard-stats">
+    <div class="stat-card red">
+      <div class="stat-label">Total Panen</div>
+      <div class="stat-value" id="stat-panen">0.00</div>
+      <div class="stat-meta">Kg</div>
+      <div class="stat-delta" id="stat-panen-delta"></div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-label">Total Dikirim</div>
+      <div class="stat-value" id="stat-dikirim">0.00</div>
+      <div class="stat-meta">Kg</div>
+    </div>
+    <div class="stat-card purple">
+      <div class="stat-label">Total Buah Terkirim</div>
+      <div class="stat-value" id="stat-kirim">0</div>
+      <div class="stat-meta">Pcs Mika</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Rate Kirim</div>
+      <div class="stat-value" id="stat-rate-kirim">0.00%</div>
+      <div class="stat-meta">Total dikirim ÷ total panen</div>
+    </div>
+    <div class="stat-card orange">
+      <div class="stat-label">Total Reject</div>
+      <div class="stat-value" id="stat-rej-total">0.00</div>
+      <div class="stat-meta" id="stat-rej-meta">Kg</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">Reject Rate <span id="stat-rej-badge"></span></div>
+      <div class="stat-value" id="stat-rej-rate">0.00%</div>
+      <div class="stat-meta">Total reject ÷ total panen</div>
+      <div class="stat-delta" id="stat-rej-rate-delta"></div>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">📊 Grafik Harian — Panen vs Kirim (Kg)</div>
+    <div class="chart-scroll" id="chart-main"></div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">🥧 Komposisi Reject Bulan Ini</div>
+    <div id="chart-reject"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📋 Rekap Harian Panen, Reject & Pengiriman</div>
+    <div class="recap-wrap">
+      <table class="recap-table">
+        <thead>
+          <tr>
+            <th class="th-base" rowspan="2">Tanggal</th>
+            <th class="th-panen" colspan="5">PANEN (Kg)</th>
+            <th class="th-reject" colspan="8">TOTAL REJECT (Kg)</th>
+            <th class="th-kirim" colspan="6">BERAT PENGIRIMAN (Kg)</th>
+            <th class="th-mika" colspan="4">JUMLAH KIRIM (Pcs)</th>
+          </tr>
+          <tr>
+            <th class="th-panen">Hatsu</th>
+            <th class="th-panen">Grade A</th>
+            <th class="th-panen">Grade B</th>
+            <th class="th-panen">Reject</th>
+            <th class="th-panen">Total</th>
+            <th class="th-reject">Crack</th>
+            <th class="th-reject">Polinasi</th>
+            <th class="th-reject">HPT</th>
+            <th class="th-reject">Bruise</th>
+            <th class="th-reject">Overripe</th>
+            <th class="th-reject">Frozen</th>
+            <th class="th-reject">Total</th>
+            <th class="th-reject">Rej %</th>
+            <th class="th-kirim">Hatsu</th>
+            <th class="th-kirim">A11</th>
+            <th class="th-kirim">A15</th>
+            <th class="th-kirim">Frozen</th>
+            <th class="th-kirim">Total</th>
+            <th class="th-kirim">Rate %</th>
+            <th class="th-mika">Hatsu</th>
+            <th class="th-mika">A11</th>
+            <th class="th-mika">A15</th>
+            <th class="th-mika">Total</th>
+          </tr>
+        </thead>
+        <tbody id="recap-body">
+          <tr><td colspan="24" style="text-align:center;color:#999;padding:1rem;">Belum ada data bulan ini</td></tr>
+        </tbody>
+        <tfoot id="recap-foot"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1.5rem;">
+    <div class="card-title">📈 Persebaran Panen per Minggu (Senin–Sabtu) — Hatsuhana · Grade A · Grade B · Reject</div>
+
+    <div class="row-3" style="align-items:flex-end;">
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Bulan</label>
+        <input type="month" id="minggu-bulan" onchange="renderWeeklyPanen()">
+      </div>
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Greenhouse</label>
+        <select id="minggu-gh" onchange="renderWeeklyPanen()">
+          <option value="all">Semua GH</option>
+          <option value="GH 1">GH 1</option>
+          <option value="GH 2">GH 2</option>
+        </select>
+      </div>
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Tampilkan</label>
+        <select id="minggu-filter" onchange="renderWeeklyPanen()">
+          <option value="all">Semua Minggu</option>
+          <option value="1">Minggu 1 saja</option>
+          <option value="2">Minggu 2 saja</option>
+          <option value="3">Minggu 3 saja</option>
+          <option value="4">Minggu 4 saja</option>
+          <option value="5">Minggu 5 saja</option>
+          <option value="6">Minggu 6 saja</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-top:1rem;">
+      <button type="button" class="btn btn-primary btn-sm" onclick="downloadWeeklyImage()">📸 Screenshot Data (PNG)</button>
+    </div>
+    <div class="info-box" style="margin-top:0.75rem;" id="minggu-period-info">-</div>
+
+    <div class="chart-scroll" id="chart-weekly" style="margin-bottom:0.75rem;"></div>
+
+    <div class="recap-wrap">
+      <table class="recap-table" id="weekly-table" style="min-width:960px;">
+        <thead>
+          <tr>
+            <th class="th-base">Minggu</th>
+            <th class="th-base">Periode (Senin–Sabtu)</th>
+            <th class="th-panen">Hatsuhana (Kg)</th>
+            <th class="th-panen">Grade A (Kg)</th>
+            <th class="th-panen">Grade B (Kg)</th>
+            <th class="th-panen">Reject (Kg)</th>
+            <th class="th-kirim">Total (Kg)</th>
+          </tr>
+        </thead>
+        <tbody id="weekly-body">
+          <tr><td colspan="7" style="text-align:center;color:#999;padding:1rem;">Belum ada data</td></tr>
+        </tbody>
+        <tfoot id="weekly-foot"></tfoot>
+      </table>
+    </div>
+
+    <div id="weekly-forecast-note"></div>
+  </div>
+</div>
