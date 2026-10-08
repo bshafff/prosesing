@@ -1,0 +1,168 @@
+<div id="kemasan" class="view">
+  <div class="view-toolbar">
+    <button class="btn btn-sm btn-home" onclick="goHome()">← Menu</button>
+    <span class="view-title">📦 Stok Kemasan (Mika)</span>
+    <button class="btn btn-sm" onclick="openImportModal('kemasan')" style="margin-left:auto;flex:none;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;">📥 Import</button>
+  </div>
+  <div class="sub-tabs">
+    <button class="sub-tab active" onclick="showKemasanSubTab('k-input', this)">📝 Input Hari Ini</button>
+    <button class="sub-tab" onclick="showKemasanSubTab('k-summary', this)">📊 Ringkasan Stok</button>
+    <button class="sub-tab" onclick="showKemasanSubTab('k-variance', this)">⚖️ Selisih Bongkar</button>
+    <button class="sub-tab" onclick="showKemasanSubTab('k-monthly', this)">📅 Rekap Bulanan</button>
+    <button class="sub-tab" onclick="showKemasanSubTab('k-history', this)">📜 History Data</button>
+  </div>
+
+  <div id="k-input" class="k-panel active">
+    <div class="card">
+      <div class="card-title">📅 Tanggal Input Kemasan</div>
+      <input type="date" id="kemasan-tgl">
+    </div>
+    <div id="forms-kemasan"></div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="simpanDataKemasan()">💾 Simpan Semua Data Kemasan</button>
+      <button class="btn btn-secondary" onclick="resetFormKemasan()">🔄 Reset Form</button>
+    </div>
+  </div>
+
+  <div id="k-summary" class="k-panel">
+    <div class="card">
+      <div class="card-title">📊 Ringkasan Akumulasi Stok</div>
+      <div class="stats">
+        <div class="stat-card green">
+          <div class="stat-label">STOK GUDANG</div>
+          <div class="stat-value" id="k-stat-gudang">0</div>
+          <div class="stat-meta">Dus Utuh</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-label">PROCESSING</div>
+          <div class="stat-value" id="k-stat-processing">0</div>
+          <div class="stat-meta">PCS Mika Ready</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">TOTAL KELUAR</div>
+          <div class="stat-value" id="k-stat-keluar">0</div>
+          <div class="stat-meta">PCS</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-label">TOTAL REJECT</div>
+          <div class="stat-value" id="k-stat-reject">0</div>
+          <div class="stat-meta">PCS</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 Detail Stok Per Jenis Grade</div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Jenis Grade</th>
+              <th class="text-right">Gudang (Dus)</th>
+              <th class="text-right">Processing (PCS)</th>
+              <th class="text-right">Total Akhir (PCS)</th>
+              <th class="text-right">Total Keluar (PCS)</th>
+              <th class="text-right">Total Reject (PCS)</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-summary-body">
+            <tr><td colspan="6" class="text-center" style="color: #999;">Belum ada data</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="k-variance" class="k-panel">
+    <div class="card">
+      <div class="card-title">📋 Log Selisih Bongkar Fisik</div>
+      <div class="info-box">
+        PCS aktual hasil bongkar tetap masuk ke ruang Processing. Catatan selisih berguna untuk mengevaluasi akurasi isi per dus.
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Tanggal</th>
+              <th>Jenis</th>
+              <th class="text-right">Dus</th>
+              <th class="text-right">Standar</th>
+              <th class="text-right">Aktual</th>
+              <th class="text-right">Selisih</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-variance-body">
+            <tr><td colspan="7" class="text-center" style="color: #999;">Belum ada data selisih bongkar</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="k-monthly" class="k-panel">
+    <div class="card">
+      <div class="card-title">📅 Filter Rekap Selisih Bulanan</div>
+      <div class="row-2" style="align-items: flex-end;">
+        <div class="input-group" style="margin-bottom:0;">
+          <label>Pilih Bulan</label>
+          <input type="month" id="filter-bulan-kemasan" onchange="renderKemasanMonthly()">
+        </div>
+        <button class="btn btn-success" onclick="exportKemasanCSV()">📥 Export Selisih CSV</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📊 Rekap Selisih Per Grade</div>
+      <div class="row-3" id="cards-rekap-jenis"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 Detail Rincian Selisih Bulanan</div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Tanggal</th>
+              <th>Jenis Grade</th>
+              <th class="text-right">Dus</th>
+              <th class="text-right">Standar</th>
+              <th class="text-right">Aktual</th>
+              <th class="text-right">Selisih</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-monthly-body">
+            <tr><td colspan="7" class="text-center" style="color: #999;">Belum ada data bulan ini</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="k-history" class="k-panel">
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <div class="card-title" style="margin-bottom: 0; border-bottom: none;">📜 History Transaksi Kemasan</div>
+        <button class="btn btn-danger btn-sm" onclick="hapusSemuaHistoryKemasan()">🗑️ Hapus Semua History</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 60px;">Aksi</th>
+              <th>Tanggal</th>
+              <th>Hatsuhana (Dus/Pcs)</th>
+              <th>Grade A (Dus/Pcs)</th>
+              <th>Grade B (Dus/Pcs)</th>
+              <th>Ringkasan Pengeluaran</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-kemasan-history-body">
+            <tr><td colspan="6" class="text-center" style="color: #999;">Belum ada history</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
