@@ -439,7 +439,6 @@ function renderMonthlyUsage(filterBulan) {
       const kirim = it.kirim || 0;
       const tamu = it.tamu || 0;
 
-      // Backward compat: old data pakai field `reject`
       const rejTutupHari = (it.rejectTutup != null && it.rejectTutup > 0) ? it.rejectTutup : (it.reject || 0);
       const rejAlasHari = it.rejectAlas || 0;
       const rejTotalHari = rejMika(it);
@@ -519,29 +518,134 @@ function renderMonthlyUsage(filterBulan) {
   tbody.innerHTML = html;
 }
 
+// ========== EXPORT CSV - STOCK OPNAME ==========
 function exportKemasanCSV() {
   const filterBulan = document.getElementById('filter-bulan-kemasan').value;
-  const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
-  const filtered = db.filter(e => e.tgl.startsWith(filterBulan));
-  if (!filtered.length) { showToast('Tidak ada data kemasan untuk diexport!', 'error'); return; }
-  let csv = 'Tanggal,Jenis Grade,Bongkar (Dus),Standar (Pcs),Aktual (Pcs),Selisih (Pcs)\n';
-  filtered.forEach(entry => {
-    if (entry.items) {
-      entry.items.forEach(it => {
-        if (it.bongkarDus > 0 || it.aktualPcs > 0) {
-          csv += `"${entry.tgl}","${it.name}",${it.bongkarDus},${it.standarPcs},${it.aktualPcs},${it.selisih}\n`;
-        }
-      });
-    }
+  if (!filterBulan) { showToast('Pilih bulan dulu!', 'error'); return; }
+
+  const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]')
+    .filter(e => e && e.tgl && Array.isArray(e.items))
+    .sort((a, b) => a.tgl.localeCompare(b.tgl));
+
+  const running = {};
+  masterJenisKemasan.forEach(m => {
+    running[m.name] = { gudangDus: 0, processing: 0, rejTutupTotal: 0, rejAlasTotal: 0 };
   });
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+
+  const rows = [];
+  db.forEach(entry => {
+    entry.items.forEach(it => {
+      const r = running[it.name];
+      if (!r) return;
+      const std = it.std || 200;
+      const masukDus = it.masuk || 0;
+      const bongkarDus = it.bongkarDus || 0;
+      const pcsBongkar = it.aktualPcs || 0;
+      const kirim = it.kirim || 0;
+      const tamu = it.tamu || 0;
+
+      const rejTutupHari = (it.rejectTutup != null && it.rejectTutup > 0) ? it.rejectTutup : (it.reject || 0);
+      const rejAlasHari = it.rejectAlas || 0;
+      const rejTotalHari = rejMika(it);
+      const procSebelumKeluar = r.processing + pcsBongkar;
+
+      r.gudangDus += masukDus - bongkarDus;
+      r.processing += pcsBongkar - kirim - tamu - rejTotalHari;
+      r.rejTutupTotal += rejTutupHari;
+      r.rejAlasTotal += rejAlasHari;
+
+      if (entry.tgl.startsWith(filterBulan)) {
+        const totalKeluarHari = kirim + tamu + rejTotalHari;
+        const totalStokPcs = Math.max(0, r.processing);
+        rows.push({
+          tgl: entry.tgl,
+          name: it.name,
+          std,
+          masukDus, masukPcs: masukDus * std,
+          gudangDus: r.gudangDus, gudangPcs: r.gudangDus * std,
+          bongkarDus, pcsBongkar,
+          procPcs: procSebelumKeluar,
+          jumlahStok: totalKeluarHari,
+          kirim, tamu,
+          totalStokDus: Math.floor(totalStokPcs / std),
+          totalStokPcs,
+          rejTutupHari, rejTutupTotal: r.rejTutupTotal,
+          rejAlasHari, rejAlasTotal: r.rejAlasTotal,
+          keterangan: it.ketReject || it.ketTamu || ''
+        });
+      }
+    });
+  });
+
+  if (!rows.length) {
+    showToast('Tidak ada data stock opname untuk bulan ini!', 'error');
+    return;
+  }
+
+  const q = v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+  const n = v => Number(v || 0);
+
+  let csv = '';
+  csv += 'STOCK OPNAME KEMASAN MIKA - ' + filterBulan + '\n';
+  csv += 'PT. Agri Wangi Berry - Processing\n\n';
+
+  csv += [
+    'Tanggal',
+    'Jenis Kemasan',
+    'Masuk Dus', 'Masuk Pcs',
+    'Stok Gudang Dus', 'Stok Gudang Pcs',
+    'Bongkar Dus', 'Pcs Bongkar', 'Ruang Prosesing Pcs',
+    'Jumlah Stok',
+    'Kirim', 'Mika Tamu',
+    'Total Stok Dus', 'Total Stok Pcs',
+    'Reject Tutup Hari Ini', 'Reject Tutup Total',
+    'Reject Alas Hari Ini', 'Reject Alas Total',
+    'Keterangan'
+  ].join(',') + '\n';
+
+  rows.forEach(r => {
+    const [y, m, d] = r.tgl.split('-');
+    const tglFmt = `${parseInt(d, 10)}/${parseInt(m, 10)}/${y}`;
+    csv += [
+      q(tglFmt),
+      q(r.name),
+      n(r.masukDus), n(r.masukPcs),
+      n(r.gudangDus), n(r.gudangPcs),
+      n(r.bongkarDus), n(r.pcsBongkar), n(r.procPcs),
+      n(r.jumlahStok),
+      n(r.kirim), n(r.tamu),
+      n(r.totalStokDus), n(r.totalStokPcs),
+      n(r.rejTutupHari), n(r.rejTutupTotal),
+      n(r.rejAlasHari), n(r.rejAlasTotal),
+      q(r.keterangan || '')
+    ].join(',') + '\n';
+  });
+
+  const sum = k => rows.reduce((a, r) => a + (r[k] || 0), 0);
+  csv += '\n';
+  csv += [
+    q('TOTAL'), q(''),
+    n(sum('masukDus')), n(sum('masukPcs')),
+    q(''), q(''),
+    n(sum('bongkarDus')), n(sum('pcsBongkar')), q(''),
+    n(sum('jumlahStok')),
+    n(sum('kirim')), n(sum('tamu')),
+    q(''), n(sum('totalStokPcs')),
+    n(sum('rejTutupHari')), q(''),
+    n(sum('rejAlasHari')), q(''),
+    q('')
+  ].join(',') + '\n';
+
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.setAttribute('download', `Rekap_Selisih_Kemasan_${filterBulan}.csv`);
+  link.setAttribute('download', `Stock_Opname_Mika_${filterBulan}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  showToast('📥 Berhasil mendownload CSV!');
+  setTimeout(() => URL.revokeObjectURL(link.href), 3000);
+
+  showToast(`📥 Download Stock Opname ${filterBulan} (${rows.length} baris)`);
 }
 
 function hapusKemasanHistory(id) {
