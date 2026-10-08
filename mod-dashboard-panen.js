@@ -26,13 +26,13 @@ function updateDashboard() {
   const T = {
     p_hatsu: 0, p_gradea: 0, p_gradeb: 0, rk_total: 0, panen_total: 0,
     rk_crack: 0, rk_poli: 0, rk_hpt: 0,
-    rp_crack: 0, rp_poli: 0, rp_hpt: 0, rp_bruise: 0, rp_overripe: 0, rp_frozen: 0, rej_total: 0,
+    rp_crack: 0, rp_poli: 0, rp_hpt: 0, rp_bruise: 0, rp_overripe: 0, rp_kuning: 0, rp_frozen: 0, rej_total: 0,
     k_hatsu: 0, k_a11: 0, k_a15: 0, k_frozen: 0, kirim_total: 0,
     m_hatsu: 0, m_a11: 0, m_a15: 0, mika_total: 0
   };
   filtered.forEach(item => {
     const rk = (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
-    const rp = (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0) + (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_frozen || 0);
+    const rp = (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0) + (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_kuning || 0) + (item.rp_frozen || 0);
     T.p_hatsu += item.p_hatsu || 0;
     T.p_gradea += item.p_gradea || 0;
     T.p_gradeb += item.p_gradeb || 0;
@@ -46,6 +46,7 @@ function updateDashboard() {
     T.rp_hpt += item.rp_hpt || 0;
     T.rp_bruise += item.rp_bruise || 0;
     T.rp_overripe += item.rp_overripe || 0;
+    T.rp_kuning += item.rp_kuning || 0;
     T.rp_frozen += item.rp_frozen || 0;
     T.rej_total += rk + rp;
     T.k_hatsu += item.k_hatsu || 0;
@@ -84,7 +85,7 @@ function updateDashboard() {
     if (!item.tgl || !item.tgl.startsWith(prevMonth)) return;
     if (parseInt(item.tgl.substring(8, 10), 10) > cutoffDay) return;
     const rk = (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
-    const rp = (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0) + (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_frozen || 0);
+    const rp = (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0) + (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_kuning || 0) + (item.rp_frozen || 0);
     pPanen += (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + rk;
     pRej += rk + rp;
     pCount++;
@@ -110,12 +111,12 @@ function updateDashboard() {
   }
   const tbody = document.getElementById('recap-body');
   if (!filtered.length) {
-    tbody.innerHTML = `<tr><td colspan="24" style="text-align:center;color:#999;padding:1rem;">Belum ada data bulan ini</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="25" style="text-align:center;color:#999;padding:1rem;">Belum ada data bulan ini</td></tr>`;
   } else {
     tbody.innerHTML = filtered.map(item => {
       const rk = (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
       const panenTotal = (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + rk;
-      const rpTotal = (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0) + (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_frozen || 0);
+      const rpTotal = (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0) + (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_kuning || 0) + (item.rp_frozen || 0);
       const totalRej = rk + rpTotal;
       const rejRate = panenTotal > 0 ? (totalRej / panenTotal * 100) : 0;
       const kirimTotal = (item.k_hatsu || 0) + (item.k_a11 || 0) + (item.k_a15 || 0) + (item.k_frozen || 0);
@@ -134,6 +135,7 @@ function updateDashboard() {
         <td>${(item.rp_hpt || 0).toFixed(2)}</td>
         <td>${(item.rp_bruise || 0).toFixed(2)}</td>
         <td>${(item.rp_overripe || 0).toFixed(2)}</td>
+        <td>${(item.rp_kuning || 0).toFixed(2)}</td>
         <td>${(item.rp_frozen || 0).toFixed(2)}</td>
         <td>${totalRej.toFixed(2)}</td>
         <td class="reject-rate">${rejRate.toFixed(2)}%</td>
@@ -164,6 +166,7 @@ function updateDashboard() {
       <td>${T.rp_hpt.toFixed(2)}</td>
       <td>${T.rp_bruise.toFixed(2)}</td>
       <td>${T.rp_overripe.toFixed(2)}</td>
+      <td>${T.rp_kuning.toFixed(2)}</td>
       <td>${T.rp_frozen.toFixed(2)}</td>
       <td>${T.rej_total.toFixed(2)}</td>
       <td style="color:#fca5a5;">${rejectRate.toFixed(2)}%</td>
@@ -190,6 +193,7 @@ function updateDashboard() {
       <td>${(T.rp_hpt / n).toFixed(2)}</td>
       <td>${(T.rp_bruise / n).toFixed(2)}</td>
       <td>${(T.rp_overripe / n).toFixed(2)}</td>
+      <td>${(T.rp_kuning / n).toFixed(2)}</td>
       <td>${(T.rp_frozen / n).toFixed(2)}</td>
       <td>${(T.rej_total / n).toFixed(2)}</td>
       <td>${rejectRate.toFixed(2)}%</td>
@@ -281,6 +285,7 @@ function renderChartRejectPie(T) {
     { label: 'HPT', value: (T.rk_hpt || 0) + T.rp_hpt, color: '#f59e0b' },
     { label: 'Bruise', value: T.rp_bruise, color: '#84cc16' },
     { label: 'Overripe', value: T.rp_overripe, color: '#0891b2' },
+    { label: 'Buah Kuning <80%', value: T.rp_kuning, color: '#eab308' },
     { label: 'Frozen', value: T.rp_frozen, color: '#7c3aed' }
   ].filter(s => s.value > 0);
   if (!segments.length) {
