@@ -115,7 +115,7 @@ function renderKemasanForms() {
         <div class="input-group"><label>Netfoam Terpakai (Pcs)</label><input type="number" id="netfoam-terpakai-${i}" placeholder="0" oninput="hitungKemasan(${i})"></div>
         <div class="input-group"><label>Stok Akhir Netfoam Potong (Pcs)</label><input readonly id="netfoam-akhir-${i}" value="${acc.netfoam}"></div>
       </div>
-      <div class="input-group"><label>Koreksi Stok Fisik Netfoam (opsional)</label><input type="number" id="netfoam-opname-${i}" placeholder="Isi hanya jika stok fisik beda dengan hitungan" oninput="hitungKemasan(${i})"></div>
+      <div class="input-group"><label>Koreksi Stok Fisik Netfoam (opsional)</label><input type="number" id="netfoam-opname-${i}" placeholder="Isi hanya jika stok fisik beda" oninput="hitungKemasan(${i})"></div>
     ` : '';
     const isGradeA = item.name.includes('Grade A') || item.name.includes('A11');
     const layerExtraForm = isGradeA ? `
@@ -126,7 +126,7 @@ function renderKemasanForms() {
         <div class="input-group"><label>Layer Terpakai (Pcs)</label><input type="number" id="layer-pakai-${i}" placeholder="0" oninput="hitungKemasan(${i})"></div>
         <div class="input-group"><label>Stok Akhir Layer (Pcs)</label><input readonly id="layer-akhir-${i}" value="${acc.layer}"></div>
       </div>
-      <div class="input-group"><label>Koreksi Stok Fisik Layer (opsional)</label><input type="number" id="layer-opname-${i}" placeholder="Isi hanya jika stok fisik beda dengan hitungan" oninput="hitungKemasan(${i})"></div>
+      <div class="input-group"><label>Koreksi Stok Fisik Layer (opsional)</label><input type="number" id="layer-opname-${i}" placeholder="Isi hanya jika stok fisik beda" oninput="hitungKemasan(${i})"></div>
     ` : '';
     const isGradeB = item.name.includes('Grade B');
     const sleeveExtraForm = isGradeB ? `
@@ -137,7 +137,7 @@ function renderKemasanForms() {
         <div class="input-group"><label>Sleeve Terpakai (Pcs)</label><input type="number" id="sleeve-pakai-${i}" placeholder="0" oninput="hitungKemasan(${i})"></div>
         <div class="input-group"><label>Stok Akhir Sleeve (Pcs)</label><input readonly id="sleeve-akhir-${i}" value="${acc.sleeve}"></div>
       </div>
-      <div class="input-group"><label>Koreksi Stok Fisik Sleeve (opsional)</label><input type="number" id="sleeve-opname-${i}" placeholder="Isi hanya jika stok fisik beda dengan hitungan" oninput="hitungKemasan(${i})"></div>
+      <div class="input-group"><label>Koreksi Stok Fisik Sleeve (opsional)</label><input type="number" id="sleeve-opname-${i}" placeholder="Isi hanya jika stok fisik beda" oninput="hitungKemasan(${i})"></div>
     ` : '';
     return `
       <div class="card" id="card-kemasan-${i}">
@@ -175,7 +175,10 @@ function renderKemasanForms() {
         <div class="info-box" style="background:#fef2f2;border-left-color:#dc2626;color:#991b1b;">
           Reject Mika otomatis <b>mengurangi stok Processing</b> (sama seperti Kirim Packing & Mika Tamu).
         </div>
-        <div class="input-group"><label>Reject Mika (PCS)</label><input type="number" id="reject-${i}" placeholder="0" oninput="hitungKemasan(${i})"></div>
+        <div class="row-2">
+          <div class="input-group"><label>Reject Tutup (PCS)</label><input type="number" id="reject-tutup-${i}" placeholder="0" oninput="hitungKemasan(${i})"></div>
+          <div class="input-group"><label>Reject Alas (PCS)</label><input type="number" id="reject-alas-${i}" placeholder="0" oninput="hitungKemasan(${i})"></div>
+        </div>
         <div class="input-group"><label>Keterangan Reject</label><input type="text" id="ket-reject-${i}" placeholder="Contoh: Sobek, pecah, kotor, atau cacat pabrik"></div>
         ${hatsuExtraForm}
         ${layerExtraForm}
@@ -217,7 +220,9 @@ function hitungKemasan(i) {
   }
   const kirim = getValK(`kirim-${i}`);
   const tamu = getValK(`tamu-${i}`);
-  const rej = getValK(`reject-${i}`);
+  const rejTutup = getValK(`reject-tutup-${i}`);
+  const rejAlas = getValK(`reject-alas-${i}`);
+  const rej = rejTutup + rejAlas;
   const pAkhir = pAwal + aktualPcs - kirim - tamu - rej;
   document.getElementById(`processing-akhir-${i}`).value = Math.max(0, pAkhir);
   if (item.name.includes('Hatsu')) {
@@ -238,38 +243,45 @@ function hitungKemasan(i) {
 function simpanDataKemasan() {
   const tgl = document.getElementById('kemasan-tgl').value;
   if (!tgl) { showToast('Pilih tanggal transaksi kemasan!', 'error'); return; }
-  const items = masterJenisKemasan.map((m, i) => ({
-    name: m.name, std: m.std,
-    masuk: getValK(`masuk-${i}`),
-    bongkarDus: getValK(`bongkar-dus-${i}`),
-    standarPcs: getValK(`bongkar-dus-${i}`) * m.std,
-    aktualPcs: getValK(`aktual-pcs-${i}`),
-    selisih: getValK(`aktual-pcs-${i}`) - (getValK(`bongkar-dus-${i}`) * m.std),
-    kirim: getValK(`kirim-${i}`),
-    tamu: getValK(`tamu-${i}`),
-    ketTamu: document.getElementById(`ket-tamu-${i}`) ? document.getElementById(`ket-tamu-${i}`).value : '',
-    reject: getValK(`reject-${i}`),
-    ketReject: document.getElementById(`ket-reject-${i}`) ? document.getElementById(`ket-reject-${i}`).value : '',
-    netfoamBall: getValK(`netfoam-ball-${i}`),
-    netfoamPotong: getValK(`netfoam-potong-${i}`),
-    netfoamTerpakai: getValK(`netfoam-terpakai-${i}`),
-    netfoamAkhir: getValK(`netfoam-potong-${i}`) - getValK(`netfoam-terpakai-${i}`),
-    layerSiap: getValK(`layer-siap-${i}`),
-    layerPakai: getValK(`layer-pakai-${i}`),
-    layerAkhir: getValK(`layer-siap-${i}`) - getValK(`layer-pakai-${i}`),
-    layerOpname: getOpname(`layer-opname-${i}`),
-    sleeveSiap: getValK(`sleeve-siap-${i}`),
-    sleevePakai: getValK(`sleeve-pakai-${i}`),
-    sleeveAkhir: getValK(`sleeve-siap-${i}`) - getValK(`sleeve-pakai-${i}`),
-    sleeveOpname: getOpname(`sleeve-opname-${i}`),
-    netfoamOpname: getOpname(`netfoam-opname-${i}`),
-    stikerMasuk: i === 0 ? getValK('stiker-masuk') : 0,
-    stikerPakai: i === 0 ? getValK('stiker-pakai') : 0,
-    stikerOpname: i === 0 ? getOpname('stiker-opname') : null
-  }));
+  const items = masterJenisKemasan.map((m, i) => {
+    const rejTutup = getValK(`reject-tutup-${i}`);
+    const rejAlas = getValK(`reject-alas-${i}`);
+    return {
+      name: m.name, std: m.std,
+      masuk: getValK(`masuk-${i}`),
+      bongkarDus: getValK(`bongkar-dus-${i}`),
+      standarPcs: getValK(`bongkar-dus-${i}`) * m.std,
+      aktualPcs: getValK(`aktual-pcs-${i}`),
+      selisih: getValK(`aktual-pcs-${i}`) - (getValK(`bongkar-dus-${i}`) * m.std),
+      kirim: getValK(`kirim-${i}`),
+      tamu: getValK(`tamu-${i}`),
+      ketTamu: document.getElementById(`ket-tamu-${i}`) ? document.getElementById(`ket-tamu-${i}`).value : '',
+      reject: 0,
+      rejectTutup: rejTutup,
+      rejectAlas: rejAlas,
+      ketReject: document.getElementById(`ket-reject-${i}`) ? document.getElementById(`ket-reject-${i}`).value : '',
+      netfoamBall: getValK(`netfoam-ball-${i}`),
+      netfoamPotong: getValK(`netfoam-potong-${i}`),
+      netfoamTerpakai: getValK(`netfoam-terpakai-${i}`),
+      netfoamAkhir: getValK(`netfoam-potong-${i}`) - getValK(`netfoam-terpakai-${i}`),
+      layerSiap: getValK(`layer-siap-${i}`),
+      layerPakai: getValK(`layer-pakai-${i}`),
+      layerAkhir: getValK(`layer-siap-${i}`) - getValK(`layer-pakai-${i}`),
+      layerOpname: getOpname(`layer-opname-${i}`),
+      sleeveSiap: getValK(`sleeve-siap-${i}`),
+      sleevePakai: getValK(`sleeve-pakai-${i}`),
+      sleeveAkhir: getValK(`sleeve-siap-${i}`) - getValK(`sleeve-pakai-${i}`),
+      sleeveOpname: getOpname(`sleeve-opname-${i}`),
+      netfoamOpname: getOpname(`netfoam-opname-${i}`),
+      stikerMasuk: i === 0 ? getValK('stiker-masuk') : 0,
+      stikerPakai: i === 0 ? getValK('stiker-pakai') : 0,
+      stikerOpname: i === 0 ? getOpname('stiker-opname') : null
+    };
+  });
   const hasData = items.some(x =>
     x.masuk > 0 || x.bongkarDus > 0 || x.aktualPcs > 0 || x.kirim > 0 || x.tamu > 0 ||
-    x.reject > 0 || x.netfoamBall > 0 || x.netfoamPotong > 0 || x.netfoamTerpakai > 0 ||
+    x.rejectTutup > 0 || x.rejectAlas > 0 ||
+    x.netfoamBall > 0 || x.netfoamPotong > 0 || x.netfoamTerpakai > 0 ||
     x.layerSiap > 0 || x.layerPakai > 0 || x.sleeveSiap > 0 || x.sleevePakai > 0 || x.stikerMasuk > 0 || x.stikerPakai > 0 ||
     x.netfoamOpname !== null || x.layerOpname !== null || x.sleeveOpname !== null || x.stikerOpname !== null
   );
@@ -323,7 +335,7 @@ function renderKemasanTables() {
     if (!db.length) {
       histBody.innerHTML = '<tr><td colspan="6" class="text-center" style="color: #999;">Belum ada history</td></tr>';
     } else {
-      histBody.innerHTML = db.map(entry => {
+      histBody.innerHTML = [...db].sort((a, b) => b.tgl.localeCompare(a.tgl)).map(entry => {
         const itemMap = {};
         if (entry.items) entry.items.forEach(x => itemMap[x.name] = x);
         const h = itemMap['Hatsu'] || {};
@@ -350,6 +362,9 @@ function renderKemasanMonthly() {
   const filterEl = document.getElementById('filter-bulan-kemasan');
   if (!filterEl) return;
   const filterBulan = filterEl.value;
+
+  renderMonthlyUsage(filterBulan);
+
   const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
   const filtered = db.filter(e => e.tgl.startsWith(filterBulan));
   const mBody = document.getElementById('tbl-monthly-body');
@@ -400,6 +415,108 @@ function renderKemasanMonthly() {
       `;
     }).join('');
   }
+}
+
+function renderMonthlyUsage(filterBulan) {
+  const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]')
+    .filter(e => e && e.tgl && Array.isArray(e.items))
+    .sort((a, b) => a.tgl.localeCompare(b.tgl));
+
+  const running = {};
+  masterJenisKemasan.forEach(m => {
+    running[m.name] = { gudangDus: 0, processing: 0, rejTutupTotal: 0, rejAlasTotal: 0 };
+  });
+
+  const rows = [];
+  db.forEach(entry => {
+    entry.items.forEach(it => {
+      const r = running[it.name];
+      if (!r) return;
+      const std = it.std || 200;
+      const masukDus = it.masuk || 0;
+      const bongkarDus = it.bongkarDus || 0;
+      const pcsBongkar = it.aktualPcs || 0;
+      const kirim = it.kirim || 0;
+      const tamu = it.tamu || 0;
+
+      // Backward compat: old data pakai field `reject`
+      const rejTutupHari = (it.rejectTutup != null && it.rejectTutup > 0) ? it.rejectTutup : (it.reject || 0);
+      const rejAlasHari = it.rejectAlas || 0;
+      const rejTotalHari = rejMika(it);
+      const procSebelumKeluar = r.processing + pcsBongkar;
+
+      r.gudangDus += masukDus - bongkarDus;
+      r.processing += pcsBongkar - kirim - tamu - rejTotalHari;
+      r.rejTutupTotal += rejTutupHari;
+      r.rejAlasTotal += rejAlasHari;
+
+      if (entry.tgl.startsWith(filterBulan)) {
+        const totalKeluarHari = kirim + tamu + rejTotalHari;
+        const totalStokPcs = Math.max(0, r.processing);
+        rows.push({
+          tgl: entry.tgl, name: it.name, std,
+          masukDus, masukPcs: masukDus * std,
+          gudangDus: r.gudangDus, gudangPcs: r.gudangDus * std,
+          bongkarDus, pcsBongkar,
+          procPcs: procSebelumKeluar,
+          jumlahStok: totalKeluarHari,
+          kirim, tamu,
+          totalStokDus: Math.floor(totalStokPcs / std),
+          totalStokPcs,
+          rejTutupHari, rejTutupTotal: r.rejTutupTotal,
+          rejAlasHari, rejAlasTotal: r.rejAlasTotal,
+          keterangan: it.ketReject || it.ketTamu || ''
+        });
+      }
+    });
+  });
+
+  const tbody = document.getElementById('monthly-usage-body');
+  if (!tbody) return;
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="19" style="text-align:center;color:#999;padding:1rem;">Belum ada data bulan ini</td></tr>';
+    return;
+  }
+
+  const byTgl = new Map();
+  rows.forEach(r => {
+    if (!byTgl.has(r.tgl)) byTgl.set(r.tgl, []);
+    byTgl.get(r.tgl).push(r);
+  });
+
+  const fmt = n => Number(n || 0).toLocaleString('id-ID');
+  const bCls = name => name === 'Hatsu' ? 'hatsu' : name === 'Grade A' ? 'gradea' : 'gradeb';
+
+  let html = '';
+  byTgl.forEach((items, tgl) => {
+    const [y, m, d] = tgl.split('-');
+    const tglFmt = `${parseInt(d, 10)}/${parseInt(m, 10)}/${y}`;
+    const rowspan = items.length;
+    items.forEach((r, idx) => {
+      html += '<tr>';
+      if (idx === 0) html += `<td class="tgl-col" rowspan="${rowspan}">${tglFmt}</td>`;
+      html += `<td><span class="badge ${bCls(r.name)}">${r.name}</span></td>`;
+      html += `<td>${r.masukDus ? fmt(r.masukDus) : ''}</td>`;
+      html += `<td>${r.masukPcs ? fmt(r.masukPcs) : ''}</td>`;
+      html += `<td>${fmt(r.gudangDus)}</td>`;
+      html += `<td>${fmt(r.gudangPcs)}</td>`;
+      html += `<td>${r.bongkarDus ? fmt(r.bongkarDus) : ''}</td>`;
+      html += `<td>${r.pcsBongkar ? fmt(r.pcsBongkar) : ''}</td>`;
+      html += `<td>${fmt(r.procPcs)}</td>`;
+      html += `<td>${r.jumlahStok ? fmt(r.jumlahStok) : ''}</td>`;
+      html += `<td>${r.kirim ? fmt(r.kirim) : ''}</td>`;
+      html += `<td>${r.tamu ? fmt(r.tamu) : ''}</td>`;
+      html += `<td>${fmt(r.totalStokDus)}</td>`;
+      html += `<td class="col-total">${fmt(r.totalStokPcs)}</td>`;
+      html += `<td>${r.rejTutupHari ? fmt(r.rejTutupHari) : ''}</td>`;
+      html += `<td>${fmt(r.rejTutupTotal)}</td>`;
+      html += `<td>${r.rejAlasHari ? fmt(r.rejAlasHari) : ''}</td>`;
+      html += `<td>${fmt(r.rejAlasTotal)}</td>`;
+      html += `<td style="white-space:normal;max-width:180px;font-size:0.7rem;">${r.keterangan || ''}</td>`;
+      html += '</tr>';
+    });
+  });
+  tbody.innerHTML = html;
 }
 
 function exportKemasanCSV() {
@@ -463,6 +580,8 @@ function editKemasanHistory(id) {
   const body = document.getElementById('modal-edit-kemasan-body');
   let html = `<div class="input-group"><label>Tanggal</label><input type="date" id="edit-k-tgl" value="${entry.tgl}"></div>`;
   entry.items.forEach((it, idx) => {
+    const rejTutup = (it.rejectTutup != null && it.rejectTutup > 0) ? it.rejectTutup : (it.reject || 0);
+    const rejAlas = it.rejectAlas || 0;
     html += `
       <div style="border: 1px solid #e5e7eb; padding: 0.75rem; border-radius: 8px; margin-bottom: 0.75rem; background: #fafafa;">
         <strong>Mika ${it.name}</strong>
@@ -475,7 +594,8 @@ function editKemasanHistory(id) {
           <div class="input-group"><label>Kirim (Pcs)</label><input type="number" id="edit-kirim-${idx}" value="${it.kirim || 0}"></div>
         </div>
         <div class="row-2">
-          <div class="input-group"><label>Reject Mika (Pcs)</label><input type="number" id="edit-reject-${idx}" value="${rejMika(it)}"></div>
+          <div class="input-group"><label>Reject Tutup (Pcs)</label><input type="number" id="edit-rejtutup-${idx}" value="${rejTutup}"></div>
+          <div class="input-group"><label>Reject Alas (Pcs)</label><input type="number" id="edit-rejalas-${idx}" value="${rejAlas}"></div>
         </div>
         <div class="row-2">
           ${(AKS_EDIT_FIELDS[it.name] || []).map(([f, lbl]) =>
@@ -504,7 +624,8 @@ function saveEditKemasan() {
     const bongkar = parseFloat(document.getElementById(`edit-bongkar-${i}`).value || 0);
     const aktual = parseFloat(document.getElementById(`edit-aktual-${i}`).value || 0);
     const kirim = parseFloat(document.getElementById(`edit-kirim-${i}`).value || 0);
-    const reject = parseFloat((document.getElementById(`edit-reject-${i}`) || {}).value || 0);
+    const rejTutup = parseFloat((document.getElementById(`edit-rejtutup-${i}`) || {}).value || 0);
+    const rejAlas = parseFloat((document.getElementById(`edit-rejalas-${i}`) || {}).value || 0);
     const stdPcs = bongkar * m.std;
     const aksEdit = {};
     (AKS_EDIT_FIELDS[m.name] || []).forEach(([f]) => {
@@ -512,12 +633,13 @@ function saveEditKemasan() {
       if (el) aksEdit[f] = parseFloat(el.value || 0);
     });
     const base = { ...db[idx].items[i] };
-    delete base.rejectTutup;
-    delete base.rejectAlas;
+    delete base.reject;
     return {
       ...base,
       masuk, bongkarDus: bongkar, standarPcs: stdPcs, aktualPcs: aktual,
-      selisih: aktual - stdPcs, kirim, reject, ...aksEdit
+      selisih: aktual - stdPcs, kirim,
+      reject: 0, rejectTutup: rejTutup, rejectAlas: rejAlas,
+      ...aksEdit
     };
   });
   db[idx] = { id: window.editingKemasanId, tgl, items: updatedItems };
