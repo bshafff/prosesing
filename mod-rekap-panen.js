@@ -1,11 +1,14 @@
 // ========== REKAP PANEN MODULE ==========
+let panenCurrentPage = 1;
+const PANEN_PER_PAGE = 10;
+
 function getValP(id) { return parseFloat(document.getElementById(id).value) || 0; }
 
 function hitungAllPanen() {
   const totRkBun = getValP('rk-crack') + getValP('rk-poli') + getValP('rk-hpt');
   document.getElementById('calc-total-rk').textContent = totRkBun.toFixed(2) + ' Kg';
 
-  const totRPros = getValP('rp-crack') + getValP('rp-poli') + getValP('rp-hpt') + getValP('rp-bruise') + getValP('rp-overripe') + getValP('rp-frozen');
+  const totRPros = getValP('rp-crack') + getValP('rp-poli') + getValP('rp-hpt') + getValP('rp-bruise') + getValP('rp-overripe') + getValP('rp-kuning') + getValP('rp-frozen');
   document.getElementById('calc-total-rp').textContent = totRPros.toFixed(2) + ' Kg';
 
   const grandTotalReject = totRkBun + totRPros;
@@ -33,7 +36,7 @@ function simpanDataPanen() {
     p_hatsu: getValP('p-hatsu'), p_gradea: getValP('p-gradea'), p_gradeb: getValP('p-gradeb'),
     rk_crack: getValP('rk-crack'), rk_poli: getValP('rk-poli'), rk_hpt: getValP('rk-hpt'),
     rp_crack: getValP('rp-crack'), rp_poli: getValP('rp-poli'), rp_hpt: getValP('rp-hpt'),
-    rp_bruise: getValP('rp-bruise'), rp_overripe: getValP('rp-overripe'), rp_frozen: getValP('rp-frozen'),
+    rp_bruise: getValP('rp-bruise'), rp_overripe: getValP('rp-overripe'), rp_kuning: getValP('rp-kuning'), rp_frozen: getValP('rp-frozen'),
     k_hatsu: getValP('k-hatsu'), k_a11: getValP('k-a11'), k_a15: getValP('k-a15'), k_frozen: getValP('k-frozen'),
     m_hatsu: parseInt(document.getElementById('m-hatsu').value || 0),
     m_a11: parseInt(document.getElementById('m-a11').value || 0),
@@ -60,20 +63,45 @@ function resetFormPanen() {
   hitungAllPanen();
 }
 
+function panenResetPage() {
+  panenCurrentPage = 1;
+  renderTablePanen();
+}
+
+function panenGoToPage(p) {
+  panenCurrentPage = p;
+  renderTablePanen();
+}
+
 function renderTablePanen() {
   const histEl = document.getElementById('panen-hist-gh');
   const tbody = document.getElementById('tabel-panen-body');
+  const paginationEl = document.getElementById('panen-pagination');
   if (!tbody) return;
+
   const db = filterGh(JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]'), histEl ? histEl.value : 'all');
+  
   if (db.length === 0) {
     tbody.innerHTML = '<tr><td colspan="11" class="text-center" style="color: #999;">Belum ada data</td></tr>';
+    if (paginationEl) paginationEl.innerHTML = '';
     return;
   }
+
   db.sort((a, b) => new Date(b.tgl) - new Date(a.tgl));
-  tbody.innerHTML = db.map(item => {
+
+  const totalPages = Math.ceil(db.length / PANEN_PER_PAGE);
+  if (panenCurrentPage > totalPages) panenCurrentPage = totalPages;
+  if (panenCurrentPage < 1) panenCurrentPage = 1;
+
+  const startIdx = (panenCurrentPage - 1) * PANEN_PER_PAGE;
+  const pageData = db.slice(startIdx, startIdx + PANEN_PER_PAGE);
+
+  tbody.innerHTML = pageData.map(item => {
     const totPanen = item.p_hatsu + item.p_gradea + item.p_gradeb + item.rk_crack + item.rk_poli + item.rk_hpt;
     const totKirim = item.k_hatsu + item.k_a11 + item.k_a15 + (item.k_frozen || 0);
-    const grandReject = item.rk_crack + item.rk_poli + item.rk_hpt + item.rp_crack + item.rp_poli + item.rp_hpt + item.rp_bruise + item.rp_overripe + item.rp_frozen;
+    const grandReject = item.rk_crack + item.rk_poli + item.rk_hpt
+      + item.rp_crack + item.rp_poli + item.rp_hpt
+      + item.rp_bruise + item.rp_overripe + (item.rp_kuning || 0) + item.rp_frozen;
     const rejRate = totPanen > 0 ? (grandReject / totPanen * 100) : 0;
     const totMika = item.m_hatsu + item.m_a11 + item.m_a15;
     return `
@@ -95,6 +123,41 @@ function renderTablePanen() {
       </tr>
     `;
   }).join('');
+
+  if (paginationEl) {
+    const from = startIdx + 1;
+    const to = Math.min(startIdx + PANEN_PER_PAGE, db.length);
+    
+    let pageBtns = '';
+    const maxShow = 5;
+    let startPage = Math.max(1, panenCurrentPage - Math.floor(maxShow / 2));
+    let endPage = Math.min(totalPages, startPage + maxShow - 1);
+    if (endPage - startPage + 1 < maxShow) startPage = Math.max(1, endPage - maxShow + 1);
+    
+    if (startPage > 1) {
+      pageBtns += `<button class="btn btn-sm btn-secondary" onclick="panenGoToPage(1)">«</button>`;
+    }
+    if (panenCurrentPage > 1) {
+      pageBtns += `<button class="btn btn-sm btn-secondary" onclick="panenGoToPage(${panenCurrentPage - 1})">‹ Prev</button>`;
+    }
+    for (let p = startPage; p <= endPage; p++) {
+      const active = p === panenCurrentPage;
+      pageBtns += `<button class="btn btn-sm ${active ? 'btn-primary' : 'btn-secondary'}" onclick="panenGoToPage(${p})" style="min-width:36px;">${p}</button>`;
+    }
+    if (panenCurrentPage < totalPages) {
+      pageBtns += `<button class="btn btn-sm btn-secondary" onclick="panenGoToPage(${panenCurrentPage + 1})">Next ›</button>`;
+    }
+    if (endPage < totalPages) {
+      pageBtns += `<button class="btn btn-sm btn-secondary" onclick="panenGoToPage(${totalPages})">»</button>`;
+    }
+    
+    paginationEl.innerHTML = `
+      <div style="font-size:0.85rem;color:#666;">
+        Menampilkan <b>${from}</b>–<b>${to}</b> dari <b>${db.length}</b> data
+      </div>
+      <div style="display:flex;gap:0.35rem;align-items:center;flex-wrap:wrap;">${pageBtns}</div>
+    `;
+  }
 }
 
 function editDataPanen(id) {
@@ -111,6 +174,8 @@ function editDataPanen(id) {
     <div class="input-group"><label>Panen Hatsu (Kg)</label><input type="number" step="0.01" id="edit-p-hatsu" value="${item.p_hatsu}"></div>
     <div class="input-group"><label>Panen Grade A (Kg)</label><input type="number" step="0.01" id="edit-p-gradea" value="${item.p_gradea}"></div>
     <div class="input-group"><label>Panen Grade B (Kg)</label><input type="number" step="0.01" id="edit-p-gradeb" value="${item.p_gradeb}"></div>
+    <hr>
+    <div class="input-group"><label>Reject Processing - Buah Kuning &lt;80% (Kg)</label><input type="number" step="0.01" id="edit-rp-kuning" value="${item.rp_kuning || 0}"></div>
     <hr>
     <div class="input-group"><label>Kirim Hatsu (Kg)</label><input type="number" step="0.01" id="edit-k-hatsu" value="${item.k_hatsu}"></div>
     <div class="input-group"><label>Kirim A11 (Kg)</label><input type="number" step="0.01" id="edit-k-a11" value="${item.k_a11}"></div>
@@ -145,6 +210,7 @@ function saveEditPanen() {
     p_hatsu: parseFloat(document.getElementById('edit-p-hatsu').value || 0),
     p_gradea: parseFloat(document.getElementById('edit-p-gradea').value || 0),
     p_gradeb: parseFloat(document.getElementById('edit-p-gradeb').value || 0),
+    rp_kuning: parseFloat((document.getElementById('edit-rp-kuning') || {}).value || 0),
     k_hatsu: parseFloat(document.getElementById('edit-k-hatsu').value || 0),
     k_a11: parseFloat(document.getElementById('edit-k-a11').value || 0),
     k_a15: parseFloat(document.getElementById('edit-k-a15').value || 0),
