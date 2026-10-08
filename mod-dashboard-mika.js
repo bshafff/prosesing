@@ -1,4 +1,82 @@
 // ========== DASHBOARD MIKA MODULE ==========
+
+// ---------- Helper: Tanggal Indonesia ----------
+function formatTanggalIndo(ymd) {
+  if (!ymd) return '-';
+  const parts = ymd.split('-');
+  if (parts.length !== 3) return ymd;
+  const [y, m, d] = parts;
+  const bulan = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  return `${parseInt(d, 10)} ${bulan[parseInt(m, 10) - 1]} ${y}`;
+}
+
+// ---------- Ambil Periode Aktif dari Filter ----------
+function getMikaPeriod() {
+  const modeEl = document.getElementById('mika-filter-mode');
+  const mode = modeEl ? modeEl.value : 'single';
+  const todayYMD = new Date().toISOString().substring(0, 10);
+  const todayYM = todayYMD.substring(0, 7);
+
+  if (mode === 'range-month') {
+    const dari = (document.getElementById('mika-dari-bulan') || {}).value || todayYM;
+    const sampai = (document.getElementById('mika-sampai-bulan') || {}).value || todayYM;
+    const [y2, m2] = sampai.split('-').map(Number);
+    const lastDay = new Date(y2, m2, 0).getDate();
+    const label = dari === sampai
+      ? formatBulanIndo(dari)
+      : `${formatBulanIndo(dari)} – ${formatBulanIndo(sampai)}`;
+    return {
+      from: `${dari}-01`,
+      to: `${sampai}-${String(lastDay).padStart(2, '0')}`,
+      label,
+      mode
+    };
+  }
+
+  if (mode === 'range-date') {
+    const dari = (document.getElementById('mika-dari-tgl') || {}).value || todayYMD;
+    const sampai = (document.getElementById('mika-sampai-tgl') || {}).value || todayYMD;
+    const label = dari === sampai
+      ? formatTanggalIndo(dari)
+      : `${formatTanggalIndo(dari)} – ${formatTanggalIndo(sampai)}`;
+    return { from: dari, to: sampai, label, mode };
+  }
+
+  // mode === 'single'
+  const bulan = (document.getElementById('mika-bulan') || {}).value || todayYM;
+  const [y, m] = bulan.split('-').map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  return {
+    from: `${bulan}-01`,
+    to: `${bulan}-${String(lastDay).padStart(2, '0')}`,
+    label: formatBulanIndo(bulan),
+    mode: 'single'
+  };
+}
+
+// ---------- Ganti Mode Filter ----------
+function onMikaFilterModeChange() {
+  const modeEl = document.getElementById('mika-filter-mode');
+  const mode = modeEl ? modeEl.value : 'single';
+  const elSingle = document.getElementById('mika-filter-single');
+  const elRangeM = document.getElementById('mika-filter-range-month');
+  const elRangeD = document.getElementById('mika-filter-range-date');
+  if (elSingle) elSingle.style.display = mode === 'single' ? 'grid' : 'none';
+  if (elRangeM) elRangeM.style.display = mode === 'range-month' ? 'grid' : 'none';
+  if (elRangeD) elRangeD.style.display = mode === 'range-date' ? 'grid' : 'none';
+  renderMikaDashboard();
+}
+
+// ---------- Set ke Bulan Ini (mode single) ----------
+function setMikaBulanIni() {
+  const modeEl = document.getElementById('mika-filter-mode');
+  const bulanEl = document.getElementById('mika-bulan');
+  if (modeEl) modeEl.value = 'single';
+  if (bulanEl) bulanEl.value = new Date().toISOString().substring(0, 7);
+  onMikaFilterModeChange();
+}
+
+// ---------- Timeline Stok (fungsi asli, tidak berubah) ----------
 function computeMikaTimeline() {
   const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]')
     .filter(e => e && e.tgl && Array.isArray(e.items))
@@ -42,28 +120,42 @@ function computeMikaTimeline() {
   return snaps;
 }
 
-function setMikaBulanIni() {
-  document.getElementById('mika-bulan').value = new Date().toISOString().substring(0, 7);
-  renderMikaDashboard();
-}
-
+// ---------- Render Dashboard Utama ----------
 function renderMikaDashboard() {
-  const bulanEl = document.getElementById('mika-bulan');
-  if (!bulanEl) return;
-  if (!bulanEl.value) bulanEl.value = new Date().toISOString().substring(0, 7);
-  const month = bulanEl.value;
-  document.getElementById('mika-period-info').innerHTML = `Menampilkan data: <b>${formatBulanIndo(month)}</b>`;
+  const todayYMD = new Date().toISOString().substring(0, 10);
+  const todayYM = todayYMD.substring(0, 7);
+
+  // Set default value input filter kalau kosong
+  const setIfEmpty = (id, val) => { const el = document.getElementById(id); if (el && !el.value) el.value = val; };
+  setIfEmpty('mika-bulan', todayYM);
+  setIfEmpty('mika-dari-bulan', todayYM);
+  setIfEmpty('mika-sampai-bulan', todayYM);
+  setIfEmpty('mika-dari-tgl', todayYMD);
+  setIfEmpty('mika-sampai-tgl', todayYMD);
+
+  const period = getMikaPeriod();
+  const timeline = computeMikaTimeline();
+  const inPeriod = timeline.filter(x => x.tgl >= period.from && x.tgl <= period.to);
+
+  // Info periode
+  const infoEl = document.getElementById('mika-period-info');
+  if (infoEl) {
+    infoEl.innerHTML = `Menampilkan data: <b>${period.label}</b> · ${inPeriod.length} hari transaksi`;
+  }
+
   const fmt = n => Number(n || 0).toLocaleString('id-ID');
   const cell = n => n < 0 ? `<span class="neg">${fmt(n)}</span>` : fmt(n);
-  const timeline = computeMikaTimeline();
-  const upToMonth = timeline.filter(x => x.tgl.substring(0, 7) <= month);
-  const inMonth = timeline.filter(x => x.tgl.substring(0, 7) === month);
-  const before = timeline.filter(x => x.tgl.substring(0, 7) < month);
+
+  const upToPeriod = timeline.filter(x => x.tgl <= period.to);
+  const before = timeline.filter(x => x.tgl < period.from);
   const opening = before.length ? before[before.length - 1] : null;
-  const latest = upToMonth.length ? upToMonth[upToMonth.length - 1] : null;
+  const latest = upToPeriod.length ? upToPeriod[upToPeriod.length - 1] : null;
+
+  // ---- Kartu Stok Terakhir ----
   const cardsEl = document.getElementById('mika-latest-cards');
   const titleEl = document.getElementById('mika-latest-title');
   const warnEl = document.getElementById('mika-warning');
+
   if (!latest) {
     titleEl.textContent = '📋 Stok Kemasan Terakhir';
     cardsEl.innerHTML = '<div style="color:#999;padding:0.5rem;">Belum ada data kemasan.</div>';
@@ -90,32 +182,148 @@ function renderMikaDashboard() {
       ? `<div class="warn-box" style="margin-top:0.5rem;">⚠️ Stok minus: <b>${minus.join(', ')}</b>. Cek input harian, atau isi <b>Koreksi Stok Fisik</b> di menu Stok Kemasan.</div>`
       : '';
   }
+
+  // ---- Tabel Stok Harian ----
   const body = document.getElementById('mika-daily-body');
-  if (!inMonth.length) {
-    body.innerHTML = '<tr><td colspan="14" style="text-align:center;color:#999;padding:1rem;">Belum ada data bulan ini</td></tr>';
-    return;
+  if (!inPeriod.length) {
+    body.innerHTML = '<tr><td colspan="14" style="text-align:center;color:#999;padding:1rem;">Belum ada data pada periode ini</td></tr>';
+  } else {
+    const row = (label, x, isOpening) => {
+      const total = x.proc['Hatsu'] + x.proc['Grade A'] + x.proc['Grade B'];
+      return `<tr>
+        <td class="tgl-col ${isOpening ? 'row-awal' : ''}">${label}</td>
+        <td>${cell(x.proc['Hatsu'])}</td>
+        <td>${cell(x.proc['Grade A'])}</td>
+        <td>${cell(x.proc['Grade B'])}</td>
+        <td class="col-total">${cell(total)}</td>
+        <td>${cell(x.layer)}</td>
+        <td>${cell(x.sleeve)}</td>
+        <td>${cell(x.stiker)}</td>
+        <td>${cell(x.netfoam)}</td>
+        <td>${fmt(Math.max(0, x.gudang['Hatsu']))}</td>
+        <td>${fmt(Math.max(0, x.gudang['Grade A']))}</td>
+        <td>${fmt(Math.max(0, x.gudang['Grade B']))}</td>
+        <td>${isOpening ? '-' : fmt(x.keluar)}</td>
+        <td>${isOpening ? '-' : fmt(x.reject)}</td>
+      </tr>`;
+    };
+    let html = '';
+    if (opening) html += row('Stok awal periode', opening, true);
+    html += inPeriod.map(x => row(x.tgl.substring(8) + '/' + x.tgl.substring(5, 7), x, false)).join('');
+    body.innerHTML = html;
   }
-  const row = (label, x, isOpening) => {
-    const total = x.proc['Hatsu'] + x.proc['Grade A'] + x.proc['Grade B'];
-    return `<tr>
-      <td class="tgl-col ${isOpening ? 'row-awal' : ''}">${label}</td>
-      <td>${cell(x.proc['Hatsu'])}</td>
-      <td>${cell(x.proc['Grade A'])}</td>
-      <td>${cell(x.proc['Grade B'])}</td>
-      <td class="col-total">${cell(total)}</td>
-      <td>${cell(x.layer)}</td>
-      <td>${cell(x.sleeve)}</td>
-      <td>${cell(x.stiker)}</td>
-      <td>${cell(x.netfoam)}</td>
-      <td>${fmt(Math.max(0, x.gudang['Hatsu']))}</td>
-      <td>${fmt(Math.max(0, x.gudang['Grade A']))}</td>
-      <td>${fmt(Math.max(0, x.gudang['Grade B']))}</td>
-      <td>${isOpening ? '-' : fmt(x.keluar)}</td>
-      <td>${isOpening ? '-' : fmt(x.reject)}</td>
-    </tr>`;
-  };
-  let html = '';
-  if (opening) html += row('Stok awal bulan', opening, true);
-  html += inMonth.map(x => row(x.tgl.substring(8) + '/' + x.tgl.substring(5, 7), x, false)).join('');
-  body.innerHTML = html;
+
+  // ---- Reject & Tamu ----
+  renderMikaRejectTamu(period);
+}
+
+// ---------- Render Kartu Reject & Tamu ----------
+function renderMikaRejectTamu(period) {
+  const kemasanDb = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
+  const panenDb = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+
+  // ========== REJECT (dari Stok Kemasan) ==========
+  const reject = { 'Hatsu': 0, 'Grade A': 0, 'Grade B': 0 };
+  kemasanDb.forEach(entry => {
+    if (!entry.tgl || entry.tgl < period.from || entry.tgl > period.to) return;
+    if (!Array.isArray(entry.items)) return;
+    entry.items.forEach(it => {
+      if (reject[it.name] !== undefined) reject[it.name] += rejMika(it);
+    });
+  });
+  const totalReject = reject['Hatsu'] + reject['Grade A'] + reject['Grade B'];
+
+  const rejectEl = document.getElementById('mika-reject-cards');
+  if (rejectEl) {
+    if (totalReject === 0) {
+      rejectEl.innerHTML = '<div style="color:#16a34a;padding:0.5rem;font-weight:600;">✓ Tidak ada reject pada periode ini</div>';
+    } else {
+      rejectEl.innerHTML = `
+        <div class="stat-card red">
+          <div class="stat-label">TOTAL REJECT</div>
+          <div class="stat-value">${totalReject.toLocaleString('id-ID')}</div>
+          <div class="stat-meta">Pcs Mika</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">Hatsu</div>
+          <div class="stat-value">${reject['Hatsu'].toLocaleString('id-ID')}</div>
+          <div class="stat-meta">Pcs</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Grade A (Hy 11)</div>
+          <div class="stat-value">${reject['Grade A'].toLocaleString('id-ID')}</div>
+          <div class="stat-meta">Pcs</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-label">Grade B (Hy 15)</div>
+          <div class="stat-value">${reject['Grade B'].toLocaleString('id-ID')}</div>
+          <div class="stat-meta">Pcs</div>
+        </div>
+      `;
+    }
+  }
+
+  // ========== TAMU (prioritas: Panen, fallback: Stok Kemasan) ==========
+  const tamuPanen = { 'Hatsu': 0, 'Grade A': 0, 'Grade B': 0 };
+  let curahKg = 0;
+  panenDb.forEach(item => {
+    if (!item.tgl || item.tgl < period.from || item.tgl > period.to) return;
+    tamuPanen['Hatsu']   += item.t_hatsu || 0;
+    tamuPanen['Grade A'] += item.t_a11   || 0;
+    tamuPanen['Grade B'] += item.t_a15   || 0;
+    curahKg              += item.t_curah || 0;
+  });
+
+  const tamuKemasan = { 'Hatsu': 0, 'Grade A': 0, 'Grade B': 0 };
+  kemasanDb.forEach(entry => {
+    if (!entry.tgl || entry.tgl < period.from || entry.tgl > period.to) return;
+    if (!Array.isArray(entry.items)) return;
+    entry.items.forEach(it => {
+      if (tamuKemasan[it.name] !== undefined) tamuKemasan[it.name] += (it.tamu || 0);
+    });
+  });
+
+  const totalTamuPanen   = tamuPanen['Hatsu']   + tamuPanen['Grade A']   + tamuPanen['Grade B'];
+  const totalTamuKemasan = tamuKemasan['Hatsu'] + tamuKemasan['Grade A'] + tamuKemasan['Grade B'];
+  const pakaiPanen = totalTamuPanen > 0;
+  const tamu = pakaiPanen ? tamuPanen : tamuKemasan;
+  const tamuSource = pakaiPanen
+    ? 'Form Panen'
+    : (totalTamuKemasan > 0 ? 'Form Stok Kemasan' : '—');
+  const totalTamu = tamu['Hatsu'] + tamu['Grade A'] + tamu['Grade B'];
+
+  const tamuEl = document.getElementById('mika-tamu-cards');
+  if (tamuEl) {
+    if (totalTamu === 0 && curahKg === 0) {
+      tamuEl.innerHTML = '<div style="color:#999;padding:0.5rem;">Belum ada data tamu pada periode ini</div>';
+    } else {
+      tamuEl.innerHTML = `
+        <div class="stat-card purple">
+          <div class="stat-label">TOTAL TAMU (PCS)</div>
+          <div class="stat-value">${totalTamu.toLocaleString('id-ID')}</div>
+          <div class="stat-meta">Sumber: ${tamuSource}</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-label">TAMU CURAH</div>
+          <div class="stat-value">${curahKg.toFixed(2)}</div>
+          <div class="stat-meta">Kg · dari Panen (bukan per grade)</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">Hatsu</div>
+          <div class="stat-value">${tamu['Hatsu'].toLocaleString('id-ID')}</div>
+          <div class="stat-meta">Pcs</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Grade A (Hy 11)</div>
+          <div class="stat-value">${tamu['Grade A'].toLocaleString('id-ID')}</div>
+          <div class="stat-meta">Pcs</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-label">Grade B (Hy 15)</div>
+          <div class="stat-value">${tamu['Grade B'].toLocaleString('id-ID')}</div>
+          <div class="stat-meta">Pcs</div>
+        </div>
+      `;
+    }
+  }
 }
