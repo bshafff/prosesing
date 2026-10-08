@@ -5,24 +5,83 @@
     <button class="btn btn-sm" onclick="openModule('dashboard')" style="margin-left:auto;flex:none;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;">📊 Dashboard Panen</button>
   </div>
 
+  <!-- ===================== FILTER PERIODE ===================== -->
   <div class="card">
-    <div class="card-title">📅 Pilih Periode Bulan</div>
-    <div class="row-2" style="align-items: flex-end;">
+    <div class="card-title">📅 Filter Periode</div>
+
+    <div class="input-group">
+      <label>Mode Filter</label>
+      <select id="mika-filter-mode" onchange="onMikaFilterModeChange()">
+        <option value="single">Bulan Tunggal</option>
+        <option value="range-month">Rentang Bulan</option>
+        <option value="range-date">Rentang Tanggal</option>
+      </select>
+    </div>
+
+    <!-- Mode: Bulan Tunggal -->
+    <div id="mika-filter-single" class="row-2" style="align-items:flex-end;">
       <div class="input-group" style="margin-bottom:0;">
         <label>Bulan</label>
         <input type="month" id="mika-bulan" onchange="renderMikaDashboard()">
       </div>
       <button class="btn btn-secondary" onclick="setMikaBulanIni()">📌 Bulan Ini</button>
     </div>
+
+    <!-- Mode: Rentang Bulan -->
+    <div id="mika-filter-range-month" class="row-2" style="display:none; align-items:flex-end;">
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Dari Bulan</label>
+        <input type="month" id="mika-dari-bulan" onchange="renderMikaDashboard()">
+      </div>
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Sampai Bulan</label>
+        <input type="month" id="mika-sampai-bulan" onchange="renderMikaDashboard()">
+      </div>
+    </div>
+
+    <!-- Mode: Rentang Tanggal -->
+    <div id="mika-filter-range-date" class="row-2" style="display:none; align-items:flex-end;">
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Dari Tanggal</label>
+        <input type="date" id="mika-dari-tgl" onchange="renderMikaDashboard()">
+      </div>
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Sampai Tanggal</label>
+        <input type="date" id="mika-sampai-tgl" onchange="renderMikaDashboard()">
+      </div>
+    </div>
+
     <div class="info-box" style="margin-top:1rem;margin-bottom:0;" id="mika-period-info">Menampilkan data: <b>-</b></div>
   </div>
 
+  <!-- ===================== STOK TERAKHIR ===================== -->
   <div class="card">
     <div class="card-title" id="mika-latest-title">📋 Stok Kemasan Terakhir</div>
     <div class="stats" id="mika-latest-cards" style="margin-bottom:0.5rem;"></div>
     <div id="mika-warning"></div>
   </div>
 
+  <!-- ===================== REJECT MIKA ===================== -->
+  <div class="card">
+    <div class="card-title">❌ Reject Mika Periode Ini</div>
+    <div class="stats" id="mika-reject-cards" style="margin-bottom:0;"></div>
+    <div class="info-box" style="margin-top:1rem;margin-bottom:0;">
+      Data dari <b>Stok Kemasan</b> (field "Reject Mika" pada masing-masing grade) — dihitung dalam satuan <b>PCS</b>.
+    </div>
+  </div>
+
+  <!-- ===================== TAMU & SAMPEL ===================== -->
+  <div class="card">
+    <div class="card-title">🎁 Tamu &amp; Sampel Periode Ini</div>
+    <div class="stats" id="mika-tamu-cards" style="margin-bottom:0;"></div>
+    <div class="info-box" style="margin-top:1rem;margin-bottom:0;">
+      <b>PCS per grade</b> diambil dari form <b>Panen</b> (field "Untuk Tamu &amp; Sampel": Hatsu / A11 / A15).
+      Kalau di Panen kosong, otomatis ambil dari <b>Stok Kemasan</b> (field "Mika Tamu / Sample").
+      <br><b>Kg Curah</b> hanya ada di form Panen (field "Curah (Kg)") karena itu total curah — tidak terpisah per grade.
+    </div>
+  </div>
+
+  <!-- ===================== STOK HARIAN ===================== -->
   <div class="card">
     <div class="card-title">📅 Stok Harian (posisi akhir hari)</div>
     <div class="recap-wrap">
