@@ -1,0 +1,64 @@
+<div id="dash-mika" class="view">
+  <div class="view-toolbar">
+    <button class="btn btn-sm btn-home" onclick="goHome()">← Menu</button>
+    <span class="view-title">🍓 Dashboard Mika</span>
+    <button class="btn btn-sm" onclick="openModule('dashboard')" style="margin-left:auto;flex:none;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;">📊 Dashboard Panen</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📅 Pilih Periode Bulan</div>
+    <div class="row-2" style="align-items: flex-end;">
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Bulan</label>
+        <input type="month" id="mika-bulan" onchange="renderMikaDashboard()">
+      </div>
+      <button class="btn btn-secondary" onclick="setMikaBulanIni()">📌 Bulan Ini</button>
+    </div>
+    <div class="info-box" style="margin-top:1rem;margin-bottom:0;" id="mika-period-info">Menampilkan data: <b>-</b></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" id="mika-latest-title">📋 Stok Kemasan Terakhir</div>
+    <div class="stats" id="mika-latest-cards" style="margin-bottom:0.5rem;"></div>
+    <div id="mika-warning"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📅 Stok Harian (posisi akhir hari)</div>
+    <div class="recap-wrap">
+      <table class="recap-table" style="min-width:1150px;">
+        <thead>
+          <tr>
+            <th class="th-base" rowspan="2">Tanggal</th>
+            <th class="th-stok" colspan="4">MIKA SIAP PACKING (Pcs)</th>
+            <th class="th-aks" colspan="4">KEMASAN TAMBAHAN (Pcs)</th>
+            <th class="th-gdg" colspan="3">GUDANG (Dus)</th>
+            <th class="th-mut" colspan="2">MUTASI HARI INI (Pcs)</th>
+          </tr>
+          <tr>
+            <th class="th-stok">Hatsu</th>
+            <th class="th-stok">Hy 11</th>
+            <th class="th-stok">Hy 15</th>
+            <th class="th-stok">Total</th>
+            <th class="th-aks">Layer</th>
+            <th class="th-aks">Sleeve</th>
+            <th class="th-aks">Stiker</th>
+            <th class="th-aks">Netfoam</th>
+            <th class="th-gdg">Hatsu</th>
+            <th class="th-gdg">Hy 11</th>
+            <th class="th-gdg">Hy 15</th>
+            <th class="th-mut">Keluar</th>
+            <th class="th-mut">Reject</th>
+          </tr>
+        </thead>
+        <tbody id="mika-daily-body">
+          <tr><td colspan="14" style="text-align:center;color:#999;padding:1rem;">Belum ada data</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="info-box" style="margin-top:1rem;margin-bottom:0;">
+      Stok dihitung otomatis dari data di menu <b>Stok Kemasan (Mika)</b>. Hy 11 = Grade A, Hy 15 = Grade B.
+      Kalau stok fisik beda dengan hitungan, isi kolom <b>Koreksi Stok Fisik</b> saat input — stok langsung diset ke angka itu mulai tanggal tersebut.
+    </div>
+  </div>
+</div>
