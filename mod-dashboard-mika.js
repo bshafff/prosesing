@@ -1,6 +1,5 @@
 // ========== DASHBOARD MIKA MODULE ==========
 
-// ---------- Helper: Tanggal Indonesia ----------
 function formatTanggalIndo(ymd) {
   if (!ymd) return '-';
   const parts = ymd.split('-');
@@ -10,7 +9,6 @@ function formatTanggalIndo(ymd) {
   return `${parseInt(d, 10)} ${bulan[parseInt(m, 10) - 1]} ${y}`;
 }
 
-// ---------- Ambil Periode Aktif dari Filter ----------
 function getMikaPeriod() {
   const modeEl = document.getElementById('mika-filter-mode');
   const mode = modeEl ? modeEl.value : 'single';
@@ -25,36 +23,20 @@ function getMikaPeriod() {
     const label = dari === sampai
       ? formatBulanIndo(dari)
       : `${formatBulanIndo(dari)} – ${formatBulanIndo(sampai)}`;
-    return {
-      from: `${dari}-01`,
-      to: `${sampai}-${String(lastDay).padStart(2, '0')}`,
-      label,
-      mode
-    };
+    return { from: `${dari}-01`, to: `${sampai}-${String(lastDay).padStart(2, '0')}`, label, mode };
   }
-
   if (mode === 'range-date') {
     const dari = (document.getElementById('mika-dari-tgl') || {}).value || todayYMD;
     const sampai = (document.getElementById('mika-sampai-tgl') || {}).value || todayYMD;
-    const label = dari === sampai
-      ? formatTanggalIndo(dari)
-      : `${formatTanggalIndo(dari)} – ${formatTanggalIndo(sampai)}`;
+    const label = dari === sampai ? formatTanggalIndo(dari) : `${formatTanggalIndo(dari)} – ${formatTanggalIndo(sampai)}`;
     return { from: dari, to: sampai, label, mode };
   }
-
-  // mode === 'single'
   const bulan = (document.getElementById('mika-bulan') || {}).value || todayYM;
   const [y, m] = bulan.split('-').map(Number);
   const lastDay = new Date(y, m, 0).getDate();
-  return {
-    from: `${bulan}-01`,
-    to: `${bulan}-${String(lastDay).padStart(2, '0')}`,
-    label: formatBulanIndo(bulan),
-    mode: 'single'
-  };
+  return { from: `${bulan}-01`, to: `${bulan}-${String(lastDay).padStart(2, '0')}`, label: formatBulanIndo(bulan), mode: 'single' };
 }
 
-// ---------- Ganti Mode Filter ----------
 function onMikaFilterModeChange() {
   const modeEl = document.getElementById('mika-filter-mode');
   const mode = modeEl ? modeEl.value : 'single';
@@ -67,7 +49,6 @@ function onMikaFilterModeChange() {
   renderMikaDashboard();
 }
 
-// ---------- Set ke Bulan Ini (mode single) ----------
 function setMikaBulanIni() {
   const modeEl = document.getElementById('mika-filter-mode');
   const bulanEl = document.getElementById('mika-bulan');
@@ -76,7 +57,6 @@ function setMikaBulanIni() {
   onMikaFilterModeChange();
 }
 
-// ---------- Timeline Stok (fungsi asli, tidak berubah) ----------
 function computeMikaTimeline() {
   const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]')
     .filter(e => e && e.tgl && Array.isArray(e.items))
@@ -120,12 +100,10 @@ function computeMikaTimeline() {
   return snaps;
 }
 
-// ---------- Render Dashboard Utama ----------
 function renderMikaDashboard() {
   const todayYMD = new Date().toISOString().substring(0, 10);
   const todayYM = todayYMD.substring(0, 7);
 
-  // Set default value input filter kalau kosong
   const setIfEmpty = (id, val) => { const el = document.getElementById(id); if (el && !el.value) el.value = val; };
   setIfEmpty('mika-bulan', todayYM);
   setIfEmpty('mika-dari-bulan', todayYM);
@@ -137,7 +115,6 @@ function renderMikaDashboard() {
   const timeline = computeMikaTimeline();
   const inPeriod = timeline.filter(x => x.tgl >= period.from && x.tgl <= period.to);
 
-  // Info periode
   const infoEl = document.getElementById('mika-period-info');
   if (infoEl) {
     infoEl.innerHTML = `Menampilkan data: <b>${period.label}</b> · ${inPeriod.length} hari transaksi`;
@@ -151,7 +128,6 @@ function renderMikaDashboard() {
   const opening = before.length ? before[before.length - 1] : null;
   const latest = upToPeriod.length ? upToPeriod[upToPeriod.length - 1] : null;
 
-  // ---- Kartu Stok Terakhir ----
   const cardsEl = document.getElementById('mika-latest-cards');
   const titleEl = document.getElementById('mika-latest-title');
   const warnEl = document.getElementById('mika-warning');
@@ -183,7 +159,6 @@ function renderMikaDashboard() {
       : '';
   }
 
-  // ---- Tabel Stok Harian ----
   const body = document.getElementById('mika-daily-body');
   if (!inPeriod.length) {
     body.innerHTML = '<tr><td colspan="14" style="text-align:center;color:#999;padding:1rem;">Belum ada data pada periode ini</td></tr>';
@@ -213,16 +188,15 @@ function renderMikaDashboard() {
     body.innerHTML = html;
   }
 
-  // ---- Reject & Tamu ----
   renderMikaRejectTamu(period);
+  renderMikaKPI(period);
+  renderMikaChart(period);
 }
 
-// ---------- Render Kartu Reject & Tamu ----------
 function renderMikaRejectTamu(period) {
   const kemasanDb = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
   const panenDb = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
 
-  // ========== REJECT (dari Stok Kemasan) ==========
   const reject = { 'Hatsu': 0, 'Grade A': 0, 'Grade B': 0 };
   kemasanDb.forEach(entry => {
     if (!entry.tgl || entry.tgl < period.from || entry.tgl > period.to) return;
@@ -263,7 +237,6 @@ function renderMikaRejectTamu(period) {
     }
   }
 
-  // ========== TAMU (prioritas: Panen, fallback: Stok Kemasan) ==========
   const tamuPanen = { 'Hatsu': 0, 'Grade A': 0, 'Grade B': 0 };
   let curahKg = 0;
   panenDb.forEach(item => {
@@ -287,9 +260,7 @@ function renderMikaRejectTamu(period) {
   const totalTamuKemasan = tamuKemasan['Hatsu'] + tamuKemasan['Grade A'] + tamuKemasan['Grade B'];
   const pakaiPanen = totalTamuPanen > 0;
   const tamu = pakaiPanen ? tamuPanen : tamuKemasan;
-  const tamuSource = pakaiPanen
-    ? 'Form Panen'
-    : (totalTamuKemasan > 0 ? 'Form Stok Kemasan' : '—');
+  const tamuSource = pakaiPanen ? 'Form Panen' : (totalTamuKemasan > 0 ? 'Form Stok Kemasan' : '—');
   const totalTamu = tamu['Hatsu'] + tamu['Grade A'] + tamu['Grade B'];
 
   const tamuEl = document.getElementById('mika-tamu-cards');
@@ -306,7 +277,7 @@ function renderMikaRejectTamu(period) {
         <div class="stat-card orange">
           <div class="stat-label">TAMU CURAH</div>
           <div class="stat-value">${curahKg.toFixed(2)}</div>
-          <div class="stat-meta">Kg · dari Panen (bukan per grade)</div>
+          <div class="stat-meta">Kg · dari Panen</div>
         </div>
         <div class="stat-card blue">
           <div class="stat-label">Hatsu</div>
@@ -326,4 +297,168 @@ function renderMikaRejectTamu(period) {
       `;
     }
   }
+}
+
+// ========== KPI PERGERAKAN KEMASAN ==========
+function renderMikaKPI(period) {
+  const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]')
+    .filter(e => e && e.tgl && e.tgl >= period.from && e.tgl <= period.to && Array.isArray(e.items));
+
+  const totals = {};
+  masterJenisKemasan.forEach(m => {
+    totals[m.name] = { masukDus: 0, bongkarDus: 0, pcsBongkar: 0, kirim: 0, tamu: 0, reject: 0 };
+  });
+
+  db.forEach(entry => {
+    entry.items.forEach(it => {
+      const t = totals[it.name];
+      if (!t) return;
+      t.masukDus += it.masuk || 0;
+      t.bongkarDus += it.bongkarDus || 0;
+      t.pcsBongkar += it.aktualPcs || 0;
+      t.kirim += it.kirim || 0;
+      t.tamu += it.tamu || 0;
+      t.reject += rejMika(it);
+    });
+  });
+
+  const sum = (key) => Object.values(totals).reduce((a, t) => a + t[key], 0);
+  const fmt = n => Number(n || 0).toLocaleString('id-ID');
+
+  const cardsEl = document.getElementById('mika-kpi-cards');
+  if (cardsEl) {
+    cardsEl.innerHTML = `
+      <div class="stat-card blue">
+        <div class="stat-label">Total Kemasan Masuk</div>
+        <div class="stat-value">${fmt(sum('masukDus'))}</div>
+        <div class="stat-meta">Dus · semua grade</div>
+      </div>
+      <div class="stat-card orange">
+        <div class="stat-label">Total Dibongkar</div>
+        <div class="stat-value">${fmt(sum('bongkarDus'))}</div>
+        <div class="stat-meta">Dus · ${fmt(sum('pcsBongkar'))} Pcs aktual</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Total Kirim Packing</div>
+        <div class="stat-value">${fmt(sum('kirim'))}</div>
+        <div class="stat-meta">Pcs mika</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-label">Total Mika Tamu</div>
+        <div class="stat-value">${fmt(sum('tamu'))}</div>
+        <div class="stat-meta">Pcs mika</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Total Reject</div>
+        <div class="stat-value">${fmt(sum('reject'))}</div>
+        <div class="stat-meta">Pcs mika</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Hari Transaksi</div>
+        <div class="stat-value">${db.length}</div>
+        <div class="stat-meta">Hari dengan data</div>
+      </div>
+    `;
+  }
+
+  const tbody = document.getElementById('mika-kpi-table-body');
+  if (!tbody) return;
+
+  const rowsHtml = masterJenisKemasan.map(m => {
+    const t = totals[m.name];
+    return `<tr>
+      <td><span class="badge ${m.badge}">${m.name}</span></td>
+      <td class="text-right">${fmt(t.masukDus)}</td>
+      <td class="text-right">${fmt(t.bongkarDus)}</td>
+      <td class="text-right">${fmt(t.pcsBongkar)}</td>
+      <td class="text-right">${fmt(t.kirim)}</td>
+      <td class="text-right">${fmt(t.tamu)}</td>
+      <td class="text-right" style="color:#dc2626;">${fmt(t.reject)}</td>
+    </tr>`;
+  }).join('');
+
+  const totalRow = `<tr style="background:#f0fdf4;font-weight:800;">
+    <td>TOTAL</td>
+    <td class="text-right">${fmt(sum('masukDus'))}</td>
+    <td class="text-right">${fmt(sum('bongkarDus'))}</td>
+    <td class="text-right">${fmt(sum('pcsBongkar'))}</td>
+    <td class="text-right">${fmt(sum('kirim'))}</td>
+    <td class="text-right">${fmt(sum('tamu'))}</td>
+    <td class="text-right" style="color:#dc2626;">${fmt(sum('reject'))}</td>
+  </tr>`;
+
+  tbody.innerHTML = rowsHtml + totalRow;
+}
+
+// ========== GRAFIK HARIAN KIRIM VS REJECT ==========
+function renderMikaChart(period) {
+  const el = document.getElementById('mika-chart-harian');
+  if (!el) return;
+
+  const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]')
+    .filter(e => e && e.tgl && e.tgl >= period.from && e.tgl <= period.to && Array.isArray(e.items));
+
+  const byDate = new Map();
+  db.forEach(entry => {
+    if (!byDate.has(entry.tgl)) byDate.set(entry.tgl, { kirim: 0, reject: 0 });
+    const d = byDate.get(entry.tgl);
+    entry.items.forEach(it => {
+      d.kirim += it.kirim || 0;
+      d.reject += rejMika(it);
+    });
+  });
+
+  const data = [...byDate.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([tgl, v]) => ({ tgl, ...v }));
+
+  if (!data.length) {
+    el.innerHTML = '<div style="text-align:center;color:#999;padding:2rem;">Belum ada data untuk grafik periode ini</div>';
+    return;
+  }
+
+  const W = Math.max(600, data.length * 60);
+  const H = 280;
+  const padL = 55, padR = 20, padT = 20, padB = 60;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+
+  let maxVal = 0;
+  data.forEach(d => { maxVal = Math.max(maxVal, d.kirim, d.reject); });
+  maxVal = Math.ceil((maxVal || 1) * 1.1);
+
+  const slotW = chartW / data.length;
+  const barW = Math.min(28, slotW / 3);
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" class="chart-svg" preserveAspectRatio="xMidYMid meet" style="min-width:${W}px;">`;
+  for (let i = 0; i <= 4; i++) {
+    const y = padT + (chartH * i / 4);
+    const val = maxVal * (1 - i / 4);
+    svg += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#e5e7eb"/>`;
+    svg += `<text x="${padL - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="#888">${val.toFixed(0)}</text>`;
+  }
+
+  data.forEach((d, i) => {
+    const slotX = padL + (chartW * i / data.length);
+    const xK = slotX + slotW / 2 - barW - 1;
+    const xR = slotX + slotW / 2 + 1;
+    const hK = (d.kirim / maxVal) * chartH;
+    const hR = (d.reject / maxVal) * chartH;
+    const yK = padT + chartH - hK;
+    const yR = padT + chartH - hR;
+    svg += `<rect x="${xK}" y="${yK}" width="${barW}" height="${hK}" fill="#2563eb" rx="2"><title>${d.tgl} · Kirim: ${d.kirim} Pcs</title></rect>`;
+    svg += `<rect x="${xR}" y="${yR}" width="${barW}" height="${hR}" fill="#dc2626" rx="2"><title>${d.tgl} · Reject: ${d.reject} Pcs</title></rect>`;
+    const dayLabel = d.tgl.substring(8, 10);
+    const monthLabel = d.tgl.substring(5, 7);
+    svg += `<text x="${slotX + slotW / 2}" y="${H - padB + 15}" text-anchor="middle" font-size="9" fill="#666">${dayLabel}/${monthLabel}</text>`;
+  });
+
+  svg += `<line x1="${padL}" y1="${padT + chartH}" x2="${W - padR}" y2="${padT + chartH}" stroke="#999"/>`;
+  svg += `</svg>`;
+
+  el.innerHTML = svg + `
+    <div class="chart-legend">
+      <span><span class="dot" style="background:#2563eb;"></span> Kirim (Pcs)</span>
+      <span><span class="dot" style="background:#dc2626;"></span> Reject (Pcs)</span>
+    </div>`;
 }
