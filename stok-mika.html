@@ -102,13 +102,59 @@
 
   <div id="k-monthly" class="k-panel">
     <div class="card">
-      <div class="card-title">📅 Filter Rekap Selisih Bulanan</div>
+      <div class="card-title">📅 Filter Bulan</div>
       <div class="row-2" style="align-items: flex-end;">
         <div class="input-group" style="margin-bottom:0;">
           <label>Pilih Bulan</label>
           <input type="month" id="filter-bulan-kemasan" onchange="renderKemasanMonthly()">
         </div>
-        <button class="btn btn-success" onclick="exportKemasanCSV()">📥 Export Selisih CSV</button>
+        <button class="btn btn-success" onclick="exportKemasanCSV()">📥 Export CSV</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📊 Rekap Penggunaan Bulanan (Stock Opname)</div>
+      <div class="info-box" style="margin-bottom:0.75rem;">
+        Data penggunaan mika per hari per grade. <b>Ruang Prosesing Pcs</b> = stok tersedia sebelum pengeluaran hari itu.
+        <b>Jumlah Stok</b> = total pcs keluar hari itu (kirim + tamu + reject). <b>Total Stok</b> = stok akhir setelah pengeluaran.
+      </div>
+      <div class="recap-wrap">
+        <table class="recap-table" style="min-width: 1500px;">
+          <thead>
+            <tr>
+              <th class="th-base" rowspan="2">Tanggal</th>
+              <th class="th-base" rowspan="2">Jenis</th>
+              <th class="th-stok" colspan="2">Kemasan Masuk</th>
+              <th class="th-stok" colspan="2">Stok Gudang</th>
+              <th class="th-aks" colspan="3">Ruang Prosesing</th>
+              <th class="th-base" rowspan="2">Jumlah Stok</th>
+              <th class="th-kirim" rowspan="2">Kirim</th>
+              <th class="th-mika" rowspan="2">Mika Tamu</th>
+              <th class="th-gdg" colspan="2">Total Stok</th>
+              <th class="th-reject" colspan="2">Reject Tutup</th>
+              <th class="th-reject" colspan="2">Reject Alas</th>
+              <th class="th-base" rowspan="2">Keterangan</th>
+            </tr>
+            <tr>
+              <th class="th-stok">Dus</th>
+              <th class="th-stok">Pcs</th>
+              <th class="th-stok">Dus</th>
+              <th class="th-stok">Pcs</th>
+              <th class="th-aks">Bongkar</th>
+              <th class="th-aks">Pcs Bongkar</th>
+              <th class="th-aks">Pcs</th>
+              <th class="th-gdg">Dus</th>
+              <th class="th-gdg">Pcs</th>
+              <th class="th-reject">Hari Ini</th>
+              <th class="th-reject">Total</th>
+              <th class="th-reject">Hari Ini</th>
+              <th class="th-reject">Total</th>
+            </tr>
+          </thead>
+          <tbody id="monthly-usage-body">
+            <tr><td colspan="19" style="text-align:center;color:#999;padding:1rem;">Belum ada data bulan ini</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
