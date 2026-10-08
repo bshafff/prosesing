@@ -3,15 +3,17 @@ const LKS_STORAGE_KEY = 'lks_awb_v1';
 const PANEN_STORAGE_KEY = 'panen_awb_v1';
 const KEMASAN_STORAGE_KEY = 'kemasan_awb_v1';
 
+// ========== KONFIGURASI AUTO-CONNECT ==========
+// GANTI BARIS DI BAWAH dengan URL Web App Apps Script kamu (yang diakhiri /exec)
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyIDEcwqyXqyfB6cuJGer5bcphJ4bCWDBRAMBd432Nalz_uXEMWwphLNduxkKgDOtZq_A/exec';
+
 // ========== HELPER: ID GENERATOR (FIXED) ==========
-// FIX: Pakai counter + pad 3 digit agar SELALU 16 digit dan unik
 let __idCounter = 0;
 function generateId() {
   __idCounter = (__idCounter + 1) % 1000;
   return String(Date.now()) + String(__idCounter).padStart(3, '0');
 }
 
-// FIX: Validasi & auto-fix ID agar selalu 16 digit unik
 function ensureValidId(rec, usedIds) {
   usedIds = usedIds || new Set();
   const id = String(rec.id || '');
@@ -82,24 +84,49 @@ function opnameVal(v) { return (typeof v === 'number' && !isNaN(v)) ? v : null; 
 
 // ========== OFFLINE + SHEETS SYNC ==========
 const SYNC_CONFIG = { API_KEY: 'AWB_PROCESSING_2026', VERSION: '1.3.0' };
-let scriptUrl = localStorage.getItem('awb_script_url') || '';
-let isAuthenticated = localStorage.getItem('awb_sync_auth') === '1';
+
+// AUTO-CONNECT: pakai default URL kalau user tidak override
+function getEffectiveUrl() {
+  return localStorage.getItem('awb_script_url') || DEFAULT_SCRIPT_URL || '';
+}
+
+let scriptUrl = getEffectiveUrl();
+let isAuthenticated = localStorage.getItem('awb_sync_auth') !== '0' && !!scriptUrl;
 
 function currentScriptUrl() { return scriptUrl; }
 
 function handleAuthClick() {
   if (isAuthenticated) {
+    // Putuskan (logout)
     isAuthenticated = false;
     localStorage.setItem('awb_sync_auth', '0');
     updateSyncStatus();
-    showToast('Koneksi Google Sheet diputus');
+    showToast('Koneksi Google Sheet diputus. Klik Connect lagi untuk menyambung.');
     return;
   }
-  const url = prompt('URL Web App Apps Script (/exec):\n(Who has access = Anyone)', scriptUrl || '');
-  if (!url || !url.trim()) return;
-  scriptUrl = url.trim().replace(/\/$/, '');
-  if (scriptUrl.indexOf('/exec') < 0) { showToast('URL harus mengandung /exec', 'error'); return; }
-  localStorage.setItem('awb_script_url', scriptUrl);
+  
+  // Kalau ada URL default dan user belum override → langsung sambung
+  const existingCustomUrl = localStorage.getItem('awb_script_url');
+  let url;
+  
+  if (DEFAULT_SCRIPT_URL && !existingCustomUrl) {
+    url = DEFAULT_SCRIPT_URL;
+    if (!confirm('Sambung ke Google Sheet default?\n\n' + url)) return;
+  } else {
+    url = prompt('URL Web App Apps Script (/exec):\n(Who has access = Anyone)', existingCustomUrl || DEFAULT_SCRIPT_URL || '');
+    if (!url || !url.trim()) return;
+    url = url.trim().replace(/\/$/, '');
+  }
+  
+  if (url.indexOf('/exec') < 0) { showToast('URL harus mengandung /exec', 'error'); return; }
+  
+  scriptUrl = url;
+  if (url !== DEFAULT_SCRIPT_URL) {
+    localStorage.setItem('awb_script_url', url);
+  } else {
+    localStorage.removeItem('awb_script_url'); // pakai default saja
+  }
+  
   isAuthenticated = true;
   localStorage.setItem('awb_sync_auth', '1');
   updateSyncStatus();
@@ -115,8 +142,6 @@ const SYNC_MIGRATION_KEY = 'awb_sync_migration_v1';
 const SYNC_LAST_KEY = 'awb_sync_last_v1';
 let syncBusy = false;
 let suppressSync = false;
-
-// FIX: Flag bulk mode untuk mencegah race condition saat import/force-queue
 let __bulkMode = false;
 
 const nativeStorage = {
@@ -139,7 +164,6 @@ function readArrayRaw(raw) {
 
 function getSyncQueue() { return readArrayRaw(nativeStorage.getItem(SYNC_QUEUE_KEY)); }
 
-// FIX: Hanya auto-sync kalau tidak dalam bulk mode
 function saveSyncQueue(queue) {
   nativeStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
   updateSyncStatus();
@@ -526,7 +550,7 @@ function emptyKemasanItem(name, std) {
     name, std,
     masuk: 0, bongkarDus: 0, standarPcs: 0, aktualPcs: 0, selisih: 0,
     kirim: 0, tamu: 0, ketTamu: '',
-    reject: 0, ketReject: '',
+    reject: 0, rejectTutup: 0, rejectAlas: 0, ketReject: '',
     netfoamBall: 0, netfoamPotong: 0, netfoamTerpakai: 0, netfoamAkhir: 0,
     layerSiap: 0, layerPakai: 0, layerAkhir: 0, layerOpname: null,
     sleeveSiap: 0, sleevePakai: 0, sleeveAkhir: 0, sleeveOpname: null,
@@ -535,7 +559,6 @@ function emptyKemasanItem(name, std) {
   };
 }
 
-// FIX: executeImport dengan bulk mode + auto-fix ID
 function executeImport() {
   if (!importState.rows.length) { showToast('Pilih file CSV dulu!', 'error'); return; }
   const type = importState.type;
@@ -544,7 +567,6 @@ function executeImport() {
   let db = readArrayRaw(nativeStorage.getItem(key));
   if (shouldClear) db = [];
   
-  // FIX: Aktifkan bulk mode supaya auto-sync tidak trigger di tengah
   __bulkMode = true;
   
   let count = 0;
@@ -572,7 +594,9 @@ function executeImport() {
         if (entry.items.find(x => x.name === nm)) return;
         const bongkar = num(r.bongkarDus);
         const aktual = num(r.aktualPcs);
-        const rejectVal = num(r.reject) + num(r.rejectTutup) + num(r.rejectAlas);
+        const rejectVal = num(r.reject);
+        const rejTutupVal = num(r.rejectTutup) || rejectVal;
+        const rejAlasVal = num(r.rejectAlas);
         entry.items.push({
           ...emptyKemasanItem(nm, std),
           masuk: num(r.masuk),
@@ -582,7 +606,9 @@ function executeImport() {
           selisih: aktual - bongkar * std,
           kirim: num(r.kirim),
           tamu: num(r.tamu),
-          reject: rejectVal,
+          reject: 0,
+          rejectTutup: rejTutupVal,
+          rejectAlas: rejAlasVal,
           ketTamu: r.ketTamu || '',
           ketReject: r.ketReject || '',
           netfoamBall: num(r.netfoamBall),
@@ -616,16 +642,8 @@ function executeImport() {
     
     if (count === 0) { showToast('Tidak ada baris valid untuk di-import.', 'error'); __bulkMode = false; return; }
     
-    // FIX: Auto-fix semua ID agar 16 digit & unik
     const usedIds = new Set();
-    db = db.map(rec => {
-      const fixed = ensureValidId(rec, usedIds);
-      // Update juga entry.items.id kalau ada (untuk kemasan)
-      if (fixed.items && Array.isArray(fixed.items)) {
-        fixed.items = fixed.items.map(it => ({ ...it }));
-      }
-      return fixed;
-    });
+    db = db.map(rec => ensureValidId(rec, usedIds));
     
     if (shouldClear) {
       suppressSync = true;
@@ -635,7 +653,6 @@ function executeImport() {
     }
     localStorage.setItem(key, JSON.stringify(db));
     
-    // FIX: Queue ulang SEMUA record yang baru diimport (biar tidak ada yang tertinggal)
     if (count > 0) {
       const newRecords = shouldClear ? db : db.slice(-count);
       newRecords.forEach(rec => queueMutation(type, 'upsert', rec));
@@ -649,7 +666,6 @@ function executeImport() {
     showToast(`✅ ${count} baris berhasil di-import!`);
     
     if (isAuthenticated && currentScriptUrl()) {
-      // Setelah bulk mode off, baru sync
       __bulkMode = false;
       setTimeout(() => syncQueue(true), 500);
     } else {
@@ -664,8 +680,6 @@ function executeImport() {
   }
 }
 
-// ========== FIX TOOLS (untuk cleanup data lama) ==========
-// Jalankan di Console kalau ada data dengan ID rusak
 function regenerateAllIds() {
   const types = [
     { type: 'panen', key: PANEN_STORAGE_KEY },
