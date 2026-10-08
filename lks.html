@@ -1,0 +1,148 @@
+<div id="lks" class="view">
+  <div class="view-toolbar">
+    <button class="btn btn-sm btn-home" onclick="goHome()">← Menu</button>
+    <span class="view-title">📝 Form Kerja Harian (LKS)</span>
+    <button class="btn btn-sm" onclick="openImportModal('lks')" style="margin-left:auto;flex:none;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;">📥 Import</button>
+  </div>
+  <div class="card">
+    <div class="card-title">📅 Tanggal Kerja</div>
+    <input type="date" id="lks-tanggal">
+  </div>
+
+  <div class="card">
+    <div class="card-title">👤 Data Pekerja</div>
+    <div class="row-2">
+      <div class="input-group">
+        <label class="required">Nama Pekerja</label>
+        <select id="lks-nama" required>
+          <option value="">Pilih nama pekerja...</option>
+          <option value="Astrin Julianti Kusmawan">Astrin Julianti Kusmawan</option>
+          <option value="Mianti Fatma Kusmawan">Mianti Fatma Kusmawan</option>
+          <option value="Resa Yolandari">Resa Yolandari</option>
+          <option value="Santi Susanti">Santi Susanti</option>
+          <option value="Tanti Agustina">Tanti Agustina</option>
+          <option value="Zahra Agesty Rainiztan">Zahra Agesty Rainiztan</option>
+        </select>
+      </div>
+      <div class="input-group"><label class="required">Grade Pekerja</label><select id="lks-grade"><option value="">Pilih grade...</option><option value="Hatsuhana">Hatsuhana</option><option value="Grade A">Grade A</option><option value="Grade B">Grade B</option></select></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🏭 Kegiatan Harian</div>
+    <div id="lks-activity-list">
+      <div class="activity-card" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.875rem; margin-bottom: 0.625rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.625rem;">
+          <span class="activity-num" style="font-size: 0.75rem; font-weight: 700; color: #2d5016; background: #e8f5e9; padding: 0.25rem 0.5rem; border-radius: 6px;">Kegiatan #1</span>
+          <button type="button" class="btn btn-sm btn-danger" onclick="removeLksActivity(this)">Hapus</button>
+        </div>
+        <div class="input-group">
+          <label class="required">Kegiatan</label>
+          <select data-kegiatan-select onchange="toggleManualKegiatan(this)" required>
+            <option value="">Pilih kegiatan...</option>
+            <option value="Packing Grade Hatsuhana">Packing Grade Hatsuhana</option>
+            <option value="Packing Grade A">Packing Grade A</option>
+            <option value="Packing Grade B">Packing Grade B</option>
+            <option value="Loading Buah">Loading Buah</option>
+            <option value="Perbantuan">Perbantuan</option>
+            <option value="Persiapan Mika">Persiapan Mika</option>
+            <option value="Persiapan Netfoam">Persiapan Netfoam</option>
+            <option value="Persiapan Sleeve">Persiapan Sleeve</option>
+            <option value="Lainnya">Lainnya (Tulis Manual)</option>
+          </select>
+          <input type="text" data-kegiatan-manual placeholder="Tulis nama kegiatan manual..." style="display:none; margin-top:0.5rem;">
+        </div>
+        <div class="row-2">
+          <div class="input-group"><label>Hasil (pcs)</label><input type="number" data-hasil min="0" step="1" placeholder="Opsional"></div>
+          <div class="input-group"><label>Keterangan</label><input type="text" data-ket placeholder="Opsional"></div>
+        </div>
+      </div>
+    </div>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="addLksActivity()" style="margin-bottom: 1rem;">+ Tambah Kegiatan</button>
+
+    <div class="row-3">
+      <div class="input-group"><label>Job Tambahan</label><input type="text" id="lks-jobTambahan" placeholder="Opsional"></div>
+      <div class="input-group">
+        <label>Perbantuan</label>
+        <select id="lks-perbantuan">
+          <option value="">Tidak ada</option>
+          <option value="Greenhouse 1">Greenhouse 1</option>
+          <option value="Greenhouse 2">Greenhouse 2</option>
+          <option value="Fertigasi">Fertigasi</option>
+          <option value="General">General</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label>Jenis Perbantuan</label>
+        <select id="lks-jenisPerbantuan">
+          <option value="">Pilih jenis perbantuan...</option>
+          <option value="Pruning">Pruning</option>
+          <option value="Sanitasi">Sanitasi</option>
+          <option value="Penanaman">Penanaman</option>
+          <option value="Perhitungan Bunga">Perhitungan Bunga</option>
+          <option value="Stok Opname Barang">Stok Opname Barang</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📦 Material Digunakan</div>
+    <div id="lks-material-list">
+      <div class="material-card" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.875rem; margin-bottom: 0.625rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.625rem;">
+          <span class="material-num" style="font-size: 0.75rem; font-weight: 700; color: #2d5016; background: #e8f5e9; padding: 0.25rem 0.5rem; border-radius: 6px;">Material #1</span>
+          <button type="button" class="btn btn-sm btn-danger" onclick="removeLksMaterial(this)">Hapus</button>
+        </div>
+        <div class="input-group">
+          <label class="required">Nama Material</label>
+          <select data-material-select onchange="toggleManualMaterial(this)" required>
+            <option value="">Pilih material...</option>
+            <option value="Mika Grade Hatsuhana">Mika Grade Hatsuhana</option>
+            <option value="Mika Grade A11">Mika Grade A11</option>
+            <option value="Mika Grade A15">Mika Grade A15</option>
+            <option value="Lakban">Lakban</option>
+            <option value="Lainnya">Lainnya (Tulis Manual)</option>
+          </select>
+          <input type="text" data-material-manual placeholder="Tulis nama material manual..." style="display:none; margin-top:0.5rem;">
+        </div>
+        <div class="row-2">
+          <div class="input-group"><label class="required">Jumlah</label><input type="number" data-qty min="0" step="0.1" placeholder="0" required></div>
+          <div class="input-group"><label>Satuan</label><input type="text" data-satuan placeholder="pcs/kg/box" value="pcs"></div>
+        </div>
+      </div>
+    </div>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="addLksMaterial()" style="margin-bottom: 1rem;">+ Tambah Material</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">💬 Keterangan</div>
+    <textarea id="lks-keterangan" placeholder="Keterangan tambahan atau catatan khusus" style="width: 100%; padding: 0.875rem; border: 1.5px solid #d1d5db; border-radius: 8px; resize: vertical; min-height: 80px;"></textarea>
+  </div>
+
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="simpanDataLks()">💾 Simpan LKS</button>
+    <button class="btn btn-secondary" onclick="resetFormLks()">🔄 Reset Form</button>
+  </div>
+
+  <div class="card" style="margin-top: 1.5rem;">
+    <div class="card-title">📋 Data LKS Tersimpan</div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 60px;">Aksi</th>
+            <th>Tanggal</th>
+            <th>Nama Pekerja</th>
+            <th>Grade</th>
+            <th>Kegiatan</th>
+            <th>Material</th>
+          </tr>
+        </thead>
+        <tbody id="tabel-lks-body">
+          <tr><td colspan="6" class="text-center" style="color: #999;">Belum ada data</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
