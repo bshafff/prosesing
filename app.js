@@ -52,8 +52,7 @@ async function initApp() {
 
   updateSyncStatus();
   migrateExistingLocalData();
-
-  if (isAuthenticated) syncQueue();
+  autoBootSync();
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW gagal:', err));
