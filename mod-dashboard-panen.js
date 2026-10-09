@@ -209,7 +209,6 @@ function updateDashboard() {
       <td>${(T.mika_total / n).toFixed(0)}</td>
     </tr>
   `;
-  renderChartPanenVsKirim(mergeByTgl(filtered));
   renderChartRejectPie(T);
   renderMikaDashboard();
   const mgEl = document.getElementById('minggu-bulan');
@@ -368,60 +367,6 @@ function renderMonthlyComparison() {
       </tr>
     `;
   }
-}
-
-// ========== GRAFIK HARIAN ==========
-function renderChartPanenVsKirim(data) {
-  const el = document.getElementById('chart-main');
-  if (!el) return;
-  if (!data.length) {
-    el.innerHTML = '<div style="text-align:center;color:#999;padding:2rem;">Belum ada data untuk grafik bulan ini</div>';
-    return;
-  }
-  const W = Math.max(600, data.length * 70);
-  const H = 280;
-  const padL = 55, padR = 20, padT = 20, padB = 60;
-  const chartW = W - padL - padR;
-  const chartH = H - padT - padB;
-  let maxVal = 0;
-  data.forEach(d => {
-    const panen = (d.p_hatsu || 0) + (d.p_gradea || 0) + (d.p_gradeb || 0) + (d.rk_crack || 0) + (d.rk_poli || 0) + (d.rk_hpt || 0);
-    const kirim = (d.k_hatsu || 0) + (d.k_a11 || 0) + (d.k_a15 || 0) + (d.k_frozen || 0);
-    maxVal = Math.max(maxVal, panen, kirim);
-  });
-  maxVal = maxVal || 1;
-  maxVal = Math.ceil(maxVal * 1.1);
-  const slotW = chartW / data.length;
-  const barW = Math.min(30, slotW / 3);
-  let svg = `<svg viewBox="0 0 ${W} ${H}" class="chart-svg" preserveAspectRatio="xMidYMid meet" style="min-width:${W}px;">`;
-  for (let i = 0; i <= 4; i++) {
-    const y = padT + (chartH * i / 4);
-    const val = maxVal * (1 - i / 4);
-    svg += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#e5e7eb" stroke-width="1"/>`;
-    svg += `<text x="${padL - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="#888">${val.toFixed(0)}</text>`;
-  }
-  data.forEach((d, i) => {
-    const panen = (d.p_hatsu || 0) + (d.p_gradea || 0) + (d.p_gradeb || 0) + (d.rk_crack || 0) + (d.rk_poli || 0) + (d.rk_hpt || 0);
-    const kirim = (d.k_hatsu || 0) + (d.k_a11 || 0) + (d.k_a15 || 0) + (d.k_frozen || 0);
-    const slotX = padL + (chartW * i / data.length);
-    const xP = slotX + slotW / 2 - barW - 1;
-    const xK = slotX + slotW / 2 + 1;
-    const hP = (panen / maxVal) * chartH;
-    const hK = (kirim / maxVal) * chartH;
-    const yP = padT + chartH - hP;
-    const yK = padT + chartH - hK;
-    svg += `<rect x="${xP}" y="${yP}" width="${barW}" height="${hP}" fill="#dc2626" rx="2"><title>${d.tgl} · Panen: ${panen.toFixed(2)} Kg</title></rect>`;
-    svg += `<rect x="${xK}" y="${yK}" width="${barW}" height="${hK}" fill="#2563eb" rx="2"><title>${d.tgl} · Kirim: ${kirim.toFixed(2)} Kg</title></rect>`;
-    const dayLabel = d.tgl.substring(8, 10);
-    svg += `<text x="${slotX + slotW / 2}" y="${H - padB + 15}" text-anchor="middle" font-size="10" fill="#666">${dayLabel}</text>`;
-  });
-  svg += `<line x1="${padL}" y1="${padT + chartH}" x2="${W - padR}" y2="${padT + chartH}" stroke="#999" stroke-width="1"/>`;
-  svg += `</svg>`;
-  el.innerHTML = svg + `
-    <div class="chart-legend">
-      <span><span class="dot" style="background:#dc2626;"></span> Panen (Kg)</span>
-      <span><span class="dot" style="background:#2563eb;"></span> Kirim (Kg)</span>
-    </div>`;
 }
 
 function renderChartRejectPie(T) {
