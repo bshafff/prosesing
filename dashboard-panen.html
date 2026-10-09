@@ -75,50 +75,114 @@
   <div class="card">
     <div class="card-title">📋 Rekap Harian Panen, Reject & Pengiriman</div>
     <div class="recap-wrap">
-     <table class="recap-table">
-  <thead>
-    <tr>
-      <th class="th-base" rowspan="2">Tanggal</th>
-      <th class="th-panen" colspan="5">PANEN (Kg)</th>
-      <th class="th-reject" colspan="9">TOTAL REJECT (Kg)</th>
-      <th class="th-kirim" colspan="6">BERAT PENGIRIMAN (Kg)</th>
-      <th class="th-mika" colspan="4">JUMLAH KIRIM (Pcs)</th>
-    </tr>
-    <tr>
-      <th class="th-panen">Hatsu</th>
-      <th class="th-panen">Grade A</th>
-      <th class="th-panen">Grade B</th>
-      <th class="th-panen">Reject</th>
-      <th class="th-panen">Total</th>
-      <th class="th-reject">Crack</th>
-      <th class="th-reject">Polinasi</th>
-      <th class="th-reject">HPT</th>
-      <th class="th-reject">Bruise</th>
-      <th class="th-reject">Overripe</th>
-      <th class="th-reject">Kuning</th>
-      <th class="th-reject">Frozen</th>
-      <th class="th-reject">Total</th>
-      <th class="th-reject">Rej %</th>
-      <th class="th-kirim">Hatsu</th>
-      <th class="th-kirim">A11</th>
-      <th class="th-kirim">A15</th>
-      <th class="th-kirim">Frozen</th>
-      <th class="th-kirim">Total</th>
-      <th class="th-kirim">Rate %</th>
-      <th class="th-mika">Hatsu</th>
-      <th class="th-mika">A11</th>
-      <th class="th-mika">A15</th>
-      <th class="th-mika">Total</th>
-    </tr>
-  </thead>
-  <tbody id="recap-body">
-    <tr><td colspan="25" style="text-align:center;color:#999;padding:1rem;">Belum ada data bulan ini</td></tr>
-  </tbody>
-  <tfoot id="recap-foot"></tfoot>
-</table>
+      <table class="recap-table">
+        <thead>
+          <tr>
+            <th class="th-base" rowspan="2">Tanggal</th>
+            <th class="th-panen" colspan="5">PANEN (Kg)</th>
+            <th class="th-reject" colspan="9">TOTAL REJECT (Kg)</th>
+            <th class="th-kirim" colspan="6">BERAT PENGIRIMAN (Kg)</th>
+            <th class="th-mika" colspan="4">JUMLAH KIRIM (Pcs)</th>
+          </tr>
+          <tr>
+            <th class="th-panen">Hatsu</th>
+            <th class="th-panen">Grade A</th>
+            <th class="th-panen">Grade B</th>
+            <th class="th-panen">Reject</th>
+            <th class="th-panen">Total</th>
+            <th class="th-reject">Crack</th>
+            <th class="th-reject">Polinasi</th>
+            <th class="th-reject">HPT</th>
+            <th class="th-reject">Bruise</th>
+            <th class="th-reject">Overripe</th>
+            <th class="th-reject">Kuning</th>
+            <th class="th-reject">Frozen</th>
+            <th class="th-reject">Total</th>
+            <th class="th-reject">Rej %</th>
+            <th class="th-kirim">Hatsu</th>
+            <th class="th-kirim">A11</th>
+            <th class="th-kirim">A15</th>
+            <th class="th-kirim">Frozen</th>
+            <th class="th-kirim">Total</th>
+            <th class="th-kirim">Rate %</th>
+            <th class="th-mika">Hatsu</th>
+            <th class="th-mika">A11</th>
+            <th class="th-mika">A15</th>
+            <th class="th-mika">Total</th>
+          </tr>
+        </thead>
+        <tbody id="recap-body">
+          <tr><td colspan="25" style="text-align:center;color:#999;padding:1rem;">Belum ada data bulan ini</td></tr>
+        </tbody>
+        <tfoot id="recap-foot"></tfoot>
+      </table>
     </div>
   </div>
 
+  <!-- ============ REKAP PERBANDINGAN BULANAN (BARU) ============ -->
+  <div class="card" style="margin-top:1.5rem;">
+    <div class="card-title">📊 Rekap Perbandingan Bulanan</div>
+
+    <div class="row-3" style="align-items:flex-end;">
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Mode</label>
+        <select id="bulan-compare-mode" onchange="onBulanCompareModeChange()">
+          <option value="all">Semua Bulan</option>
+          <option value="range">Rentang Bulan</option>
+        </select>
+      </div>
+      <div class="input-group" id="bulan-compare-dari-wrap" style="margin-bottom:0;display:none;">
+        <label>Dari Bulan</label>
+        <input type="month" id="bulan-compare-dari" onchange="renderMonthlyComparison()">
+      </div>
+      <div class="input-group" id="bulan-compare-sampai-wrap" style="margin-bottom:0;display:none;">
+        <label>Sampai Bulan</label>
+        <input type="month" id="bulan-compare-sampai" onchange="renderMonthlyComparison()">
+      </div>
+    </div>
+
+    <div class="info-box" style="margin-top:1rem;" id="bulan-compare-info">-</div>
+
+    <div class="recap-wrap" style="margin-top:1rem;">
+      <table class="recap-table" style="min-width:1400px;">
+        <thead>
+          <tr>
+            <th class="th-base" rowspan="2">No</th>
+            <th class="th-base" rowspan="2">Bulan</th>
+            <th class="th-panen" colspan="5">PANEN (Kg)</th>
+            <th class="th-kirim" colspan="6">BERAT PENGIRIMAN (Kg)</th>
+            <th class="th-reject" colspan="2">REJECT</th>
+            <th class="th-mika" colspan="4">JUMLAH KIRIM (Pcs)</th>
+          </tr>
+          <tr>
+            <th class="th-panen">Hatsu</th>
+            <th class="th-panen">Grade A</th>
+            <th class="th-panen">Grade B</th>
+            <th class="th-panen">Reject</th>
+            <th class="th-panen">Total</th>
+            <th class="th-kirim">Hatsu</th>
+            <th class="th-kirim">A11</th>
+            <th class="th-kirim">A15</th>
+            <th class="th-kirim">Frozen</th>
+            <th class="th-kirim">Total</th>
+            <th class="th-kirim">Rate %</th>
+            <th class="th-reject">Total (Kg)</th>
+            <th class="th-reject">Reject Rate %</th>
+            <th class="th-mika">Hatsu</th>
+            <th class="th-mika">A11</th>
+            <th class="th-mika">A15</th>
+            <th class="th-mika">Total</th>
+          </tr>
+        </thead>
+        <tbody id="bulan-compare-body">
+          <tr><td colspan="18" style="text-align:center;color:#999;padding:1rem;">Belum ada data</td></tr>
+        </tbody>
+        <tfoot id="bulan-compare-foot"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============ PERSEBARAN MINGGUAN ============ -->
   <div class="card" style="margin-top:1.5rem;">
     <div class="card-title">📈 Persebaran Panen per Minggu (Senin–Sabtu) — Hatsuhana · Grade A · Grade B · Reject</div>
 
