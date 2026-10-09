@@ -77,7 +77,13 @@ function computeMikaTimeline() {
         st.gudang[it.name] += (it.masuk || 0) - (it.bongkarDus || 0);
         const out = (it.kirim || 0) + (it.tamu || 0);
         const rej = rejMika(it);
-        st.proc[it.name] += (it.aktualPcs || 0) - out - rej;
+        const opnameVal = (typeof it.processingOpname === 'number' && !isNaN(it.processingOpname))
+          ? it.processingOpname : null;
+        if (opnameVal !== null) {
+          st.proc[it.name] = opnameVal;
+        } else {
+          st.proc[it.name] += (it.aktualPcs || 0) - out - rej;
+        }
         keluar += out; reject += rej; rejectBy[it.name] += rej;
         st.layer   += (it.layerSiap || 0)   - (it.layerPakai || 0);
         st.sleeve  += (it.sleeveSiap || 0)  - (it.sleevePakai || 0);
@@ -299,7 +305,6 @@ function renderMikaRejectTamu(period) {
   }
 }
 
-// ========== KPI PERGERAKAN KEMASAN ==========
 function renderMikaKPI(period) {
   const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]')
     .filter(e => e && e.tgl && e.tgl >= period.from && e.tgl <= period.to && Array.isArray(e.items));
@@ -390,7 +395,6 @@ function renderMikaKPI(period) {
   tbody.innerHTML = rowsHtml + totalRow;
 }
 
-// ========== GRAFIK HARIAN KIRIM VS REJECT ==========
 function renderMikaChart(period) {
   const el = document.getElementById('mika-chart-harian');
   if (!el) return;
