@@ -196,7 +196,6 @@ function renderMikaDashboard() {
 
   renderMikaRejectTamu(period);
   renderMikaKPI(period);
-  renderMikaChart(period);
 }
 
 function renderMikaRejectTamu(period) {
@@ -393,76 +392,4 @@ function renderMikaKPI(period) {
   </tr>`;
 
   tbody.innerHTML = rowsHtml + totalRow;
-}
-
-function renderMikaChart(period) {
-  const el = document.getElementById('mika-chart-harian');
-  if (!el) return;
-
-  const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]')
-    .filter(e => e && e.tgl && e.tgl >= period.from && e.tgl <= period.to && Array.isArray(e.items));
-
-  const byDate = new Map();
-  db.forEach(entry => {
-    if (!byDate.has(entry.tgl)) byDate.set(entry.tgl, { kirim: 0, reject: 0 });
-    const d = byDate.get(entry.tgl);
-    entry.items.forEach(it => {
-      d.kirim += it.kirim || 0;
-      d.reject += rejMika(it);
-    });
-  });
-
-  const data = [...byDate.entries()]
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([tgl, v]) => ({ tgl, ...v }));
-
-  if (!data.length) {
-    el.innerHTML = '<div style="text-align:center;color:#999;padding:2rem;">Belum ada data untuk grafik periode ini</div>';
-    return;
-  }
-
-  const W = Math.max(600, data.length * 60);
-  const H = 280;
-  const padL = 55, padR = 20, padT = 20, padB = 60;
-  const chartW = W - padL - padR;
-  const chartH = H - padT - padB;
-
-  let maxVal = 0;
-  data.forEach(d => { maxVal = Math.max(maxVal, d.kirim, d.reject); });
-  maxVal = Math.ceil((maxVal || 1) * 1.1);
-
-  const slotW = chartW / data.length;
-  const barW = Math.min(28, slotW / 3);
-
-  let svg = `<svg viewBox="0 0 ${W} ${H}" class="chart-svg" preserveAspectRatio="xMidYMid meet" style="min-width:${W}px;">`;
-  for (let i = 0; i <= 4; i++) {
-    const y = padT + (chartH * i / 4);
-    const val = maxVal * (1 - i / 4);
-    svg += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#e5e7eb"/>`;
-    svg += `<text x="${padL - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="#888">${val.toFixed(0)}</text>`;
-  }
-
-  data.forEach((d, i) => {
-    const slotX = padL + (chartW * i / data.length);
-    const xK = slotX + slotW / 2 - barW - 1;
-    const xR = slotX + slotW / 2 + 1;
-    const hK = (d.kirim / maxVal) * chartH;
-    const hR = (d.reject / maxVal) * chartH;
-    const yK = padT + chartH - hK;
-    const yR = padT + chartH - hR;
-    svg += `<rect x="${xK}" y="${yK}" width="${barW}" height="${hK}" fill="#2563eb" rx="2"><title>${d.tgl} · Kirim: ${d.kirim} Pcs</title></rect>`;
-    svg += `<rect x="${xR}" y="${yR}" width="${barW}" height="${hR}" fill="#dc2626" rx="2"><title>${d.tgl} · Reject: ${d.reject} Pcs</title></rect>`;
-    const dayLabel = d.tgl.substring(8, 10);
-    const monthLabel = d.tgl.substring(5, 7);
-    svg += `<text x="${slotX + slotW / 2}" y="${H - padB + 15}" text-anchor="middle" font-size="9" fill="#666">${dayLabel}/${monthLabel}</text>`;
-  });
-
-  svg += `<line x1="${padL}" y1="${padT + chartH}" x2="${W - padR}" y2="${padT + chartH}" stroke="#999"/>`;
-  svg += `</svg>`;
-
-  el.innerHTML = svg + `
-    <div class="chart-legend">
-      <span><span class="dot" style="background:#2563eb;"></span> Kirim (Pcs)</span>
-      <span><span class="dot" style="background:#dc2626;"></span> Reject (Pcs)</span>
-    </div>`;
 }
