@@ -214,7 +214,160 @@ function updateDashboard() {
   renderMikaDashboard();
   const mgEl = document.getElementById('minggu-bulan');
   if (mgEl && !mgEl.value) mgEl.value = selectedMonth;
+  renderMonthlyComparison();
   renderWeeklyPanen();
+}
+
+// ========== REKAP PERBANDINGAN BULANAN ==========
+function onBulanCompareModeChange() {
+  const mode = document.getElementById('bulan-compare-mode').value;
+  const elDari = document.getElementById('bulan-compare-dari-wrap');
+  const elSampai = document.getElementById('bulan-compare-sampai-wrap');
+  if (elDari) elDari.style.display = mode === 'range' ? '' : 'none';
+  if (elSampai) elSampai.style.display = mode === 'range' ? '' : 'none';
+  renderMonthlyComparison();
+}
+
+function getBulanComparePeriod() {
+  const modeEl = document.getElementById('bulan-compare-mode');
+  const mode = modeEl ? modeEl.value : 'all';
+  const todayYM = new Date().toISOString().substring(0, 7);
+  if (mode === 'range') {
+    const dariEl = document.getElementById('bulan-compare-dari');
+    const sampaiEl = document.getElementById('bulan-compare-sampai');
+    if (dariEl && !dariEl.value) dariEl.value = todayYM;
+    if (sampaiEl && !sampaiEl.value) sampaiEl.value = todayYM;
+    return {
+      mode: 'range',
+      from: dariEl ? dariEl.value : todayYM,
+      to: sampaiEl ? sampaiEl.value : todayYM
+    };
+  }
+  return { mode: 'all', from: null, to: null };
+}
+
+function renderMonthlyComparison() {
+  const tbody = document.getElementById('bulan-compare-body');
+  if (!tbody) return;
+  const period = getBulanComparePeriod();
+  const panenDb = filterGh(JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]'), dashGh());
+
+  const byMonth = new Map();
+  panenDb.forEach(item => {
+    if (!item.tgl) return;
+    const ym = item.tgl.substring(0, 7);
+    if (period.mode === 'range') {
+      if (ym < period.from || ym > period.to) return;
+    }
+    if (!byMonth.has(ym)) {
+      byMonth.set(ym, {
+        ym,
+        p_hatsu: 0, p_gradea: 0, p_gradeb: 0, rk_total: 0, panen_total: 0,
+        k_hatsu: 0, k_a11: 0, k_a15: 0, k_frozen: 0, kirim_total: 0,
+        rej_total: 0,
+        m_hatsu: 0, m_a11: 0, m_a15: 0, mika_total: 0
+      });
+    }
+    const m = byMonth.get(ym);
+    const rk = (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
+    const rp = (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0) + (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_kuning || 0) + (item.rp_frozen || 0);
+    m.p_hatsu += item.p_hatsu || 0;
+    m.p_gradea += item.p_gradea || 0;
+    m.p_gradeb += item.p_gradeb || 0;
+    m.rk_total += rk;
+    m.panen_total += (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + rk;
+    m.k_hatsu += item.k_hatsu || 0;
+    m.k_a11 += item.k_a11 || 0;
+    m.k_a15 += item.k_a15 || 0;
+    m.k_frozen += item.k_frozen || 0;
+    m.kirim_total += (item.k_hatsu || 0) + (item.k_a11 || 0) + (item.k_a15 || 0) + (item.k_frozen || 0);
+    m.rej_total += rk + rp;
+    m.m_hatsu += item.m_hatsu || 0;
+    m.m_a11 += item.m_a11 || 0;
+    m.m_a15 += item.m_a15 || 0;
+    m.mika_total += (item.m_hatsu || 0) + (item.m_a11 || 0) + (item.m_a15 || 0);
+  });
+
+  const rows = [...byMonth.values()].sort((a, b) => a.ym.localeCompare(b.ym));
+
+  const infoEl = document.getElementById('bulan-compare-info');
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="18" style="text-align:center;color:#999;padding:1rem;">Belum ada data</td></tr>';
+    const footEl = document.getElementById('bulan-compare-foot');
+    if (footEl) footEl.innerHTML = '';
+    if (infoEl) infoEl.textContent = 'Tidak ada data pada periode ini.';
+    return;
+  }
+
+  if (infoEl) {
+    const periodLabel = period.mode === 'all'
+      ? `Semua bulan · ${rows.length} bulan`
+      : `${formatBulanIndo(period.from)} – ${formatBulanIndo(period.to)} · ${rows.length} bulan`;
+    infoEl.innerHTML = `<b>${ghLabelOf(dashGh())}</b> · ${periodLabel}`;
+  }
+
+  tbody.innerHTML = rows.map((m, i) => {
+    const rejRate = m.panen_total > 0 ? (m.rej_total / m.panen_total * 100) : 0;
+    const rateKirim = m.panen_total > 0 ? (m.kirim_total / m.panen_total * 100) : 0;
+    return `<tr>
+      <td class="tgl-col">${i + 1}</td>
+      <td class="tgl-col" style="text-align:left;white-space:nowrap;">${formatBulanIndo(m.ym)}</td>
+      <td>${m.p_hatsu.toFixed(2)}</td>
+      <td>${m.p_gradea.toFixed(2)}</td>
+      <td>${m.p_gradeb.toFixed(2)}</td>
+      <td>${m.rk_total.toFixed(2)}</td>
+      <td class="col-total">${m.panen_total.toFixed(2)}</td>
+      <td>${m.k_hatsu.toFixed(2)}</td>
+      <td>${m.k_a11.toFixed(2)}</td>
+      <td>${m.k_a15.toFixed(2)}</td>
+      <td>${m.k_frozen.toFixed(2)}</td>
+      <td><strong>${m.kirim_total.toFixed(2)}</strong></td>
+      <td class="rate-kirim">${rateKirim.toFixed(2)}%</td>
+      <td>${m.rej_total.toFixed(2)}</td>
+      <td class="reject-rate">${rejRate.toFixed(2)}%</td>
+      <td>${m.m_hatsu}</td>
+      <td>${m.m_a11}</td>
+      <td>${m.m_a15}</td>
+      <td><strong>${m.mika_total}</strong></td>
+    </tr>`;
+  }).join('');
+
+  const T = rows.reduce((acc, m) => {
+    ['p_hatsu','p_gradea','p_gradeb','rk_total','panen_total','k_hatsu','k_a11','k_a15','k_frozen','kirim_total','rej_total','m_hatsu','m_a11','m_a15','mika_total'].forEach(k => {
+      acc[k] = (acc[k] || 0) + m[k];
+    });
+    return acc;
+  }, {});
+
+  const totalRejRate = T.panen_total > 0 ? (T.rej_total / T.panen_total * 100) : 0;
+  const totalRateKirim = T.panen_total > 0 ? (T.kirim_total / T.panen_total * 100) : 0;
+  const footEl = document.getElementById('bulan-compare-foot');
+  if (footEl) {
+    footEl.innerHTML = `
+      <tr>
+        <td class="tgl-col">-</td>
+        <td class="tgl-col" style="text-align:left;">TOTAL</td>
+        <td>${T.p_hatsu.toFixed(2)}</td>
+        <td>${T.p_gradea.toFixed(2)}</td>
+        <td>${T.p_gradeb.toFixed(2)}</td>
+        <td>${T.rk_total.toFixed(2)}</td>
+        <td>${T.panen_total.toFixed(2)}</td>
+        <td>${T.k_hatsu.toFixed(2)}</td>
+        <td>${T.k_a11.toFixed(2)}</td>
+        <td>${T.k_a15.toFixed(2)}</td>
+        <td>${T.k_frozen.toFixed(2)}</td>
+        <td>${T.kirim_total.toFixed(2)}</td>
+        <td style="color:#86efac;">${totalRateKirim.toFixed(2)}%</td>
+        <td>${T.rej_total.toFixed(2)}</td>
+        <td style="color:#fca5a5;">${totalRejRate.toFixed(2)}%</td>
+        <td>${T.m_hatsu}</td>
+        <td>${T.m_a11}</td>
+        <td>${T.m_a15}</td>
+        <td>${T.mika_total}</td>
+      </tr>
+    `;
+  }
 }
 
 // ========== GRAFIK HARIAN ==========
