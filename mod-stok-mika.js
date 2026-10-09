@@ -11,7 +11,13 @@ function recalculateStockKemasan() {
           accum[item.name].gudang += (item.masuk || 0) - (item.bongkarDus || 0);
           const totalOut = (item.kirim || 0) + (item.tamu || 0);
           const totalRej = rejMika(item);
-          accum[item.name].processing += (item.aktualPcs || 0) - totalOut - totalRej;
+          const opname = (typeof item.processingOpname === 'number' && !isNaN(item.processingOpname))
+            ? item.processingOpname : null;
+          if (opname !== null) {
+            accum[item.name].processing = opname;
+          } else {
+            accum[item.name].processing += (item.aktualPcs || 0) - totalOut - totalRej;
+          }
           accum[item.name].keluar += totalOut;
           accum[item.name].reject += totalRej;
         }
@@ -165,6 +171,11 @@ function renderKemasanForms() {
           <div class="input-group"><label>Hasil Bongkar (Aktual)</label><input readonly id="pcs-bongkar-display-${i}" value="0"></div>
           <div class="input-group"><label>Processing Akhir (Est.)</label><input readonly id="processing-akhir-${i}" value="${pAwal}"></div>
         </div>
+        <div class="input-group" style="background:#f0fdf4;padding:0.75rem;border-radius:8px;border-left:3px solid #16a34a;margin-top:0.75rem;">
+          <label style="color:#166534;font-weight:700;">🔧 Koreksi Stok Fisik Processing (Pcs)</label>
+          <input type="number" id="processing-opname-${i}" placeholder="Kosongkan kalau stok fisik sesuai hitungan" oninput="hitungKemasan(${i})">
+          <small style="color:#166534;font-size:0.75rem;">Isi hanya kalau stok fisik di ruang Processing <b>beda</b> dengan hitungan. Sistem akan set stok ke angka ini mulai tanggal tersebut.</small>
+        </div>
         <div class="sub-title">📤 4. Pengeluaran Hari Ini</div>
         <div class="row-2">
           <div class="input-group"><label>Kirim Packing (PCS)</label><input type="number" id="kirim-${i}" placeholder="0" oninput="hitungKemasan(${i})"></div>
@@ -218,8 +229,15 @@ function hitungKemasan(i) {
   const kirim = getValK(`kirim-${i}`);
   const tamu = getValK(`tamu-${i}`);
   const rej = getValK(`reject-${i}`);
-  const pAkhir = pAwal + aktualPcs - kirim - tamu - rej;
-  document.getElementById(`processing-akhir-${i}`).value = Math.max(0, pAkhir);
+  const pAkhirNormal = pAwal + aktualPcs - kirim - tamu - rej;
+  const opnameEl = document.getElementById(`processing-opname-${i}`);
+  const opnameValue = opnameEl && opnameEl.value !== '' ? parseFloat(opnameEl.value) : null;
+  const pAkhirFinal = (opnameValue !== null && !isNaN(opnameValue)) ? opnameValue : pAkhirNormal;
+  document.getElementById(`processing-akhir-${i}`).value = Math.max(0, pAkhirFinal);
+  if (opnameValue !== null && !isNaN(opnameValue)) {
+    const diff = opnameValue - pAkhirNormal;
+    infoEl.innerHTML += `<br><b style="color:#166534;">📝 Koreksi fisik: ${diff >= 0 ? '+' : ''}${diff} pcs (set ke ${opnameValue})</b>`;
+  }
   if (item.name.includes('Hatsu')) {
     const el = document.getElementById(`netfoam-akhir-${i}`);
     if (el) el.value = akhirAks(currentAksesoris.netfoam, getValK(`netfoam-potong-${i}`), getValK(`netfoam-terpakai-${i}`), `netfoam-opname-${i}`);
@@ -252,6 +270,7 @@ function simpanDataKemasan() {
       ketTamu: document.getElementById(`ket-tamu-${i}`) ? document.getElementById(`ket-tamu-${i}`).value : '',
       reject: rej,
       ketReject: document.getElementById(`ket-reject-${i}`) ? document.getElementById(`ket-reject-${i}`).value : '',
+      processingOpname: getOpname(`processing-opname-${i}`),
       netfoamBall: getValK(`netfoam-ball-${i}`),
       netfoamPotong: getValK(`netfoam-potong-${i}`),
       netfoamTerpakai: getValK(`netfoam-terpakai-${i}`),
@@ -272,7 +291,7 @@ function simpanDataKemasan() {
   });
   const hasData = items.some(x =>
     x.masuk > 0 || x.bongkarDus > 0 || x.aktualPcs > 0 || x.kirim > 0 || x.tamu > 0 ||
-    x.reject > 0 ||
+    x.reject > 0 || x.processingOpname !== null ||
     x.netfoamBall > 0 || x.netfoamPotong > 0 || x.netfoamTerpakai > 0 ||
     x.layerSiap > 0 || x.layerPakai > 0 || x.sleeveSiap > 0 || x.sleevePakai > 0 || x.stikerMasuk > 0 || x.stikerPakai > 0 ||
     x.netfoamOpname !== null || x.layerOpname !== null || x.sleeveOpname !== null || x.stikerOpname !== null
@@ -434,7 +453,13 @@ function renderMonthlyUsage(filterBulan) {
       const procSebelumKeluar = r.processing + pcsBongkar;
 
       r.gudangDus += masukDus - bongkarDus;
-      r.processing += pcsBongkar - kirim - tamu - rejHari;
+      const opnameVal = (typeof it.processingOpname === 'number' && !isNaN(it.processingOpname))
+        ? it.processingOpname : null;
+      if (opnameVal !== null) {
+        r.processing = opnameVal;
+      } else {
+        r.processing += pcsBongkar - kirim - tamu - rejHari;
+      }
       r.rejTotal += rejHari;
 
       if (entry.tgl.startsWith(filterBulan)) {
@@ -451,6 +476,7 @@ function renderMonthlyUsage(filterBulan) {
           totalStokDus: Math.floor(totalStokPcs / std),
           totalStokPcs,
           rejHari, rejTotal: r.rejTotal,
+          opname: opnameVal,
           keterangan: it.ketReject || it.ketTamu || ''
         });
       }
@@ -496,7 +522,7 @@ function renderMonthlyUsage(filterBulan) {
       html += `<td class="col-total">${fmt(r.totalStokPcs)}</td>`;
       html += `<td style="color:#dc2626;">${r.rejHari ? fmt(r.rejHari) : ''}</td>`;
       html += `<td style="color:#dc2626;">${fmt(r.rejTotal)}</td>`;
-      html += `<td style="white-space:normal;max-width:180px;font-size:0.7rem;">${r.keterangan || ''}</td>`;
+      html += `<td style="white-space:normal;max-width:180px;font-size:0.7rem;">${r.keterangan || ''}${r.opname !== null ? `<br><b style="color:#166534;">📝 Koreksi: ${fmt(r.opname)} pcs</b>` : ''}</td>`;
       html += '</tr>';
     });
   });
@@ -532,7 +558,13 @@ function exportKemasanCSV() {
       const procSebelumKeluar = r.processing + pcsBongkar;
 
       r.gudangDus += masukDus - bongkarDus;
-      r.processing += pcsBongkar - kirim - tamu - rejHari;
+      const opnameVal = (typeof it.processingOpname === 'number' && !isNaN(it.processingOpname))
+        ? it.processingOpname : null;
+      if (opnameVal !== null) {
+        r.processing = opnameVal;
+      } else {
+        r.processing += pcsBongkar - kirim - tamu - rejHari;
+      }
       r.rejTotal += rejHari;
 
       if (entry.tgl.startsWith(filterBulan)) {
@@ -549,6 +581,7 @@ function exportKemasanCSV() {
           totalStokDus: Math.floor(totalStokPcs / std),
           totalStokPcs,
           rejHari, rejTotal: r.rejTotal,
+          opname: opnameVal,
           keterangan: it.ketReject || it.ketTamu || ''
         });
       }
@@ -577,6 +610,7 @@ function exportKemasanCSV() {
     'Kirim', 'Mika Tamu',
     'Total Stok Dus', 'Total Stok Pcs',
     'Reject Hari Ini', 'Reject Total',
+    'Koreksi Fisik',
     'Keterangan'
   ].join(',') + '\n';
 
@@ -593,6 +627,7 @@ function exportKemasanCSV() {
       n(r.kirim), n(r.tamu),
       n(r.totalStokDus), n(r.totalStokPcs),
       n(r.rejHari), n(r.rejTotal),
+      r.opname !== null ? n(r.opname) : '',
       q(r.keterangan || '')
     ].join(',') + '\n';
   });
@@ -608,7 +643,7 @@ function exportKemasanCSV() {
     n(sum('kirim')), n(sum('tamu')),
     q(''), n(sum('totalStokPcs')),
     n(sum('rejHari')), q(''),
-    q('')
+    q(''), q('')
   ].join(',') + '\n';
 
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -660,6 +695,7 @@ function editKemasanHistory(id) {
   let html = `<div class="input-group"><label>Tanggal</label><input type="date" id="edit-k-tgl" value="${entry.tgl}"></div>`;
   entry.items.forEach((it, idx) => {
     const rejVal = rejMika(it);
+    const opnameVal = (it.processingOpname != null) ? it.processingOpname : '';
     html += `
       <div style="border: 1px solid #e5e7eb; padding: 0.75rem; border-radius: 8px; margin-bottom: 0.75rem; background: #fafafa;">
         <strong>Mika ${it.name}</strong>
@@ -673,6 +709,7 @@ function editKemasanHistory(id) {
         </div>
         <div class="row-2">
           <div class="input-group"><label>Reject Mika (Pcs)</label><input type="number" id="edit-reject-${idx}" value="${rejVal}"></div>
+          <div class="input-group"><label>Koreksi Stok Fisik Processing (Pcs)</label><input type="number" id="edit-processing-opname-${idx}" placeholder="Kosongkan kalau sesuai" value="${opnameVal}"></div>
         </div>
         <div class="row-2">
           ${(AKS_EDIT_FIELDS[it.name] || []).map(([f, lbl]) =>
@@ -702,6 +739,8 @@ function saveEditKemasan() {
     const aktual = parseFloat(document.getElementById(`edit-aktual-${i}`).value || 0);
     const kirim = parseFloat(document.getElementById(`edit-kirim-${i}`).value || 0);
     const reject = parseFloat((document.getElementById(`edit-reject-${i}`) || {}).value || 0);
+    const opnameEl = document.getElementById(`edit-processing-opname-${i}`);
+    const processingOpname = opnameEl && opnameEl.value !== '' ? parseFloat(opnameEl.value) : null;
     const stdPcs = bongkar * m.std;
     const aksEdit = {};
     (AKS_EDIT_FIELDS[m.name] || []).forEach(([f]) => {
@@ -709,13 +748,13 @@ function saveEditKemasan() {
       if (el) aksEdit[f] = parseFloat(el.value || 0);
     });
     const base = { ...db[idx].items[i] };
-    // Hapus field lama agar tidak dobel dihitung
     delete base.rejectTutup;
     delete base.rejectAlas;
     return {
       ...base,
       masuk, bongkarDus: bongkar, standarPcs: stdPcs, aktualPcs: aktual,
       selisih: aktual - stdPcs, kirim, reject,
+      processingOpname,
       ...aksEdit
     };
   });
