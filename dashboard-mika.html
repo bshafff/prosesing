@@ -63,9 +63,8 @@
     <div class="card-title">🎁 Tamu &amp; Sampel Periode Ini</div>
     <div class="stats" id="mika-tamu-cards" style="margin-bottom:0;"></div>
     <div class="info-box" style="margin-top:1rem;margin-bottom:0;">
-      <b>PCS per grade</b> diambil dari form <b>Panen</b> (field "Untuk Tamu &amp; Sampel": Hatsu / A11 / A15).
-      Kalau di Panen kosong, otomatis ambil dari <b>Stok Kemasan</b> (field "Mika Tamu / Sample").
-      <br><b>Kg Curah</b> hanya ada di form Panen (field "Curah (Kg)").
+      <b>PCS per grade</b> diambil dari form <b>Panen</b>. Kalau kosong, otomatis ambil dari <b>Stok Kemasan</b>.
+      <br><b>Kg Curah</b> hanya ada di form Panen.
     </div>
   </div>
 
@@ -127,6 +126,88 @@
     </div>
     <div class="info-box" style="margin-top:1rem;margin-bottom:0;">
       Stok dihitung otomatis dari data di menu <b>Stok Kemasan (Mika)</b>. Hy 11 = Grade A, Hy 15 = Grade B.
+    </div>
+  </div>
+
+  <!-- ===================== REKAP BULANAN (STOCK OPNAME) ===================== -->
+  <div class="card" style="margin-top:1.5rem;">
+    <div class="card-title">📅 Rekap Bulanan (Stock Opname)</div>
+    <div class="row-2" style="align-items:flex-end;">
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Pilih Bulan</label>
+        <input type="month" id="mika-monthly-bulan" onchange="renderMikaMonthly()">
+      </div>
+      <button class="btn btn-success" onclick="exportMikaCSV()">📥 Export CSV</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📊 Rekap Penggunaan Bulanan (Stock Opname)</div>
+    <div class="info-box" style="margin-bottom:0.75rem;">
+      Data penggunaan mika per hari per grade. <b>Ruang Prosesing Pcs</b> = stok tersedia sebelum pengeluaran hari itu.
+      <b>Jumlah Stok</b> = total pcs keluar hari itu (kirim + tamu + reject). <b>Total Stok</b> = stok akhir setelah pengeluaran.
+    </div>
+    <div class="recap-wrap">
+      <table class="recap-table" style="min-width: 1350px;">
+        <thead>
+          <tr>
+            <th class="th-base" rowspan="2">Tanggal</th>
+            <th class="th-base" rowspan="2">Jenis</th>
+            <th class="th-stok" colspan="2">Kemasan Masuk</th>
+            <th class="th-stok" colspan="2">Stok Gudang</th>
+            <th class="th-aks" colspan="3">Ruang Prosesing</th>
+            <th class="th-base" rowspan="2">Jumlah Stok</th>
+            <th class="th-kirim" rowspan="2">Kirim</th>
+            <th class="th-mika" rowspan="2">Mika Tamu</th>
+            <th class="th-gdg" colspan="2">Total Stok</th>
+            <th class="th-reject" colspan="2">Reject</th>
+            <th class="th-base" rowspan="2">Keterangan</th>
+          </tr>
+          <tr>
+            <th class="th-stok">Dus</th>
+            <th class="th-stok">Pcs</th>
+            <th class="th-stok">Dus</th>
+            <th class="th-stok">Pcs</th>
+            <th class="th-aks">Bongkar</th>
+            <th class="th-aks">Pcs Bongkar</th>
+            <th class="th-aks">Pcs</th>
+            <th class="th-gdg">Dus</th>
+            <th class="th-gdg">Pcs</th>
+            <th class="th-reject">Hari Ini</th>
+            <th class="th-reject">Total</th>
+          </tr>
+        </thead>
+        <tbody id="mika-monthly-usage-body">
+          <tr><td colspan="17" style="text-align:center;color:#999;padding:1rem;">Belum ada data bulan ini</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📊 Rekap Selisih Per Grade</div>
+    <div class="row-3" id="mika-monthly-cards"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📋 Detail Rincian Selisih Bulanan</div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Tanggal</th>
+            <th>Jenis Grade</th>
+            <th class="text-right">Dus</th>
+            <th class="text-right">Standar</th>
+            <th class="text-right">Aktual</th>
+            <th class="text-right">Selisih</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="mika-monthly-detail-body">
+          <tr><td colspan="7" class="text-center" style="color: #999;">Belum ada data bulan ini</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
