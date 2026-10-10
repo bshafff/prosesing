@@ -116,7 +116,6 @@ function renderMikaDashboard() {
   setIfEmpty('mika-sampai-bulan', todayYM);
   setIfEmpty('mika-dari-tgl', todayYMD);
   setIfEmpty('mika-sampai-tgl', todayYMD);
-  setIfEmpty('mika-monthly-bulan', todayYM);
 
   const period = getMikaPeriod();
   const timeline = computeMikaTimeline();
@@ -126,6 +125,10 @@ function renderMikaDashboard() {
   if (infoEl) {
     infoEl.innerHTML = `Menampilkan data: <b>${period.label}</b> · ${inPeriod.length} hari transaksi`;
   }
+
+  // Update label periode di section Rekap Bulanan
+  const periodeLabelEl = document.getElementById('mika-monthly-periode-label');
+  if (periodeLabelEl) periodeLabelEl.value = period.label;
 
   const fmt = n => Number(n || 0).toLocaleString('id-ID');
   const cell = n => n < 0 ? `<span class="neg">${fmt(n)}</span>` : fmt(n);
@@ -197,7 +200,7 @@ function renderMikaDashboard() {
 
   renderMikaRejectTamu(period);
   renderMikaKPI(period);
-  renderMikaMonthly();
+  renderMikaMonthly(period);
 }
 
 function renderMikaRejectTamu(period) {
@@ -396,18 +399,13 @@ function renderMikaKPI(period) {
   tbody.innerHTML = rowsHtml + totalRow;
 }
 
-// ========== REKAP BULANAN (STOCK OPNAME) ==========
-function renderMikaMonthly() {
-  const filterEl = document.getElementById('mika-monthly-bulan');
-  if (!filterEl) return;
-  if (!filterEl.value) filterEl.value = new Date().toISOString().substring(0, 7);
-  const filterBulan = filterEl.value;
-
-  renderMikaMonthlyUsage(filterBulan);
-  renderMikaMonthlySelisih(filterBulan);
+// ========== REKAP BULANAN (STOCK OPNAME) — ikut Filter Periode ==========
+function renderMikaMonthly(period) {
+  renderMikaMonthlyUsage(period);
+  renderMikaMonthlySelisih(period);
 }
 
-function renderMikaMonthlyUsage(filterBulan) {
+function renderMikaMonthlyUsage(period) {
   const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]')
     .filter(e => e && e.tgl && Array.isArray(e.items))
     .sort((a, b) => a.tgl.localeCompare(b.tgl));
@@ -441,7 +439,8 @@ function renderMikaMonthlyUsage(filterBulan) {
       }
       r.rejTotal += rejHari;
 
-      if (entry.tgl.startsWith(filterBulan)) {
+      // Filter by period range
+      if (entry.tgl >= period.from && entry.tgl <= period.to) {
         const totalKeluarHari = kirim + tamu + rejHari;
         const totalStokPcs = Math.max(0, r.processing);
         rows.push({
@@ -465,7 +464,7 @@ function renderMikaMonthlyUsage(filterBulan) {
   const tbody = document.getElementById('mika-monthly-usage-body');
   if (!tbody) return;
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;color:#999;padding:1rem;">Belum ada data bulan ini</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;color:#999;padding:1rem;">Belum ada data pada periode ini</td></tr>';
     return;
   }
 
@@ -508,9 +507,9 @@ function renderMikaMonthlyUsage(filterBulan) {
   tbody.innerHTML = html;
 }
 
-function renderMikaMonthlySelisih(filterBulan) {
+function renderMikaMonthlySelisih(period) {
   const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
-  const filtered = db.filter(e => e.tgl.startsWith(filterBulan));
+  const filtered = db.filter(e => e.tgl >= period.from && e.tgl <= period.to);
   const mBody = document.getElementById('mika-monthly-detail-body');
   const mRows = [];
   const statsPerJenis = {
@@ -544,7 +543,7 @@ function renderMikaMonthlySelisih(filterBulan) {
       });
     }
   });
-  if (mBody) mBody.innerHTML = mRows.length ? mRows.join('') : '<tr><td colspan="7" class="text-center" style="color: #999;">Belum ada data selisih bulan ini</td></tr>';
+  if (mBody) mBody.innerHTML = mRows.length ? mRows.join('') : '<tr><td colspan="7" class="text-center" style="color: #999;">Belum ada data selisih pada periode ini</td></tr>';
   const cardsEl = document.getElementById('mika-monthly-cards');
   if (cardsEl) {
     cardsEl.innerHTML = masterJenisKemasan.map(m => {
@@ -561,10 +560,13 @@ function renderMikaMonthlySelisih(filterBulan) {
   }
 }
 
-// ========== EXPORT CSV STOCK OPNAME ==========
+// ========== EXPORT CSV STOCK OPNAME (ikut Filter Periode) ==========
 function exportMikaCSV() {
-  const filterBulan = document.getElementById('mika-monthly-bulan').value;
-  if (!filterBulan) { showToast('Pilih bulan dulu!', 'error'); return; }
+  const period = getMikaPeriod();
+  if (!period.from || !period.to) {
+    showToast('Pilih periode dulu!', 'error');
+    return;
+  }
 
   const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]')
     .filter(e => e && e.tgl && Array.isArray(e.items))
@@ -599,7 +601,7 @@ function exportMikaCSV() {
       }
       r.rejTotal += rejHari;
 
-      if (entry.tgl.startsWith(filterBulan)) {
+      if (entry.tgl >= period.from && entry.tgl <= period.to) {
         const totalKeluarHari = kirim + tamu + rejHari;
         const totalStokPcs = Math.max(0, r.processing);
         let ket = it.ketReject || it.ketTamu || '';
@@ -624,16 +626,22 @@ function exportMikaCSV() {
   });
 
   if (!rows.length) {
-    showToast('Tidak ada data stock opname untuk bulan ini!', 'error');
+    showToast('Tidak ada data stock opname pada periode ini!', 'error');
     return;
   }
 
   const q = v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
   const n = v => Number(v || 0);
 
+  // Label periode untuk header CSV
+  const periodLabel = period.mode === 'single'
+    ? period.from.substring(0, 7)
+    : `${period.from} s.d. ${period.to}`;
+
   let csv = '';
-  csv += 'STOCK OPNAME KEMASAN MIKA - ' + filterBulan + '\n';
-  csv += 'PT. Agri Wangi Berry - Processing\n\n';
+  csv += 'STOCK OPNAME KEMASAN MIKA - ' + periodLabel + '\n';
+  csv += 'PT. Agri Wangi Berry - Processing\n';
+  csv += 'Periode: ' + period.label + '\n\n';
 
   csv += [
     'Tanggal', 'Jenis Kemasan',
@@ -680,11 +688,11 @@ function exportMikaCSV() {
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.setAttribute('download', `Stock_Opname_Mika_${filterBulan}.csv`);
+  link.setAttribute('download', `Stock_Opname_Mika_${period.from}_to_${period.to}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   setTimeout(() => URL.revokeObjectURL(link.href), 3000);
 
-  showToast(`📥 Download Stock Opname ${filterBulan} (${rows.length} baris)`);
+  showToast(`📥 Download Stock Opname ${period.label} (${rows.length} baris)`);
 }
