@@ -132,10 +132,13 @@
   <!-- ===================== REKAP BULANAN (STOCK OPNAME) ===================== -->
   <div class="card" style="margin-top:1.5rem;">
     <div class="card-title">📅 Rekap Bulanan (Stock Opname)</div>
+    <div class="info-box" style="margin-bottom:0.75rem;">
+      Semua data di bawah mengikuti <b>Filter Periode</b> di atas. Ganti filter di atas untuk memperbarui semua tabel sekaligus.
+    </div>
     <div class="row-2" style="align-items:flex-end;">
       <div class="input-group" style="margin-bottom:0;">
-        <label>Pilih Bulan</label>
-        <input type="month" id="mika-monthly-bulan" onchange="renderMikaMonthly()">
+        <label>Periode Aktif</label>
+        <input readonly id="mika-monthly-periode-label" value="-">
       </div>
       <button class="btn btn-success" onclick="exportMikaCSV()">📥 Export CSV</button>
     </div>
@@ -178,7 +181,7 @@
           </tr>
         </thead>
         <tbody id="mika-monthly-usage-body">
-          <tr><td colspan="17" style="text-align:center;color:#999;padding:1rem;">Belum ada data bulan ini</td></tr>
+          <tr><td colspan="17" style="text-align:center;color:#999;padding:1rem;">Belum ada data pada periode ini</td></tr>
         </tbody>
       </table>
     </div>
@@ -205,7 +208,7 @@
           </tr>
         </thead>
         <tbody id="mika-monthly-detail-body">
-          <tr><td colspan="7" class="text-center" style="color: #999;">Belum ada data bulan ini</td></tr>
+          <tr><td colspan="7" class="text-center" style="color: #999;">Belum ada data pada periode ini</td></tr>
         </tbody>
       </table>
     </div>
