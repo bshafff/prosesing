@@ -116,6 +116,7 @@ function renderMikaDashboard() {
   setIfEmpty('mika-sampai-bulan', todayYM);
   setIfEmpty('mika-dari-tgl', todayYMD);
   setIfEmpty('mika-sampai-tgl', todayYMD);
+  setIfEmpty('mika-monthly-bulan', todayYM);
 
   const period = getMikaPeriod();
   const timeline = computeMikaTimeline();
@@ -196,6 +197,7 @@ function renderMikaDashboard() {
 
   renderMikaRejectTamu(period);
   renderMikaKPI(period);
+  renderMikaMonthly();
 }
 
 function renderMikaRejectTamu(period) {
@@ -392,4 +394,297 @@ function renderMikaKPI(period) {
   </tr>`;
 
   tbody.innerHTML = rowsHtml + totalRow;
+}
+
+// ========== REKAP BULANAN (STOCK OPNAME) ==========
+function renderMikaMonthly() {
+  const filterEl = document.getElementById('mika-monthly-bulan');
+  if (!filterEl) return;
+  if (!filterEl.value) filterEl.value = new Date().toISOString().substring(0, 7);
+  const filterBulan = filterEl.value;
+
+  renderMikaMonthlyUsage(filterBulan);
+  renderMikaMonthlySelisih(filterBulan);
+}
+
+function renderMikaMonthlyUsage(filterBulan) {
+  const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]')
+    .filter(e => e && e.tgl && Array.isArray(e.items))
+    .sort((a, b) => a.tgl.localeCompare(b.tgl));
+
+  const running = {};
+  masterJenisKemasan.forEach(m => {
+    running[m.name] = { gudangDus: 0, processing: 0, rejTotal: 0 };
+  });
+
+  const rows = [];
+  db.forEach(entry => {
+    entry.items.forEach(it => {
+      const r = running[it.name];
+      if (!r) return;
+      const std = it.std || 200;
+      const masukDus = it.masuk || 0;
+      const bongkarDus = it.bongkarDus || 0;
+      const pcsBongkar = it.aktualPcs || 0;
+      const kirim = it.kirim || 0;
+      const tamu = it.tamu || 0;
+      const rejHari = rejMika(it);
+      const procSebelumKeluar = r.processing + pcsBongkar;
+
+      r.gudangDus += masukDus - bongkarDus;
+      const opnameVal = (typeof it.processingOpname === 'number' && !isNaN(it.processingOpname))
+        ? it.processingOpname : null;
+      if (opnameVal !== null) {
+        r.processing = opnameVal;
+      } else {
+        r.processing += pcsBongkar - kirim - tamu - rejHari;
+      }
+      r.rejTotal += rejHari;
+
+      if (entry.tgl.startsWith(filterBulan)) {
+        const totalKeluarHari = kirim + tamu + rejHari;
+        const totalStokPcs = Math.max(0, r.processing);
+        rows.push({
+          tgl: entry.tgl, name: it.name, std,
+          masukDus, masukPcs: masukDus * std,
+          gudangDus: r.gudangDus, gudangPcs: r.gudangDus * std,
+          bongkarDus, pcsBongkar,
+          procPcs: procSebelumKeluar,
+          jumlahStok: totalKeluarHari,
+          kirim, tamu,
+          totalStokDus: Math.floor(totalStokPcs / std),
+          totalStokPcs,
+          rejHari, rejTotal: r.rejTotal,
+          opname: opnameVal,
+          keterangan: it.ketReject || it.ketTamu || ''
+        });
+      }
+    });
+  });
+
+  const tbody = document.getElementById('mika-monthly-usage-body');
+  if (!tbody) return;
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;color:#999;padding:1rem;">Belum ada data bulan ini</td></tr>';
+    return;
+  }
+
+  const byTgl = new Map();
+  rows.forEach(r => {
+    if (!byTgl.has(r.tgl)) byTgl.set(r.tgl, []);
+    byTgl.get(r.tgl).push(r);
+  });
+
+  const fmt = n => Number(n || 0).toLocaleString('id-ID');
+  const bCls = name => name === 'Hatsu' ? 'hatsu' : name === 'Grade A' ? 'gradea' : 'gradeb';
+
+  let html = '';
+  byTgl.forEach((items, tgl) => {
+    const [y, m, d] = tgl.split('-');
+    const tglFmt = `${parseInt(d, 10)}/${parseInt(m, 10)}/${y}`;
+    const rowspan = items.length;
+    items.forEach((r, idx) => {
+      html += '<tr>';
+      if (idx === 0) html += `<td class="tgl-col" rowspan="${rowspan}">${tglFmt}</td>`;
+      html += `<td><span class="badge ${bCls(r.name)}">${r.name}</span></td>`;
+      html += `<td>${r.masukDus ? fmt(r.masukDus) : ''}</td>`;
+      html += `<td>${r.masukPcs ? fmt(r.masukPcs) : ''}</td>`;
+      html += `<td>${fmt(r.gudangDus)}</td>`;
+      html += `<td>${fmt(r.gudangPcs)}</td>`;
+      html += `<td>${r.bongkarDus ? fmt(r.bongkarDus) : ''}</td>`;
+      html += `<td>${r.pcsBongkar ? fmt(r.pcsBongkar) : ''}</td>`;
+      html += `<td>${fmt(r.procPcs)}</td>`;
+      html += `<td>${r.jumlahStok ? fmt(r.jumlahStok) : ''}</td>`;
+      html += `<td>${r.kirim ? fmt(r.kirim) : ''}</td>`;
+      html += `<td>${r.tamu ? fmt(r.tamu) : ''}</td>`;
+      html += `<td>${fmt(r.totalStokDus)}</td>`;
+      html += `<td class="col-total">${fmt(r.totalStokPcs)}</td>`;
+      html += `<td style="color:#dc2626;">${r.rejHari ? fmt(r.rejHari) : ''}</td>`;
+      html += `<td style="color:#dc2626;">${fmt(r.rejTotal)}</td>`;
+      html += `<td style="white-space:normal;max-width:180px;font-size:0.7rem;">${r.keterangan || ''}${r.opname !== null ? `<br><b style="color:#166534;">📝 Koreksi: ${fmt(r.opname)} pcs</b>` : ''}</td>`;
+      html += '</tr>';
+    });
+  });
+  tbody.innerHTML = html;
+}
+
+function renderMikaMonthlySelisih(filterBulan) {
+  const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
+  const filtered = db.filter(e => e.tgl.startsWith(filterBulan));
+  const mBody = document.getElementById('mika-monthly-detail-body');
+  const mRows = [];
+  const statsPerJenis = {
+    'Hatsu': { dus: 0, std: 0, akt: 0, sel: 0 },
+    'Grade A': { dus: 0, std: 0, akt: 0, sel: 0 },
+    'Grade B': { dus: 0, std: 0, akt: 0, sel: 0 }
+  };
+  filtered.forEach(entry => {
+    if (entry.items) {
+      entry.items.forEach(it => {
+        if (it.bongkarDus > 0 || it.aktualPcs > 0) {
+          if (statsPerJenis[it.name]) {
+            statsPerJenis[it.name].dus += it.bongkarDus;
+            statsPerJenis[it.name].std += it.standarPcs;
+            statsPerJenis[it.name].akt += it.aktualPcs;
+            statsPerJenis[it.name].sel += it.selisih;
+          }
+          let statusBadge = '<span class="sesuai">Sesuai</span>';
+          if (it.selisih < 0) statusBadge = `<span class="kurang">Kurang (${it.selisih})</span>`;
+          if (it.selisih > 0) statusBadge = `<span class="lebih">Lebih (+${it.selisih})</span>`;
+          mRows.push(`<tr>
+            <td>${entry.tgl}</td>
+            <td><b>${it.name}</b></td>
+            <td class="text-right">${it.bongkarDus}</td>
+            <td class="text-right">${it.standarPcs}</td>
+            <td class="text-right">${it.aktualPcs}</td>
+            <td class="text-right">${it.selisih > 0 ? '+' + it.selisih : it.selisih}</td>
+            <td>${statusBadge}</td>
+          </tr>`);
+        }
+      });
+    }
+  });
+  if (mBody) mBody.innerHTML = mRows.length ? mRows.join('') : '<tr><td colspan="7" class="text-center" style="color: #999;">Belum ada data selisih bulan ini</td></tr>';
+  const cardsEl = document.getElementById('mika-monthly-cards');
+  if (cardsEl) {
+    cardsEl.innerHTML = masterJenisKemasan.map(m => {
+      const st = statsPerJenis[m.name];
+      const cls = st.sel < 0 ? 'red' : st.sel > 0 ? 'blue' : 'green';
+      return `
+        <div class="stat-card ${cls}">
+          <div class="stat-label">Mika ${m.name}</div>
+          <div class="stat-value" style="font-size: 1.5rem;">${st.sel > 0 ? '+' + st.sel : st.sel} <small style="font-size: 0.8rem;">Pcs Selisih</small></div>
+          <div class="stat-meta">Total Bongkar: ${st.dus} Dus (${st.akt} Pcs)</div>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+// ========== EXPORT CSV STOCK OPNAME ==========
+function exportMikaCSV() {
+  const filterBulan = document.getElementById('mika-monthly-bulan').value;
+  if (!filterBulan) { showToast('Pilih bulan dulu!', 'error'); return; }
+
+  const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]')
+    .filter(e => e && e.tgl && Array.isArray(e.items))
+    .sort((a, b) => a.tgl.localeCompare(b.tgl));
+
+  const running = {};
+  masterJenisKemasan.forEach(m => {
+    running[m.name] = { gudangDus: 0, processing: 0, rejTotal: 0 };
+  });
+
+  const rows = [];
+  db.forEach(entry => {
+    entry.items.forEach(it => {
+      const r = running[it.name];
+      if (!r) return;
+      const std = it.std || 200;
+      const masukDus = it.masuk || 0;
+      const bongkarDus = it.bongkarDus || 0;
+      const pcsBongkar = it.aktualPcs || 0;
+      const kirim = it.kirim || 0;
+      const tamu = it.tamu || 0;
+      const rejHari = rejMika(it);
+      const procSebelumKeluar = r.processing + pcsBongkar;
+
+      r.gudangDus += masukDus - bongkarDus;
+      const opnameVal = (typeof it.processingOpname === 'number' && !isNaN(it.processingOpname))
+        ? it.processingOpname : null;
+      if (opnameVal !== null) {
+        r.processing = opnameVal;
+      } else {
+        r.processing += pcsBongkar - kirim - tamu - rejHari;
+      }
+      r.rejTotal += rejHari;
+
+      if (entry.tgl.startsWith(filterBulan)) {
+        const totalKeluarHari = kirim + tamu + rejHari;
+        const totalStokPcs = Math.max(0, r.processing);
+        let ket = it.ketReject || it.ketTamu || '';
+        if (opnameVal !== null) {
+          ket = ket + (ket ? ' | ' : '') + '📝 Koreksi: ' + opnameVal + ' pcs';
+        }
+        rows.push({
+          tgl: entry.tgl, name: it.name, std,
+          masukDus, masukPcs: masukDus * std,
+          gudangDus: r.gudangDus, gudangPcs: r.gudangDus * std,
+          bongkarDus, pcsBongkar,
+          procPcs: procSebelumKeluar,
+          jumlahStok: totalKeluarHari,
+          kirim, tamu,
+          totalStokDus: Math.floor(totalStokPcs / std),
+          totalStokPcs,
+          rejHari, rejTotal: r.rejTotal,
+          keterangan: ket
+        });
+      }
+    });
+  });
+
+  if (!rows.length) {
+    showToast('Tidak ada data stock opname untuk bulan ini!', 'error');
+    return;
+  }
+
+  const q = v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+  const n = v => Number(v || 0);
+
+  let csv = '';
+  csv += 'STOCK OPNAME KEMASAN MIKA - ' + filterBulan + '\n';
+  csv += 'PT. Agri Wangi Berry - Processing\n\n';
+
+  csv += [
+    'Tanggal', 'Jenis Kemasan',
+    'Masuk Dus', 'Masuk Pcs',
+    'Stok Gudang Dus', 'Stok Gudang Pcs',
+    'Bongkar Dus', 'Pcs Bongkar', 'Ruang Prosesing Pcs',
+    'Jumlah Stok',
+    'Kirim', 'Mika Tamu',
+    'Total Stok Dus', 'Total Stok Pcs',
+    'Reject Hari Ini', 'Reject Total',
+    'Keterangan'
+  ].join(',') + '\n';
+
+  rows.forEach(r => {
+    const [y, m, d] = r.tgl.split('-');
+    const tglFmt = `${parseInt(d, 10)}/${parseInt(m, 10)}/${y}`;
+    csv += [
+      q(tglFmt), q(r.name),
+      n(r.masukDus), n(r.masukPcs),
+      n(r.gudangDus), n(r.gudangPcs),
+      n(r.bongkarDus), n(r.pcsBongkar), n(r.procPcs),
+      n(r.jumlahStok),
+      n(r.kirim), n(r.tamu),
+      n(r.totalStokDus), n(r.totalStokPcs),
+      n(r.rejHari), n(r.rejTotal),
+      q(r.keterangan || '')
+    ].join(',') + '\n';
+  });
+
+  const sum = k => rows.reduce((a, r) => a + (r[k] || 0), 0);
+  csv += '\n';
+  csv += [
+    q('TOTAL'), q(''),
+    n(sum('masukDus')), n(sum('masukPcs')),
+    q(''), q(''),
+    n(sum('bongkarDus')), n(sum('pcsBongkar')), q(''),
+    n(sum('jumlahStok')),
+    n(sum('kirim')), n(sum('tamu')),
+    q(''), n(sum('totalStokPcs')),
+    n(sum('rejHari')), q(''),
+    q('')
+  ].join(',') + '\n';
+
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.setAttribute('download', `Stock_Opname_Mika_${filterBulan}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(link.href), 3000);
+
+  showToast(`📥 Download Stock Opname ${filterBulan} (${rows.length} baris)`);
 }
