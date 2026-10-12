@@ -16,7 +16,21 @@
       <div class="card-title">📅 Tanggal Input Kemasan</div>
       <input type="date" id="kemasan-tgl">
     </div>
-    <div id="forms-kemasan"></div>
+
+    <div class="sub-tabs" id="input-kemasan-tabs">
+      <button class="sub-tab active" onclick="showInputKemasanTab('hatsu', this)">📦 Hatsu</button>
+      <button class="sub-tab" onclick="showInputKemasanTab('gradea', this)">📦 Grade A</button>
+      <button class="sub-tab" onclick="showInputKemasanTab('gradeb', this)">📦 Grade B</button>
+      <button class="sub-tab" onclick="showInputKemasanTab('stiker', this)">🏷️ Stiker</button>
+    </div>
+
+    <div id="forms-kemasan">
+      <div id="input-panel-hatsu" class="input-kemasan-panel" style="display:block;"></div>
+      <div id="input-panel-gradea" class="input-kemasan-panel" style="display:none;"></div>
+      <div id="input-panel-gradeb" class="input-kemasan-panel" style="display:none;"></div>
+      <div id="input-panel-stiker" class="input-kemasan-panel" style="display:none;"></div>
+    </div>
+
     <div class="btn-group">
       <button class="btn btn-primary" onclick="simpanDataKemasan()">💾 Simpan Semua Data Kemasan</button>
       <button class="btn btn-secondary" onclick="resetFormKemasan()">🔄 Reset Form</button>
@@ -66,6 +80,24 @@
           </thead>
           <tbody id="tbl-summary-body">
             <tr><td colspan="6" class="text-center" style="color: #999;">Belum ada data</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 Detail Stok Aksesoris</div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Aksesoris</th>
+              <th class="text-right">Gudang</th>
+              <th class="text-right">Processing</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-aks-body">
+            <tr><td colspan="3" class="text-center" style="color: #999;">Belum ada data</td></tr>
           </tbody>
         </table>
       </div>
