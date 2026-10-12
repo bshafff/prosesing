@@ -126,7 +126,6 @@ function renderMikaDashboard() {
     infoEl.innerHTML = `Menampilkan data: <b>${period.label}</b> · ${inPeriod.length} hari transaksi`;
   }
 
-  // Update label periode di section Rekap Bulanan
   const periodeLabelEl = document.getElementById('mika-monthly-periode-label');
   if (periodeLabelEl) periodeLabelEl.value = period.label;
 
@@ -439,7 +438,6 @@ function renderMikaMonthlyUsage(period) {
       }
       r.rejTotal += rejHari;
 
-      // Filter by period range
       if (entry.tgl >= period.from && entry.tgl <= period.to) {
         const totalKeluarHari = kirim + tamu + rejHari;
         const totalStokPcs = Math.max(0, r.processing);
@@ -449,11 +447,11 @@ function renderMikaMonthlyUsage(period) {
           gudangDus: r.gudangDus, gudangPcs: r.gudangDus * std,
           bongkarDus, pcsBongkar,
           procPcs: procSebelumKeluar,
-          jumlahStok: totalKeluarHari,
+          totalKeluar: totalKeluarHari,
           kirim, tamu,
+          rejHari, rejTotal: r.rejTotal,
           totalStokDus: Math.floor(totalStokPcs / std),
           totalStokPcs,
-          rejHari, rejTotal: r.rejTotal,
           opname: opnameVal,
           keterangan: it.ketReject || it.ketTamu || ''
         });
@@ -493,13 +491,13 @@ function renderMikaMonthlyUsage(period) {
       html += `<td>${r.bongkarDus ? fmt(r.bongkarDus) : ''}</td>`;
       html += `<td>${r.pcsBongkar ? fmt(r.pcsBongkar) : ''}</td>`;
       html += `<td>${fmt(r.procPcs)}</td>`;
-      html += `<td>${r.jumlahStok ? fmt(r.jumlahStok) : ''}</td>`;
+      html += `<td class="col-total">${r.totalKeluar ? fmt(r.totalKeluar) : ''}</td>`;
       html += `<td>${r.kirim ? fmt(r.kirim) : ''}</td>`;
       html += `<td>${r.tamu ? fmt(r.tamu) : ''}</td>`;
-      html += `<td>${fmt(r.totalStokDus)}</td>`;
-      html += `<td class="col-total">${fmt(r.totalStokPcs)}</td>`;
       html += `<td style="color:#dc2626;">${r.rejHari ? fmt(r.rejHari) : ''}</td>`;
       html += `<td style="color:#dc2626;">${fmt(r.rejTotal)}</td>`;
+      html += `<td>${fmt(r.totalStokDus)}</td>`;
+      html += `<td class="col-total">${fmt(r.totalStokPcs)}</td>`;
       html += `<td style="white-space:normal;max-width:180px;font-size:0.7rem;">${r.keterangan || ''}${r.opname !== null ? `<br><b style="color:#166534;">📝 Koreksi: ${fmt(r.opname)} pcs</b>` : ''}</td>`;
       html += '</tr>';
     });
@@ -614,11 +612,11 @@ function exportMikaCSV() {
           gudangDus: r.gudangDus, gudangPcs: r.gudangDus * std,
           bongkarDus, pcsBongkar,
           procPcs: procSebelumKeluar,
-          jumlahStok: totalKeluarHari,
+          totalKeluar: totalKeluarHari,
           kirim, tamu,
+          rejHari, rejTotal: r.rejTotal,
           totalStokDus: Math.floor(totalStokPcs / std),
           totalStokPcs,
-          rejHari, rejTotal: r.rejTotal,
           keterangan: ket
         });
       }
@@ -633,7 +631,6 @@ function exportMikaCSV() {
   const q = v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
   const n = v => Number(v || 0);
 
-  // Label periode untuk header CSV
   const periodLabel = period.mode === 'single'
     ? period.from.substring(0, 7)
     : `${period.from} s.d. ${period.to}`;
@@ -648,10 +645,10 @@ function exportMikaCSV() {
     'Masuk Dus', 'Masuk Pcs',
     'Stok Gudang Dus', 'Stok Gudang Pcs',
     'Bongkar Dus', 'Pcs Bongkar', 'Ruang Prosesing Pcs',
-    'Jumlah Stok',
+    'Total Keluar',
     'Kirim', 'Mika Tamu',
-    'Total Stok Dus', 'Total Stok Pcs',
     'Reject Hari Ini', 'Reject Total',
+    'Total Stok Dus', 'Total Stok Pcs',
     'Keterangan'
   ].join(',') + '\n';
 
@@ -663,10 +660,10 @@ function exportMikaCSV() {
       n(r.masukDus), n(r.masukPcs),
       n(r.gudangDus), n(r.gudangPcs),
       n(r.bongkarDus), n(r.pcsBongkar), n(r.procPcs),
-      n(r.jumlahStok),
+      n(r.totalKeluar),
       n(r.kirim), n(r.tamu),
-      n(r.totalStokDus), n(r.totalStokPcs),
       n(r.rejHari), n(r.rejTotal),
+      n(r.totalStokDus), n(r.totalStokPcs),
       q(r.keterangan || '')
     ].join(',') + '\n';
   });
@@ -678,10 +675,10 @@ function exportMikaCSV() {
     n(sum('masukDus')), n(sum('masukPcs')),
     q(''), q(''),
     n(sum('bongkarDus')), n(sum('pcsBongkar')), q(''),
-    n(sum('jumlahStok')),
+    n(sum('totalKeluar')),
     n(sum('kirim')), n(sum('tamu')),
-    q(''), n(sum('totalStokPcs')),
     n(sum('rejHari')), q(''),
+    q(''), n(sum('totalStokPcs')),
     q('')
   ].join(',') + '\n';
 
@@ -695,4 +692,57 @@ function exportMikaCSV() {
   setTimeout(() => URL.revokeObjectURL(link.href), 3000);
 
   showToast(`📥 Download Stock Opname ${period.label} (${rows.length} baris)`);
+}
+
+// ========== SCREENSHOT FUNCTIONS ==========
+async function loadHtml2Canvas() {
+  if (window.html2canvas) return;
+  await new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('Gagal load html2canvas'));
+    document.head.appendChild(s);
+  });
+}
+
+async function captureCardAsImage(cardId, filename, showToastWhenDone) {
+  const card = document.getElementById(cardId);
+  if (!card) { showToast('Elemen tidak ditemukan', 'error'); return; }
+  try {
+    showToast('📸 Membuat gambar...');
+    await loadHtml2Canvas();
+    const canvas = await html2canvas(card, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      windowWidth: card.scrollWidth,
+      windowHeight: card.scrollHeight
+    });
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+    if (!blob) { showToast('Gagal membuat gambar', 'error'); return; }
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(link.href), 4000);
+    if (showToastWhenDone) showToast('📸 Screenshot tersimpan');
+  } catch (err) {
+    console.error(err);
+    showToast('Screenshot gagal: ' + err.message, 'error');
+  }
+}
+
+function downloadMikaDailyImage() {
+  const today = new Date().toISOString().substring(0, 10);
+  captureCardAsImage('mika-daily-card', `Stok_Harian_Mika_${today}.png`, true);
+}
+
+function downloadMikaMonthlyImage() {
+  const period = getMikaPeriod();
+  const filename = `Rekap_Penggunaan_Mika_${period.from}_to_${period.to}.png`;
+  captureCardAsImage('mika-monthly-usage-card', filename, true);
 }
