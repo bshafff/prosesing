@@ -155,7 +155,7 @@ function updateDashboard() {
   const n = filtered.length || 1;
   document.getElementById('recap-foot').innerHTML = `
     <tr>
-      <td class="tgl-col">TOTAL</td>
+      <td style="text-align:center;font-weight:800;">Jumlah</td>
       <td>${T.p_hatsu.toFixed(2)}</td>
       <td>${T.p_gradea.toFixed(2)}</td>
       <td>${T.p_gradeb.toFixed(2)}</td>
@@ -182,7 +182,7 @@ function updateDashboard() {
       <td>${T.mika_total}</td>
     </tr>
     <tr style="background:#4b5563;">
-      <td class="tgl-col">RATA-RATA</td>
+      <td style="text-align:center;font-weight:800;">Rata-rata</td>
       <td>${(T.p_hatsu / n).toFixed(2)}</td>
       <td>${(T.p_gradea / n).toFixed(2)}</td>
       <td>${(T.p_gradeb / n).toFixed(2)}</td>
@@ -345,8 +345,8 @@ function renderMonthlyComparison() {
   if (footEl) {
     footEl.innerHTML = `
       <tr>
-        <td class="tgl-col">-</td>
-        <td class="tgl-col" style="text-align:left;">TOTAL</td>
+        <td style="text-align:center;font-weight:800;">-</td>
+        <td style="text-align:left;font-weight:800;">Jumlah</td>
         <td>${T.p_hatsu.toFixed(2)}</td>
         <td>${T.p_gradea.toFixed(2)}</td>
         <td>${T.p_gradeb.toFixed(2)}</td>
@@ -796,7 +796,7 @@ function downloadWeeklyImage() {
     pct: weeklyPctText(d.totals[g.key], d.totals.total, 'dari total bulan'), delta: ''
   }));
   tot.push({ kg: d.totals.total.toFixed(2), pct: '100.0% dari total bulan', delta: '' });
-  drawRow(y, 'TOTAL', ['Seluruh minggu bulan ini'], tot, '#eff6ff', '#1e3a8a', '#64748b');
+  drawRow(y, 'Jumlah', ['Seluruh minggu bulan ini'], tot, '#eff6ff', '#1e3a8a', '#64748b');
   y += rowH;
 
   const f = d.forecast;
@@ -871,4 +871,113 @@ function renderWeeklyChart(weeks) {
   el.innerHTML = svg + `<div class="chart-legend">` +
     WEEK_GRADES.map(g => `<span><span class="dot" style="background:${g.color};"></span> ${g.label}</span>`).join('') +
     `</div>`;
+}
+
+// ========== SCREENSHOT FUNCTIONS ==========
+async function loadHtml2Canvas() {
+  if (window.html2canvas) return;
+  await new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('Gagal load html2canvas'));
+    document.head.appendChild(s);
+  });
+}
+
+async function captureCardAsImage(cardId, filename, showToastWhenDone) {
+  const card = document.getElementById(cardId);
+  if (!card) { showToast('Elemen tidak ditemukan', 'error'); return; }
+  let tempContainer = null;
+  try {
+    showToast('📸 Membuat gambar...');
+    await loadHtml2Canvas();
+
+    // ==== Clone card ke container off-screen ====
+    const clone = card.cloneNode(true);
+    clone.querySelectorAll('[data-html2canvas-ignore="true"]').forEach(el => el.remove());
+
+    tempContainer = document.createElement('div');
+    tempContainer.style.cssText = 'position:fixed;left:-99999px;top:0;background:#ffffff;padding:0;margin:0;z-index:-1;';
+    tempContainer.appendChild(clone);
+    document.body.appendChild(tempContainer);
+
+    clone.querySelectorAll('.recap-wrap, .table-container, .chart-scroll').forEach(w => {
+      w.style.overflow = 'visible';
+      w.style.overflowX = 'visible';
+      w.style.overflowY = 'visible';
+      w.style.width = 'auto';
+      w.style.maxWidth = 'none';
+      w.style.display = 'block';
+    });
+
+    clone.querySelectorAll('table').forEach(t => {
+      t.style.width = 'auto';
+      t.style.minWidth = '100%';
+      t.style.tableLayout = 'auto';
+    });
+
+    clone.style.width = 'max-content';
+    clone.style.maxWidth = 'none';
+
+    await new Promise(r => setTimeout(r, 200));
+
+    const fullWidth = Math.max(clone.scrollWidth, clone.offsetWidth);
+    const fullHeight = Math.max(clone.scrollHeight, clone.offsetHeight);
+
+    tempContainer.style.width = fullWidth + 'px';
+    clone.style.width = fullWidth + 'px';
+
+    await new Promise(r => setTimeout(r, 100));
+
+    const canvas = await html2canvas(clone, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      width: fullWidth,
+      height: fullHeight,
+      windowWidth: fullWidth,
+      windowHeight: fullHeight,
+      scrollX: 0,
+      scrollY: 0
+    });
+
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+    if (!blob) { showToast('Gagal membuat gambar', 'error'); return; }
+
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(link.href), 4000);
+
+    if (showToastWhenDone) showToast('📸 Screenshot tersimpan');
+  } catch (err) {
+    console.error(err);
+    showToast('Screenshot gagal: ' + err.message, 'error');
+  } finally {
+    if (tempContainer && tempContainer.parentNode) {
+      tempContainer.parentNode.removeChild(tempContainer);
+    }
+  }
+}
+
+function downloadRecapHarianImage() {
+  const bulan = document.getElementById('dashboard-bulan') ? document.getElementById('dashboard-bulan').value : '';
+  const gh = ghLabelOf(dashGh()).replace(/\s/g, '');
+  const filename = `Rekap_Harian_Panen_${bulan}_${gh}.png`;
+  captureCardAsImage('panen-recap-harian-card', filename, true);
+}
+
+function downloadBulanCompareImage() {
+  const period = getBulanComparePeriod();
+  const gh = ghLabelOf(dashGh()).replace(/\s/g, '');
+  const periodLabel = period.mode === 'all'
+    ? 'SemuaBulan'
+    : `${period.from}_to_${period.to}`;
+  const filename = `Rekap_Perbandingan_Bulanan_${periodLabel}_${gh}.png`;
+  captureCardAsImage('panen-bulan-compare-card', filename, true);
 }
