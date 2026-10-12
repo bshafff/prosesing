@@ -91,8 +91,11 @@
     </div>
   </div>
 
-  <div class="card">
+  <div class="card" id="mika-daily-card">
     <div class="card-title">📅 Stok Harian (posisi akhir hari)</div>
+    <div style="margin-bottom:0.75rem;" data-html2canvas-ignore="true">
+      <button type="button" class="btn btn-primary btn-sm" onclick="downloadMikaDailyImage()">📸 Screenshot</button>
+    </div>
     <div class="recap-wrap">
       <table class="recap-table" style="min-width:1150px;">
         <thead>
@@ -144,14 +147,17 @@
     </div>
   </div>
 
-  <div class="card">
+  <div class="card" id="mika-monthly-usage-card">
     <div class="card-title">📊 Rekap Penggunaan Bulanan (Stock Opname)</div>
     <div class="info-box" style="margin-bottom:0.75rem;">
       Data penggunaan mika per hari per grade. <b>Ruang Prosesing Pcs</b> = stok tersedia sebelum pengeluaran hari itu.
-      <b>Jumlah Stok</b> = total pcs keluar hari itu (kirim + tamu + reject). <b>Total Stok</b> = stok akhir setelah pengeluaran.
+      <b>Total Keluar</b> = total pcs yang keluar hari itu (kirim + tamu + reject). <b>Total Stok</b> = stok akhir setelah pengeluaran.
+    </div>
+    <div style="margin-bottom:0.75rem;" data-html2canvas-ignore="true">
+      <button type="button" class="btn btn-primary btn-sm" onclick="downloadMikaMonthlyImage()">📸 Screenshot</button>
     </div>
     <div class="recap-wrap">
-      <table class="recap-table" style="min-width: 1350px;">
+      <table class="recap-table" style="min-width: 1400px;">
         <thead>
           <tr>
             <th class="th-base" rowspan="2">Tanggal</th>
@@ -159,11 +165,11 @@
             <th class="th-stok" colspan="2">Kemasan Masuk</th>
             <th class="th-stok" colspan="2">Stok Gudang</th>
             <th class="th-aks" colspan="3">Ruang Prosesing</th>
-            <th class="th-base" rowspan="2">Jumlah Stok</th>
+            <th class="th-mut" rowspan="2">Total Keluar</th>
             <th class="th-kirim" rowspan="2">Kirim</th>
             <th class="th-mika" rowspan="2">Mika Tamu</th>
-            <th class="th-gdg" colspan="2">Total Stok</th>
             <th class="th-reject" colspan="2">Reject</th>
+            <th class="th-gdg" colspan="2">Total Stok</th>
             <th class="th-base" rowspan="2">Keterangan</th>
           </tr>
           <tr>
@@ -174,10 +180,10 @@
             <th class="th-aks">Bongkar</th>
             <th class="th-aks">Pcs Bongkar</th>
             <th class="th-aks">Pcs</th>
-            <th class="th-gdg">Dus</th>
-            <th class="th-gdg">Pcs</th>
             <th class="th-reject">Hari Ini</th>
             <th class="th-reject">Total</th>
+            <th class="th-gdg">Dus</th>
+            <th class="th-gdg">Pcs</th>
           </tr>
         </thead>
         <tbody id="mika-monthly-usage-body">
