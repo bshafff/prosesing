@@ -496,7 +496,7 @@ function renderMikaMonthlyUsage(period) {
       html += `<td>${r.tamu ? fmt(r.tamu) : ''}</td>`;
       html += `<td style="color:#dc2626;">${r.rejHari ? fmt(r.rejHari) : ''}</td>`;
       html += `<td style="color:#dc2626;">${fmt(r.rejTotal)}</td>`;
-      html += `<td>${fmt(r.totalStokDus)}</td>`;
+      html += `<td class="col-total">${fmt(r.totalStokDus)}</td>`;
       html += `<td class="col-total">${fmt(r.totalStokPcs)}</td>`;
       html += `<td style="white-space:normal;max-width:180px;font-size:0.7rem;">${r.keterangan || ''}${r.opname !== null ? `<br><b style="color:#166534;">📝 Koreksi: ${fmt(r.opname)} pcs</b>` : ''}</td>`;
       html += '</tr>';
@@ -709,19 +709,70 @@ async function loadHtml2Canvas() {
 async function captureCardAsImage(cardId, filename, showToastWhenDone) {
   const card = document.getElementById(cardId);
   if (!card) { showToast('Elemen tidak ditemukan', 'error'); return; }
+  let tempContainer = null;
   try {
     showToast('📸 Membuat gambar...');
     await loadHtml2Canvas();
-    const canvas = await html2canvas(card, {
+
+    // ==== FIX: Clone card ke container off-screen ====
+    const clone = card.cloneNode(true);
+    // Hapus tombol yang ada data-html2canvas-ignore dari clone
+    clone.querySelectorAll('[data-html2canvas-ignore="true"]').forEach(el => el.remove());
+
+    tempContainer = document.createElement('div');
+    tempContainer.style.cssText = 'position:fixed;left:-99999px;top:0;background:#ffffff;padding:0;margin:0;z-index:-1;';
+    tempContainer.appendChild(clone);
+    document.body.appendChild(tempContainer);
+
+    // Lepaskan semua overflow di clone supaya semua kolom kelihatan
+    clone.querySelectorAll('.recap-wrap, .table-container, .chart-scroll').forEach(w => {
+      w.style.overflow = 'visible';
+      w.style.overflowX = 'visible';
+      w.style.overflowY = 'visible';
+      w.style.width = 'auto';
+      w.style.maxWidth = 'none';
+      w.style.display = 'block';
+    });
+
+    // Paksa semua tabel lebar total
+    clone.querySelectorAll('table').forEach(t => {
+      t.style.width = 'auto';
+      t.style.minWidth = '100%';
+      t.style.tableLayout = 'auto';
+    });
+
+    // Paksa clone lebar mengikuti konten
+    clone.style.width = 'max-content';
+    clone.style.maxWidth = 'none';
+
+    // Tunggu render
+    await new Promise(r => setTimeout(r, 200));
+
+    const fullWidth = Math.max(clone.scrollWidth, clone.offsetWidth);
+    const fullHeight = Math.max(clone.scrollHeight, clone.offsetHeight);
+
+    // Set container & clone ke ukuran fix (biar html2canvas tahu batas)
+    tempContainer.style.width = fullWidth + 'px';
+    clone.style.width = fullWidth + 'px';
+
+    await new Promise(r => setTimeout(r, 100));
+
+    const canvas = await html2canvas(clone, {
       backgroundColor: '#ffffff',
       scale: 2,
       useCORS: true,
       logging: false,
-      windowWidth: card.scrollWidth,
-      windowHeight: card.scrollHeight
+      width: fullWidth,
+      height: fullHeight,
+      windowWidth: fullWidth,
+      windowHeight: fullHeight,
+      scrollX: 0,
+      scrollY: 0
     });
+
     const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
     if (!blob) { showToast('Gagal membuat gambar', 'error'); return; }
+
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = filename;
@@ -729,10 +780,15 @@ async function captureCardAsImage(cardId, filename, showToastWhenDone) {
     link.click();
     document.body.removeChild(link);
     setTimeout(() => URL.revokeObjectURL(link.href), 4000);
+
     if (showToastWhenDone) showToast('📸 Screenshot tersimpan');
   } catch (err) {
     console.error(err);
     showToast('Screenshot gagal: ' + err.message, 'error');
+  } finally {
+    if (tempContainer && tempContainer.parentNode) {
+      tempContainer.parentNode.removeChild(tempContainer);
+    }
   }
 }
 
