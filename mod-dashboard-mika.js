@@ -60,47 +60,90 @@ function setMikaBulanIni() {
 function computeMikaTimeline() {
   const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]')
     .filter(e => e && e.tgl && Array.isArray(e.items))
-    .sort((a, b) => a.tgl.localeCompare(b.tgl) || (String(a.id).localeCompare(String(b.id))));
+    .sort((a, b) => a.tgl.localeCompare(b.tgl) || String(a.id).localeCompare(String(b.id)));
+
   const names = masterJenisKemasan.map(m => m.name);
-  const st = { gudang: {}, proc: {}, layer: 0, sleeve: 0, stiker: 0, netfoam: 0 };
+  const st = {
+    gudang: {}, proc: {},
+    layer: { gudang: 0, proc: 0 },
+    sleeve: { gudang: 0, proc: 0 },
+    stiker: { gudang: 0, proc: 0 },
+    netfoam: { ball: 0, proc: 0 }
+  };
   names.forEach(n => { st.gudang[n] = 0; st.proc[n] = 0; });
+
   const byDate = new Map();
   db.forEach(e => { if (!byDate.has(e.tgl)) byDate.set(e.tgl, []); byDate.get(e.tgl).push(e); });
   const snaps = [];
+
   byDate.forEach((entries, tgl) => {
     let keluar = 0, reject = 0;
     const rejectBy = {};
     names.forEach(n => { rejectBy[n] = 0; });
+
     entries.forEach(entry => {
       entry.items.forEach(it => {
         if (!(it.name in st.proc)) return;
+        // Mika
         st.gudang[it.name] += (it.masuk || 0) - (it.bongkarDus || 0);
         const out = (it.kirim || 0) + (it.tamu || 0);
         const rej = rejMika(it);
         const opnameVal = (typeof it.processingOpname === 'number' && !isNaN(it.processingOpname))
           ? it.processingOpname : null;
-        if (opnameVal !== null) {
-          st.proc[it.name] = opnameVal;
-        } else {
-          st.proc[it.name] += (it.aktualPcs || 0) - out - rej;
-        }
+        if (opnameVal !== null) st.proc[it.name] = opnameVal;
+        else st.proc[it.name] += (it.aktualPcs || 0) - out - rej;
         keluar += out; reject += rej; rejectBy[it.name] += rej;
-        st.layer   += (it.layerSiap || 0)   - (it.layerPakai || 0);
-        st.sleeve  += (it.sleeveSiap || 0)  - (it.sleevePakai || 0);
-        st.stiker  += (it.stikerMasuk || 0) - (it.stikerPakai || 0);
-        st.netfoam += (it.netfoamPotong || 0) - (it.netfoamTerpakai || 0);
-      });
-      entry.items.forEach(it => {
-        ['layer', 'sleeve', 'stiker', 'netfoam'].forEach(k => {
-          const o = opnameVal(it[k + 'Opname']);
-          if (o !== null) st[k] = o;
-        });
+
+        // Aksesoris
+        if (it.name === 'Hatsu') {
+          // Netfoam
+          const nMasukBall = it.netfoamMasukBall || 0;
+          const nPotongBall = it.netfoamPotongBall || 0;
+          const nAktualPcs = (it.netfoamAktualPcs != null) ? it.netfoamAktualPcs : (it.netfoamPotong || 0);
+          const nPakai = (it.netfoamPakai != null) ? it.netfoamPakai : (it.netfoamTerpakai || 0);
+          const nOpname = (typeof it.netfoamOpname === 'number') ? it.netfoamOpname : null;
+          st.netfoam.ball += nMasukBall - nPotongBall;
+          if (nOpname !== null) st.netfoam.proc = nOpname;
+          else st.netfoam.proc += nAktualPcs - nPakai;
+
+          // Stiker
+          const sMasukLembar = (it.stikerMasukLembar != null) ? it.stikerMasukLembar : (it.stikerMasuk || 0);
+          const sBongkarLembar = it.stikerBongkarLembar || 0;
+          const sAktualPcs = (it.stikerAktualPcs != null) ? it.stikerAktualPcs : (sBongkarLembar * AKS_KONVERSI.stiker);
+          const sPakai = it.stikerPakai || 0;
+          const sOpname = (typeof it.stikerOpname === 'number') ? it.stikerOpname : null;
+          st.stiker.gudang += sMasukLembar - sBongkarLembar;
+          if (sOpname !== null) st.stiker.proc = sOpname;
+          else if (sBongkarLembar > 0) st.stiker.proc += sAktualPcs - sPakai;
+        }
+        if (it.name === 'Grade A') {
+          const lMasukDus = it.layerMasukDus || 0;
+          const lBongkarDus = it.layerBongkarDus || 0;
+          const lAktualPcs = (it.layerAktualPcs != null) ? it.layerAktualPcs : (it.layerSiap || 0);
+          const lPakai = it.layerPakai || 0;
+          const lOpname = (typeof it.layerOpname === 'number') ? it.layerOpname : null;
+          st.layer.gudang += lMasukDus - lBongkarDus;
+          if (lOpname !== null) st.layer.proc = lOpname;
+          else st.layer.proc += lAktualPcs - lPakai;
+        }
+        if (it.name === 'Grade B') {
+          const slMasukDus = it.sleeveMasukDus || 0;
+          const slBongkarDus = it.sleeveBongkarDus || 0;
+          const slAktualPcs = (it.sleeveAktualPcs != null) ? it.sleeveAktualPcs : (it.sleeveSiap || 0);
+          const slPakai = it.sleevePakai || 0;
+          const slOpname = (typeof it.sleeveOpname === 'number') ? it.sleeveOpname : null;
+          st.sleeve.gudang += slMasukDus - slBongkarDus;
+          if (slOpname !== null) st.sleeve.proc = slOpname;
+          else st.sleeve.proc += slAktualPcs - slPakai;
+        }
       });
     });
+
     snaps.push({
       tgl, keluar, reject, rejectBy,
       proc: { ...st.proc }, gudang: { ...st.gudang },
-      layer: st.layer, sleeve: st.sleeve, stiker: st.stiker, netfoam: st.netfoam
+      layer: { ...st.layer }, sleeve: { ...st.sleeve },
+      stiker: { ...st.stiker }, netfoam: { ...st.netfoam }
     });
   });
   return snaps;
@@ -148,13 +191,13 @@ function renderMikaDashboard() {
   } else {
     titleEl.textContent = `📋 Stok Kemasan per ${latest.tgl}`;
     const items = [
-      { label: 'Hatsu',  val: latest.proc['Hatsu'],   cls: 'blue',   meta: `Gudang ${fmt(Math.max(0, latest.gudang['Hatsu']))} dus · Reject hari itu ${fmt(latest.rejectBy['Hatsu'])}` },
-      { label: 'Hy 11 (Grade A)', val: latest.proc['Grade A'], cls: 'green',  meta: `Gudang ${fmt(Math.max(0, latest.gudang['Grade A']))} dus · Reject hari itu ${fmt(latest.rejectBy['Grade A'])}` },
-      { label: 'Hy 15 (Grade B)', val: latest.proc['Grade B'], cls: 'orange', meta: `Gudang ${fmt(Math.max(0, latest.gudang['Grade B']))} dus · Reject hari itu ${fmt(latest.rejectBy['Grade B'])}` },
-      { label: 'Layer',  val: latest.layer,   cls: 'purple', meta: 'Pcs · untuk Grade A' },
-      { label: 'Sleeve', val: latest.sleeve,  cls: 'orange', meta: 'Pcs · untuk Grade B' },
-      { label: 'Stiker', val: latest.stiker,  cls: 'blue',   meta: 'Pcs' },
-      { label: 'Netfoam', val: latest.netfoam, cls: 'green', meta: 'Pcs potong · untuk Hatsu' }
+      { label: 'Hatsu', val: latest.proc['Hatsu'], cls: 'blue', meta: `Gudang ${fmt(Math.max(0, latest.gudang['Hatsu']))} dus` },
+      { label: 'Hy 11 (Grade A)', val: latest.proc['Grade A'], cls: 'green', meta: `Gudang ${fmt(Math.max(0, latest.gudang['Grade A']))} dus` },
+      { label: 'Hy 15 (Grade B)', val: latest.proc['Grade B'], cls: 'orange', meta: `Gudang ${fmt(Math.max(0, latest.gudang['Grade B']))} dus` },
+      { label: 'Layer', val: latest.layer.proc, cls: 'purple', meta: `Gudang ${fmt(Math.max(0, latest.layer.gudang))} dus` },
+      { label: 'Sleeve', val: latest.sleeve.proc, cls: 'orange', meta: `Gudang ${fmt(Math.max(0, latest.sleeve.gudang))} dus` },
+      { label: 'Stiker', val: latest.stiker.proc, cls: 'blue', meta: `Gudang ${fmt(Math.max(0, latest.stiker.gudang))} lembar` },
+      { label: 'Netfoam', val: latest.netfoam.proc, cls: 'green', meta: `Ball ${fmt(Math.max(0, latest.netfoam.ball))}` }
     ];
     cardsEl.innerHTML = items.map(x => `
       <div class="stat-card ${x.cls}">
@@ -164,7 +207,7 @@ function renderMikaDashboard() {
       </div>`).join('');
     const minus = items.filter(x => x.val < 0).map(x => x.label);
     warnEl.innerHTML = minus.length
-      ? `<div class="warn-box" style="margin-top:0.5rem;">⚠️ Stok minus: <b>${minus.join(', ')}</b>. Cek input harian, atau isi <b>Koreksi Stok Fisik</b> di menu Stok Kemasan.</div>`
+      ? `<div class="warn-box" style="margin-top:0.5rem;">⚠️ Stok minus: <b>${minus.join(', ')}</b>.</div>`
       : '';
   }
 
@@ -180,10 +223,10 @@ function renderMikaDashboard() {
         <td>${cell(x.proc['Grade A'])}</td>
         <td>${cell(x.proc['Grade B'])}</td>
         <td class="col-total">${cell(total)}</td>
-        <td>${cell(x.layer)}</td>
-        <td>${cell(x.sleeve)}</td>
-        <td>${cell(x.stiker)}</td>
-        <td>${cell(x.netfoam)}</td>
+        <td>${cell(x.layer.proc)}</td>
+        <td>${cell(x.sleeve.proc)}</td>
+        <td>${cell(x.stiker.proc)}</td>
+        <td>${cell(x.netfoam.proc)}</td>
         <td>${fmt(Math.max(0, x.gudang['Hatsu']))}</td>
         <td>${fmt(Math.max(0, x.gudang['Grade A']))}</td>
         <td>${fmt(Math.max(0, x.gudang['Grade B']))}</td>
@@ -219,29 +262,13 @@ function renderMikaRejectTamu(period) {
   const rejectEl = document.getElementById('mika-reject-cards');
   if (rejectEl) {
     if (totalReject === 0) {
-      rejectEl.innerHTML = '<div style="color:#16a34a;padding:0.5rem;font-weight:600;">✓ Tidak ada reject pada periode ini</div>';
+      rejectEl.innerHTML = '<div style="color:#16a34a;padding:0.5rem;font-weight:600;">✓ Tidak ada reject</div>';
     } else {
       rejectEl.innerHTML = `
-        <div class="stat-card red">
-          <div class="stat-label">TOTAL REJECT</div>
-          <div class="stat-value">${totalReject.toLocaleString('id-ID')}</div>
-          <div class="stat-meta">Pcs Mika</div>
-        </div>
-        <div class="stat-card blue">
-          <div class="stat-label">Hatsu</div>
-          <div class="stat-value">${reject['Hatsu'].toLocaleString('id-ID')}</div>
-          <div class="stat-meta">Pcs</div>
-        </div>
-        <div class="stat-card green">
-          <div class="stat-label">Grade A (Hy 11)</div>
-          <div class="stat-value">${reject['Grade A'].toLocaleString('id-ID')}</div>
-          <div class="stat-meta">Pcs</div>
-        </div>
-        <div class="stat-card orange">
-          <div class="stat-label">Grade B (Hy 15)</div>
-          <div class="stat-value">${reject['Grade B'].toLocaleString('id-ID')}</div>
-          <div class="stat-meta">Pcs</div>
-        </div>
+        <div class="stat-card red"><div class="stat-label">TOTAL REJECT</div><div class="stat-value">${totalReject.toLocaleString('id-ID')}</div><div class="stat-meta">Pcs</div></div>
+        <div class="stat-card blue"><div class="stat-label">Hatsu</div><div class="stat-value">${reject['Hatsu'].toLocaleString('id-ID')}</div><div class="stat-meta">Pcs</div></div>
+        <div class="stat-card green"><div class="stat-label">Grade A</div><div class="stat-value">${reject['Grade A'].toLocaleString('id-ID')}</div><div class="stat-meta">Pcs</div></div>
+        <div class="stat-card orange"><div class="stat-label">Grade B</div><div class="stat-value">${reject['Grade B'].toLocaleString('id-ID')}</div><div class="stat-meta">Pcs</div></div>
       `;
     }
   }
@@ -265,7 +292,7 @@ function renderMikaRejectTamu(period) {
     });
   });
 
-  const totalTamuPanen   = tamuPanen['Hatsu']   + tamuPanen['Grade A']   + tamuPanen['Grade B'];
+  const totalTamuPanen = tamuPanen['Hatsu'] + tamuPanen['Grade A'] + tamuPanen['Grade B'];
   const totalTamuKemasan = tamuKemasan['Hatsu'] + tamuKemasan['Grade A'] + tamuKemasan['Grade B'];
   const pakaiPanen = totalTamuPanen > 0;
   const tamu = pakaiPanen ? tamuPanen : tamuKemasan;
@@ -275,34 +302,14 @@ function renderMikaRejectTamu(period) {
   const tamuEl = document.getElementById('mika-tamu-cards');
   if (tamuEl) {
     if (totalTamu === 0 && curahKg === 0) {
-      tamuEl.innerHTML = '<div style="color:#999;padding:0.5rem;">Belum ada data tamu pada periode ini</div>';
+      tamuEl.innerHTML = '<div style="color:#999;padding:0.5rem;">Belum ada data tamu</div>';
     } else {
       tamuEl.innerHTML = `
-        <div class="stat-card purple">
-          <div class="stat-label">TOTAL TAMU (PCS)</div>
-          <div class="stat-value">${totalTamu.toLocaleString('id-ID')}</div>
-          <div class="stat-meta">Sumber: ${tamuSource}</div>
-        </div>
-        <div class="stat-card orange">
-          <div class="stat-label">TAMU CURAH</div>
-          <div class="stat-value">${curahKg.toFixed(2)}</div>
-          <div class="stat-meta">Kg · dari Panen</div>
-        </div>
-        <div class="stat-card blue">
-          <div class="stat-label">Hatsu</div>
-          <div class="stat-value">${tamu['Hatsu'].toLocaleString('id-ID')}</div>
-          <div class="stat-meta">Pcs</div>
-        </div>
-        <div class="stat-card green">
-          <div class="stat-label">Grade A (Hy 11)</div>
-          <div class="stat-value">${tamu['Grade A'].toLocaleString('id-ID')}</div>
-          <div class="stat-meta">Pcs</div>
-        </div>
-        <div class="stat-card orange">
-          <div class="stat-label">Grade B (Hy 15)</div>
-          <div class="stat-value">${tamu['Grade B'].toLocaleString('id-ID')}</div>
-          <div class="stat-meta">Pcs</div>
-        </div>
+        <div class="stat-card purple"><div class="stat-label">TOTAL TAMU (PCS)</div><div class="stat-value">${totalTamu.toLocaleString('id-ID')}</div><div class="stat-meta">Sumber: ${tamuSource}</div></div>
+        <div class="stat-card orange"><div class="stat-label">TAMU CURAH</div><div class="stat-value">${curahKg.toFixed(2)}</div><div class="stat-meta">Kg · dari Panen</div></div>
+        <div class="stat-card blue"><div class="stat-label">Hatsu</div><div class="stat-value">${tamu['Hatsu'].toLocaleString('id-ID')}</div><div class="stat-meta">Pcs</div></div>
+        <div class="stat-card green"><div class="stat-label">Grade A</div><div class="stat-value">${tamu['Grade A'].toLocaleString('id-ID')}</div><div class="stat-meta">Pcs</div></div>
+        <div class="stat-card orange"><div class="stat-label">Grade B</div><div class="stat-value">${tamu['Grade B'].toLocaleString('id-ID')}</div><div class="stat-meta">Pcs</div></div>
       `;
     }
   }
@@ -336,36 +343,12 @@ function renderMikaKPI(period) {
   const cardsEl = document.getElementById('mika-kpi-cards');
   if (cardsEl) {
     cardsEl.innerHTML = `
-      <div class="stat-card blue">
-        <div class="stat-label">Total Kemasan Masuk</div>
-        <div class="stat-value">${fmt(sum('masukDus'))}</div>
-        <div class="stat-meta">Dus · semua grade</div>
-      </div>
-      <div class="stat-card orange">
-        <div class="stat-label">Total Dibongkar</div>
-        <div class="stat-value">${fmt(sum('bongkarDus'))}</div>
-        <div class="stat-meta">Dus · ${fmt(sum('pcsBongkar'))} Pcs aktual</div>
-      </div>
-      <div class="stat-card green">
-        <div class="stat-label">Total Kirim Packing</div>
-        <div class="stat-value">${fmt(sum('kirim'))}</div>
-        <div class="stat-meta">Pcs mika</div>
-      </div>
-      <div class="stat-card purple">
-        <div class="stat-label">Total Mika Tamu</div>
-        <div class="stat-value">${fmt(sum('tamu'))}</div>
-        <div class="stat-meta">Pcs mika</div>
-      </div>
-      <div class="stat-card red">
-        <div class="stat-label">Total Reject</div>
-        <div class="stat-value">${fmt(sum('reject'))}</div>
-        <div class="stat-meta">Pcs mika</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Hari Transaksi</div>
-        <div class="stat-value">${db.length}</div>
-        <div class="stat-meta">Hari dengan data</div>
-      </div>
+      <div class="stat-card blue"><div class="stat-label">Total Kemasan Masuk</div><div class="stat-value">${fmt(sum('masukDus'))}</div><div class="stat-meta">Dus</div></div>
+      <div class="stat-card orange"><div class="stat-label">Total Dibongkar</div><div class="stat-value">${fmt(sum('bongkarDus'))}</div><div class="stat-meta">Dus · ${fmt(sum('pcsBongkar'))} Pcs</div></div>
+      <div class="stat-card green"><div class="stat-label">Total Kirim Packing</div><div class="stat-value">${fmt(sum('kirim'))}</div><div class="stat-meta">Pcs</div></div>
+      <div class="stat-card purple"><div class="stat-label">Total Mika Tamu</div><div class="stat-value">${fmt(sum('tamu'))}</div><div class="stat-meta">Pcs</div></div>
+      <div class="stat-card red"><div class="stat-label">Total Reject</div><div class="stat-value">${fmt(sum('reject'))}</div><div class="stat-meta">Pcs</div></div>
+      <div class="stat-card"><div class="stat-label">Hari Transaksi</div><div class="stat-value">${db.length}</div><div class="stat-meta">Hari</div></div>
     `;
   }
 
@@ -398,7 +381,7 @@ function renderMikaKPI(period) {
   tbody.innerHTML = rowsHtml + totalRow;
 }
 
-// ========== REKAP BULANAN (STOCK OPNAME) — ikut Filter Periode ==========
+// ========== REKAP BULANAN (STOCK OPNAME) ==========
 function renderMikaMonthly(period) {
   renderMikaMonthlyUsage(period);
   renderMikaMonthlySelisih(period);
@@ -410,9 +393,7 @@ function renderMikaMonthlyUsage(period) {
     .sort((a, b) => a.tgl.localeCompare(b.tgl));
 
   const running = {};
-  masterJenisKemasan.forEach(m => {
-    running[m.name] = { gudangDus: 0, processing: 0, rejTotal: 0 };
-  });
+  masterJenisKemasan.forEach(m => { running[m.name] = { gudangDus: 0, processing: 0, rejTotal: 0 }; });
 
   const rows = [];
   db.forEach(entry => {
@@ -431,11 +412,8 @@ function renderMikaMonthlyUsage(period) {
       r.gudangDus += masukDus - bongkarDus;
       const opnameVal = (typeof it.processingOpname === 'number' && !isNaN(it.processingOpname))
         ? it.processingOpname : null;
-      if (opnameVal !== null) {
-        r.processing = opnameVal;
-      } else {
-        r.processing += pcsBongkar - kirim - tamu - rejHari;
-      }
+      if (opnameVal !== null) r.processing = opnameVal;
+      else r.processing += pcsBongkar - kirim - tamu - rejHari;
       r.rejTotal += rejHari;
 
       if (entry.tgl >= period.from && entry.tgl <= period.to) {
@@ -541,39 +519,32 @@ function renderMikaMonthlySelisih(period) {
       });
     }
   });
-  if (mBody) mBody.innerHTML = mRows.length ? mRows.join('') : '<tr><td colspan="7" class="text-center" style="color: #999;">Belum ada data selisih pada periode ini</td></tr>';
+  if (mBody) mBody.innerHTML = mRows.length ? mRows.join('') : '<tr><td colspan="7" class="text-center" style="color:#999;">Belum ada data selisih</td></tr>';
   const cardsEl = document.getElementById('mika-monthly-cards');
   if (cardsEl) {
     cardsEl.innerHTML = masterJenisKemasan.map(m => {
       const st = statsPerJenis[m.name];
       const cls = st.sel < 0 ? 'red' : st.sel > 0 ? 'blue' : 'green';
-      return `
-        <div class="stat-card ${cls}">
-          <div class="stat-label">Mika ${m.name}</div>
-          <div class="stat-value" style="font-size: 1.5rem;">${st.sel > 0 ? '+' + st.sel : st.sel} <small style="font-size: 0.8rem;">Pcs Selisih</small></div>
-          <div class="stat-meta">Total Bongkar: ${st.dus} Dus (${st.akt} Pcs)</div>
-        </div>
-      `;
+      return `<div class="stat-card ${cls}">
+        <div class="stat-label">Mika ${m.name}</div>
+        <div class="stat-value" style="font-size:1.5rem;">${st.sel > 0 ? '+' + st.sel : st.sel} <small style="font-size:0.8rem;">Pcs</small></div>
+        <div class="stat-meta">Bongkar: ${st.dus} Dus (${st.akt} Pcs)</div>
+      </div>`;
     }).join('');
   }
 }
 
-// ========== EXPORT CSV STOCK OPNAME (ikut Filter Periode) ==========
+// ========== EXPORT CSV ==========
 function exportMikaCSV() {
   const period = getMikaPeriod();
-  if (!period.from || !period.to) {
-    showToast('Pilih periode dulu!', 'error');
-    return;
-  }
+  if (!period.from || !period.to) { showToast('Pilih periode!', 'error'); return; }
 
   const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]')
     .filter(e => e && e.tgl && Array.isArray(e.items))
     .sort((a, b) => a.tgl.localeCompare(b.tgl));
 
   const running = {};
-  masterJenisKemasan.forEach(m => {
-    running[m.name] = { gudangDus: 0, processing: 0, rejTotal: 0 };
-  });
+  masterJenisKemasan.forEach(m => { running[m.name] = { gudangDus: 0, processing: 0, rejTotal: 0 }; });
 
   const rows = [];
   db.forEach(entry => {
@@ -592,20 +563,15 @@ function exportMikaCSV() {
       r.gudangDus += masukDus - bongkarDus;
       const opnameVal = (typeof it.processingOpname === 'number' && !isNaN(it.processingOpname))
         ? it.processingOpname : null;
-      if (opnameVal !== null) {
-        r.processing = opnameVal;
-      } else {
-        r.processing += pcsBongkar - kirim - tamu - rejHari;
-      }
+      if (opnameVal !== null) r.processing = opnameVal;
+      else r.processing += pcsBongkar - kirim - tamu - rejHari;
       r.rejTotal += rejHari;
 
       if (entry.tgl >= period.from && entry.tgl <= period.to) {
         const totalKeluarHari = kirim + tamu + rejHari;
         const totalStokPcs = Math.max(0, r.processing);
         let ket = it.ketReject || it.ketTamu || '';
-        if (opnameVal !== null) {
-          ket = ket + (ket ? ' | ' : '') + '📝 Koreksi: ' + opnameVal + ' pcs';
-        }
+        if (opnameVal !== null) ket = ket + (ket ? ' | ' : '') + '📝 Koreksi: ' + opnameVal + ' pcs';
         rows.push({
           tgl: entry.tgl, name: it.name, std,
           masukDus, masukPcs: masukDus * std,
@@ -623,34 +589,18 @@ function exportMikaCSV() {
     });
   });
 
-  if (!rows.length) {
-    showToast('Tidak ada data stock opname pada periode ini!', 'error');
-    return;
-  }
+  if (!rows.length) { showToast('Tidak ada data!', 'error'); return; }
 
   const q = v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
   const n = v => Number(v || 0);
 
-  const periodLabel = period.mode === 'single'
-    ? period.from.substring(0, 7)
-    : `${period.from} s.d. ${period.to}`;
+  const periodLabel = period.mode === 'single' ? period.from.substring(0, 7) : `${period.from} s.d. ${period.to}`;
 
   let csv = '';
   csv += 'STOCK OPNAME KEMASAN MIKA - ' + periodLabel + '\n';
   csv += 'PT. Agri Wangi Berry - Processing\n';
   csv += 'Periode: ' + period.label + '\n\n';
-
-  csv += [
-    'Tanggal', 'Jenis Kemasan',
-    'Masuk Dus', 'Masuk Pcs',
-    'Stok Gudang Dus', 'Stok Gudang Pcs',
-    'Bongkar Dus', 'Pcs Bongkar', 'Ruang Prosesing Pcs',
-    'Total Keluar',
-    'Kirim', 'Mika Tamu',
-    'Reject Hari Ini', 'Reject Total',
-    'Total Stok Dus', 'Total Stok Pcs',
-    'Keterangan'
-  ].join(',') + '\n';
+  csv += ['Tanggal','Jenis Kemasan','Masuk Dus','Masuk Pcs','Stok Gudang Dus','Stok Gudang Pcs','Bongkar Dus','Pcs Bongkar','Ruang Prosesing Pcs','Total Keluar','Kirim','Mika Tamu','Reject Hari Ini','Reject Total','Total Stok Dus','Total Stok Pcs','Keterangan'].join(',') + '\n';
 
   rows.forEach(r => {
     const [y, m, d] = r.tgl.split('-');
@@ -670,17 +620,7 @@ function exportMikaCSV() {
 
   const sum = k => rows.reduce((a, r) => a + (r[k] || 0), 0);
   csv += '\n';
-  csv += [
-    q('TOTAL'), q(''),
-    n(sum('masukDus')), n(sum('masukPcs')),
-    q(''), q(''),
-    n(sum('bongkarDus')), n(sum('pcsBongkar')), q(''),
-    n(sum('totalKeluar')),
-    n(sum('kirim')), n(sum('tamu')),
-    n(sum('rejHari')), q(''),
-    q(''), n(sum('totalStokPcs')),
-    q('')
-  ].join(',') + '\n';
+  csv += [q('TOTAL'), q(''), n(sum('masukDus')), n(sum('masukPcs')), q(''), q(''), n(sum('bongkarDus')), n(sum('pcsBongkar')), q(''), n(sum('totalKeluar')), n(sum('kirim')), n(sum('tamu')), n(sum('rejHari')), q(''), q(''), n(sum('totalStokPcs')), q('')].join(',') + '\n';
 
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
@@ -690,115 +630,5 @@ function exportMikaCSV() {
   link.click();
   document.body.removeChild(link);
   setTimeout(() => URL.revokeObjectURL(link.href), 3000);
-
-  showToast(`📥 Download Stock Opname ${period.label} (${rows.length} baris)`);
-}
-
-// ========== SCREENSHOT FUNCTIONS ==========
-async function loadHtml2Canvas() {
-  if (window.html2canvas) return;
-  await new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-    s.onload = resolve;
-    s.onerror = () => reject(new Error('Gagal load html2canvas'));
-    document.head.appendChild(s);
-  });
-}
-
-async function captureCardAsImage(cardId, filename, showToastWhenDone) {
-  const card = document.getElementById(cardId);
-  if (!card) { showToast('Elemen tidak ditemukan', 'error'); return; }
-  let tempContainer = null;
-  try {
-    showToast('📸 Membuat gambar...');
-    await loadHtml2Canvas();
-
-    // ==== FIX: Clone card ke container off-screen ====
-    const clone = card.cloneNode(true);
-    // Hapus tombol yang ada data-html2canvas-ignore dari clone
-    clone.querySelectorAll('[data-html2canvas-ignore="true"]').forEach(el => el.remove());
-
-    tempContainer = document.createElement('div');
-    tempContainer.style.cssText = 'position:fixed;left:-99999px;top:0;background:#ffffff;padding:0;margin:0;z-index:-1;';
-    tempContainer.appendChild(clone);
-    document.body.appendChild(tempContainer);
-
-    // Lepaskan semua overflow di clone supaya semua kolom kelihatan
-    clone.querySelectorAll('.recap-wrap, .table-container, .chart-scroll').forEach(w => {
-      w.style.overflow = 'visible';
-      w.style.overflowX = 'visible';
-      w.style.overflowY = 'visible';
-      w.style.width = 'auto';
-      w.style.maxWidth = 'none';
-      w.style.display = 'block';
-    });
-
-    // Paksa semua tabel lebar total
-    clone.querySelectorAll('table').forEach(t => {
-      t.style.width = 'auto';
-      t.style.minWidth = '100%';
-      t.style.tableLayout = 'auto';
-    });
-
-    // Paksa clone lebar mengikuti konten
-    clone.style.width = 'max-content';
-    clone.style.maxWidth = 'none';
-
-    // Tunggu render
-    await new Promise(r => setTimeout(r, 200));
-
-    const fullWidth = Math.max(clone.scrollWidth, clone.offsetWidth);
-    const fullHeight = Math.max(clone.scrollHeight, clone.offsetHeight);
-
-    // Set container & clone ke ukuran fix (biar html2canvas tahu batas)
-    tempContainer.style.width = fullWidth + 'px';
-    clone.style.width = fullWidth + 'px';
-
-    await new Promise(r => setTimeout(r, 100));
-
-    const canvas = await html2canvas(clone, {
-      backgroundColor: '#ffffff',
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      width: fullWidth,
-      height: fullHeight,
-      windowWidth: fullWidth,
-      windowHeight: fullHeight,
-      scrollX: 0,
-      scrollY: 0
-    });
-
-    const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-    if (!blob) { showToast('Gagal membuat gambar', 'error'); return; }
-
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(link.href), 4000);
-
-    if (showToastWhenDone) showToast('📸 Screenshot tersimpan');
-  } catch (err) {
-    console.error(err);
-    showToast('Screenshot gagal: ' + err.message, 'error');
-  } finally {
-    if (tempContainer && tempContainer.parentNode) {
-      tempContainer.parentNode.removeChild(tempContainer);
-    }
-  }
-}
-
-function downloadMikaDailyImage() {
-  const today = new Date().toISOString().substring(0, 10);
-  captureCardAsImage('mika-daily-card', `Stok_Harian_Mika_${today}.png`, true);
-}
-
-function downloadMikaMonthlyImage() {
-  const period = getMikaPeriod();
-  const filename = `Rekap_Penggunaan_Mika_${period.from}_to_${period.to}.png`;
-  captureCardAsImage('mika-monthly-usage-card', filename, true);
+  showToast(`📥 Download (${rows.length} baris)`);
 }
