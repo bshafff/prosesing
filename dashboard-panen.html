@@ -67,8 +67,11 @@
     <div id="chart-reject"></div>
   </div>
 
-  <div class="card">
+  <div class="card" id="panen-recap-harian-card">
     <div class="card-title">📋 Rekap Harian Panen, Reject & Pengiriman</div>
+    <div style="margin-bottom:0.75rem;" data-html2canvas-ignore="true">
+      <button type="button" class="btn btn-primary btn-sm" onclick="downloadRecapHarianImage()">📸 Screenshot</button>
+    </div>
     <div class="recap-wrap">
       <table class="recap-table">
         <thead>
@@ -114,10 +117,10 @@
     </div>
   </div>
 
-  <div class="card" style="margin-top:1.5rem;">
+  <div class="card" id="panen-bulan-compare-card" style="margin-top:1.5rem;">
     <div class="card-title">📊 Rekap Perbandingan Bulanan</div>
 
-    <div class="row-3" style="align-items:flex-end;">
+    <div class="row-3" style="align-items:flex-end;" data-html2canvas-ignore="true">
       <div class="input-group" style="margin-bottom:0;">
         <label>Mode</label>
         <select id="bulan-compare-mode" onchange="onBulanCompareModeChange()">
@@ -136,6 +139,10 @@
     </div>
 
     <div class="info-box" style="margin-top:1rem;" id="bulan-compare-info">-</div>
+
+    <div style="margin-bottom:0.75rem;" data-html2canvas-ignore="true">
+      <button type="button" class="btn btn-primary btn-sm" onclick="downloadBulanCompareImage()">📸 Screenshot</button>
+    </div>
 
     <div class="recap-wrap" style="margin-top:1rem;">
       <table class="recap-table" style="min-width:1400px;">
