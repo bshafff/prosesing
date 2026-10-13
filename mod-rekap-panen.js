@@ -28,6 +28,140 @@ function hitungAllPanen() {
   document.getElementById('calc-total-mika').textContent = totalMika + ' Pcs';
 }
 
+// ========== FORMAT WA ==========
+function formatTanggalPanjang(ymd) {
+  if (!ymd) return '-';
+  const bulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const parts = ymd.split('-');
+  if (parts.length !== 3) return ymd;
+  return `${parseInt(parts[2], 10)} ${bulan[parseInt(parts[1], 10) - 1]} ${parts[0]}`;
+}
+
+function fmtKg(n) {
+  const v = parseFloat(n) || 0;
+  return v.toFixed(2).replace('.', ',');
+}
+
+function fmtInt(n) {
+  return String(parseInt(n, 10) || 0);
+}
+
+function generateWAText() {
+  const tgl = document.getElementById('panen-tgl').value;
+  const tglFmt = formatTanggalPanjang(tgl);
+
+  // === Data Panen ===
+  const p_hatsu = getValP('p-hatsu');
+  const p_gradea = getValP('p-gradea');
+  const p_gradeb = getValP('p-gradeb');
+  const totalGradePanen = p_hatsu + p_gradea + p_gradeb;
+
+  // === Reject Kebun ===
+  const rk_crack = getValP('rk-crack');
+  const rk_poli = getValP('rk-poli');
+  const rk_hpt = getValP('rk-hpt');
+  const rkTotal = rk_crack + rk_poli + rk_hpt;
+  const totalPanen = totalGradePanen + rkTotal;
+
+  // === Pengiriman ===
+  const k_hatsu = getValP('k-hatsu');
+  const k_a11 = getValP('k-a11');
+  const k_a15 = getValP('k-a15');
+  const k_frozen = getValP('k-frozen');
+  const totalGradeKirim = k_hatsu + k_a11 + k_a15;
+  const totalKirim = totalGradeKirim + k_frozen;
+
+  // === Pack ===
+  const m_hatsu = parseInt(document.getElementById('m-hatsu').value || 0, 10);
+  const m_a11 = parseInt(document.getElementById('m-a11').value || 0, 10);
+  const m_a15 = parseInt(document.getElementById('m-a15').value || 0, 10);
+  const totalPack = m_hatsu + m_a11 + m_a15;
+
+  // === Reject Processing ===
+  const rp_crack = getValP('rp-crack');
+  const rp_poli = getValP('rp-poli');
+  const rp_hpt = getValP('rp-hpt');
+  const rp_bruise = getValP('rp-bruise');
+  const rp_overripe = getValP('rp-overripe');
+  const rp_kuning = getValP('rp-kuning');
+  const rp_frozen = getValP('rp-frozen');
+  const rpTotal = rp_crack + rp_poli + rp_hpt + rp_bruise + rp_overripe + rp_kuning + rp_frozen;
+
+  // === Build text ===
+  let t = '';
+  t += `*Data Panen*\n*${tglFmt}*\n\n`;
+  t += `Hatsuhana : ${fmtKg(p_hatsu)} kg\n`;
+  t += `Grade A : ${fmtKg(p_gradea)} kg\n`;
+  t += `Grade B : ${fmtKg(p_gradeb)} kg\n`;
+  t += `*Total Grade* : ${fmtKg(totalGradePanen)} kg\n\n`;
+  t += `Reject : ${fmtKg(rkTotal)} kg\n`;
+  t += `*Total Panen* : ${fmtKg(totalPanen)} kg\n\n`;
+
+  t += `*Data Pengiriman*\n*${tglFmt}*\n\n`;
+  t += `*Berat*\n`;
+  t += `Hatsuhana : ${fmtKg(k_hatsu)} kg\n`;
+  t += `Grade A : ${fmtKg(k_a11)} kg\n`;
+  t += `Grade B : ${fmtKg(k_a15)} kg\n`;
+  t += `*Total Grade* : ${fmtKg(totalGradeKirim)} kg\n\n`;
+  t += `Frozen : ${fmtKg(k_frozen)} kg\n`;
+  t += `*Total Kirim* : ${fmtKg(totalKirim)} kg\n\n`;
+
+  t += `*Pack*\n`;
+  t += `Hatsuhana : ${fmtInt(m_hatsu)}\n`;
+  t += `Grade A : ${fmtInt(m_a11)}\n`;
+  t += `Grade B : ${fmtInt(m_a15)}\n`;
+  t += `*Total Pack*: ${fmtInt(totalPack)}\n\n`;
+
+  t += `*Data Reject Harian*\n*${tglFmt}*\n\n`;
+  t += `Cracking : ${fmtKg(rp_crack)} kg\n`;
+  t += `Polinasi : ${fmtKg(rp_poli)} kg\n`;
+  t += `HPT : ${fmtKg(rp_hpt)} kg\n`;
+  t += `Bruise : ${fmtKg(rp_bruise)} kg\n`;
+  t += `Overripe : ${fmtKg(rp_overripe)} kg\n`;
+  t += `Buah Kuning (<80%) : ${fmtKg(rp_kuning)} kg\n`;
+  t += `Frozen (<11 gr) : ${fmtKg(rp_frozen)} kg\n\n`;
+  t += `*Total Reject* : ${fmtKg(rpTotal)} kg`;
+
+  return t;
+}
+
+function openWAModal() {
+  const tgl = document.getElementById('panen-tgl').value;
+  if (!tgl) { showToast('Isi tanggal panen dulu!', 'error'); return; }
+
+  const text = generateWAText();
+  const ta = document.getElementById('wa-text-preview');
+  if (ta) ta.value = text;
+
+  document.getElementById('modal-wa').classList.add('show');
+}
+
+function closeWAModal() {
+  document.getElementById('modal-wa').classList.remove('show');
+}
+
+async function copyWAText() {
+  const ta = document.getElementById('wa-text-preview');
+  if (!ta) return;
+  const text = ta.value;
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('✅ Tersalin! Buka WA & paste.');
+  } catch (err) {
+    ta.removeAttribute('readonly');
+    ta.select();
+    ta.setSelectionRange(0, 99999);
+    try {
+      document.execCommand('copy');
+      showToast('✅ Tersalin! Buka WA & paste.');
+    } catch (e2) {
+      showToast('Gagal copy, silakan select manual lalu Ctrl+C', 'error');
+    }
+    ta.setAttribute('readonly', 'readonly');
+  }
+}
+
+// ========== SIMPAN ==========
 function simpanDataPanen() {
   const tgl = document.getElementById('panen-tgl').value;
   if (!tgl) { showToast('Pilih tanggal panen terlebih dahulu!', 'error'); return; }
@@ -80,7 +214,7 @@ function renderTablePanen() {
   if (!tbody) return;
 
   const db = filterGh(JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]'), histEl ? histEl.value : 'all');
-  
+
   if (db.length === 0) {
     tbody.innerHTML = '<tr><td colspan="11" class="text-center" style="color: #999;">Belum ada data</td></tr>';
     if (paginationEl) paginationEl.innerHTML = '';
@@ -127,13 +261,13 @@ function renderTablePanen() {
   if (paginationEl) {
     const from = startIdx + 1;
     const to = Math.min(startIdx + PANEN_PER_PAGE, db.length);
-    
+
     let pageBtns = '';
     const maxShow = 5;
     let startPage = Math.max(1, panenCurrentPage - Math.floor(maxShow / 2));
     let endPage = Math.min(totalPages, startPage + maxShow - 1);
     if (endPage - startPage + 1 < maxShow) startPage = Math.max(1, endPage - maxShow + 1);
-    
+
     if (startPage > 1) {
       pageBtns += `<button class="btn btn-sm btn-secondary" onclick="panenGoToPage(1)">«</button>`;
     }
@@ -150,7 +284,7 @@ function renderTablePanen() {
     if (endPage < totalPages) {
       pageBtns += `<button class="btn btn-sm btn-secondary" onclick="panenGoToPage(${totalPages})">»</button>`;
     }
-    
+
     paginationEl.innerHTML = `
       <div style="font-size:0.85rem;color:#666;">
         Menampilkan <b>${from}</b>–<b>${to}</b> dari <b>${db.length}</b> data
