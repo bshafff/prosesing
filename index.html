@@ -118,32 +118,67 @@
       transform: none;
       box-shadow: none;
     }
-    #welcome-screen .w-features {
+
+    /* ===== Jargon Box ===== */
+    #welcome-screen .w-jargon {
       margin-top: 1.75rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid #e5e7eb;
-      text-align: left;
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
+      padding: 1.5rem 1.25rem;
+      position: relative;
+      background: linear-gradient(135deg, #fef9ec 0%, #f5f7f4 100%);
+      border: 2px solid #b8893b;
+      border-radius: 12px;
+      text-align: center;
     }
-    #welcome-screen .w-feature {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      font-size: 0.875rem;
-      color: #444;
+    #welcome-screen .w-jargon::before,
+    #welcome-screen .w-jargon::after {
+      content: '"';
+      position: absolute;
+      font-family: Georgia, serif;
+      font-size: 3rem;
+      color: #b8893b;
+      line-height: 1;
+      opacity: 0.4;
     }
-    #welcome-screen .w-feature-icon {
-      font-size: 1.25rem;
-      flex: none;
+    #welcome-screen .w-jargon::before {
+      top: 0.5rem;
+      left: 0.75rem;
     }
+    #welcome-screen .w-jargon::after {
+      content: '"';
+      bottom: -0.5rem;
+      right: 0.75rem;
+    }
+    #welcome-screen .w-jargon-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #b8893b;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+    #welcome-screen .w-jargon-text {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-style: italic;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #2d5016;
+      line-height: 1.5;
+      letter-spacing: 0.3px;
+    }
+    #welcome-screen .w-jargon-text span {
+      display: block;
+      margin-top: 0.35rem;
+      font-size: 1.15rem;
+      color: #8f1d21;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
     #welcome-screen .w-foot {
       margin-top: 1.5rem;
       font-size: 0.75rem;
       color: #999;
     }
-    .app-container-hidden { display: none !important; }
   </style>
 </head>
 <body>
@@ -163,18 +198,11 @@
 
     <button id="welcome-btn" class="w-btn" onclick="welcomeConnect()">🔗 Sambung &amp; Mulai</button>
 
-    <div class="w-features">
-      <div class="w-feature">
-        <span class="w-feature-icon">📱</span>
-        <span>Tanpa daftar — langsung pakai</span>
-      </div>
-      <div class="w-feature">
-        <span class="w-feature-icon">☁️</span>
-        <span>Sinkron otomatis ke Google Sheet</span>
-      </div>
-      <div class="w-feature">
-        <span class="w-feature-icon">📶</span>
-        <span>Bisa dipakai offline — data aman</span>
+    <div class="w-jargon">
+      <div class="w-jargon-label">Our Philosophy</div>
+      <div class="w-jargon-text">
+        Agri Wangi Berry
+        <span>Together, Grow and Goes</span>
       </div>
     </div>
   </div>
