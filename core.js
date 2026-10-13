@@ -3,15 +3,14 @@ const LKS_STORAGE_KEY = 'lks_awb_v1';
 const PANEN_STORAGE_KEY = 'panen_awb_v1';
 const KEMASAN_STORAGE_KEY = 'kemasan_awb_v1';
 
-// ========== KONFIGURASI AUTO-CONNECT ==========
-// GANTI BARIS DI BAWAH dengan URL Web App Apps Script kamu (yang diakhiri /exec)
+// ========== KONFIGURASI ==========
 const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyIDEcwqyXqyfB6cuJGer5bcphJ4bCWDBRAMBd432Nalz_uXEMWwphLNduxkKgDOtZq_A/exec';
-
-// ========== VERSION / AUTO-UPDATE ==========
 const APP_VERSION_KEY = 'awb_app_version_v1';
+const WELCOMED_KEY = 'awb_welcomed_v1';
+
 let currentRemoteVersion = null;
 
-// ========== HELPER: ID GENERATOR ==========
+// ========== ID GENERATOR ==========
 let __idCounter = 0;
 function generateId() {
   __idCounter = (__idCounter + 1) % 1000;
@@ -91,7 +90,88 @@ function rejMika(it) {
 
 function opnameVal(v) { return (typeof v === 'number' && !isNaN(v)) ? v : null; }
 
-// ========== OFFLINE + SHEETS SYNC ==========
+// ========== WELCOME / ONBOARDING ==========
+function isWelcomed() {
+  return localStorage.getItem(WELCOMED_KEY) === '1';
+}
+
+function showWelcomeScreen() {
+  const ws = document.getElementById('welcome-screen');
+  const hd = document.getElementById('app-header');
+  const app = document.getElementById('app-container');
+  if (ws) ws.classList.add('show');
+  if (hd) hd.style.display = 'none';
+  if (app) app.style.display = 'none';
+}
+
+function showAppScreen() {
+  const ws = document.getElementById('welcome-screen');
+  const hd = document.getElementById('app-header');
+  const app = document.getElementById('app-container');
+  if (ws) ws.classList.remove('show');
+  if (hd) hd.style.display = '';
+  if (app) app.style.display = '';
+}
+
+async function welcomeConnect() {
+  const btn = document.getElementById('welcome-btn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '⏳ Menyambungkan...';
+  }
+
+  // Set flag welcommed
+  localStorage.setItem(WELCOMED_KEY, '1');
+
+  // Auto-set default URL
+  if (DEFAULT_SCRIPT_URL && DEFAULT_SCRIPT_URL.indexOf('/exec') > 0) {
+    scriptUrl = DEFAULT_SCRIPT_URL;
+    isAuthenticated = true;
+    localStorage.setItem('awb_sync_auth', '1');
+  }
+
+  // Tampilkan app (dashboard)
+  showAppScreen();
+  updateSyncStatus('syncing');
+
+  // Load data & sync
+  setTimeout(async () => {
+    try {
+      if (isAuthenticated && currentScriptUrl()) {
+        // Kalau lokal kosong → pull dari Sheet
+        const totalLocal =
+          readArrayRaw(nativeStorage.getItem(PANEN_STORAGE_KEY)).length +
+          readArrayRaw(nativeStorage.getItem(KEMASAN_STORAGE_KEY)).length +
+          readArrayRaw(nativeStorage.getItem(LKS_STORAGE_KEY)).length;
+
+        if (totalLocal === 0) {
+          showToast('⏳ Memuat data dari Sheet...');
+          await pullFromSheet(true);
+        } else if (getSyncQueue().length > 0) {
+          showToast('⏳ Menyinkronkan perubahan...');
+          await syncQueue(true);
+        } else {
+          showToast('✓ Tersinkron');
+        }
+
+        // Update status jadi "Tersinkron"
+        const st = document.getElementById('sync-status');
+        if (st) {
+          const now = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+          st.className = 'auth-status ok';
+          st.textContent = `✓ Tersinkron — ${now}`;
+        }
+      } else {
+        showToast('Mode offline — data tersimpan lokal');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Gagal sync: ' + err.message, 'error');
+    }
+  }, 300);
+}
+
+// ========== SYNC ==========
 const SYNC_CONFIG = { API_KEY: 'AWB_PROCESSING_2026', VERSION: '1.3.0' };
 
 function getEffectiveUrl() {
@@ -245,7 +325,7 @@ function jsonpRequest(params, timeoutMs = 45000) {
 
 async function syncQueue(manual) {
   if (!isAuthenticated || !currentScriptUrl()) {
-    if (manual) showToast('Tekan "Connect Sheets" dulu.', 'error');
+    if (manual) showToast('Belum terhubung.', 'error');
     return;
   }
   if (syncBusy || !navigator.onLine) {
@@ -255,7 +335,7 @@ async function syncQueue(manual) {
   const initialQueue = getSyncQueue();
   if (!initialQueue.length) {
     updateSyncStatus();
-    if (manual) showToast('Tidak ada perubahan untuk disync');
+    if (manual) showToast('✓ Semua data tersinkron');
     return;
   }
   syncBusy = true;
@@ -286,7 +366,7 @@ async function syncQueue(manual) {
       await new Promise(r => setTimeout(r, 1000));
     }
     updateSyncStatus();
-    if (manual) showToast(`✓ Sinkronisasi selesai (${totalProcessed} data)`);
+    if (manual) showToast(`✓ Tersinkron (${totalProcessed} data)`);
   } catch (err) {
     console.error(err);
     updateSyncStatus('error', err.message);
@@ -296,7 +376,7 @@ async function syncQueue(manual) {
 
 async function pullFromSheet(silent) {
   if (!isAuthenticated || !currentScriptUrl()) {
-    if (!silent) showToast('Tekan "Connect Sheets" dulu.', 'error');
+    if (!silent) showToast('Belum terhubung.', 'error');
     return;
   }
   if (!navigator.onLine) {
@@ -321,7 +401,7 @@ async function pullFromSheet(silent) {
     renderTableLks(); renderTablePanen();
     recalculateStockKemasan(); renderKemasanForms(); renderKemasanTables(); updateDashboard();
     updateSyncStatus();
-    if (silent) console.log('[AUTO] Pull selesai (silent)');
+    if (!silent) showToast('✓ Data dimuat dari Sheet');
   } catch (err) {
     suppressSync = false;
     console.error(err);
@@ -375,22 +455,33 @@ function updateSyncStatus(mode, msg) {
   if (mode === 'error') { st.classList.add('error'); st.textContent = '✗ ' + (msg || 'Sync gagal'); return; }
   if (!authed) { st.textContent = 'Belum terhubung ke Google Sheet'; return; }
   st.classList.add('ok');
-  st.textContent = pending ? `✓ Terhubung — ${pending} perubahan menunggu Sync` : '✓ Terhubung — Sheet sync aktif';
+  if (pending > 0) {
+    st.textContent = `✓ Terhubung — ${pending} perubahan menunggu Sync`;
+  } else {
+    // Tampilkan "Tersinkron" + waktu
+    const lastSync = nativeStorage.getItem(SYNC_LAST_KEY);
+    if (lastSync) {
+      const t = new Date(lastSync).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      st.textContent = `✓ Tersinkron — ${t}`;
+    } else {
+      st.textContent = '✓ Terhubung — Sheet sync aktif';
+    }
+  }
 }
 
 window.addEventListener('online', () => { updateSyncStatus(); if (isAuthenticated) syncQueue(); });
 window.addEventListener('offline', () => updateSyncStatus());
 
-// ========== AUTO BOOT SYNC ==========
+// ========== AUTO BOOT ==========
 function autoBootSync() {
-  // 1) AUTO CONNECT
+  if (!isWelcomed()) return;
+
   if (DEFAULT_SCRIPT_URL && !isAuthenticated) {
     const authSetting = localStorage.getItem('awb_sync_auth');
     if (authSetting !== '0') {
       scriptUrl = DEFAULT_SCRIPT_URL;
       isAuthenticated = true;
       localStorage.setItem('awb_sync_auth', '1');
-      console.log('[AUTO] Connected ke default URL');
     }
   }
 
@@ -399,13 +490,10 @@ function autoBootSync() {
     return;
   }
 
-  // 2) AUTO SYNC — kalau ada queue pending
   if (getSyncQueue().length > 0 && navigator.onLine) {
-    console.log('[AUTO] Queue pending, sync otomatis...');
     syncQueue();
   }
 
-  // 3) AUTO PULL — HANYA kalau lokal kosong (fresh install)
   const totalLocal =
     readArrayRaw(nativeStorage.getItem(PANEN_STORAGE_KEY)).length +
     readArrayRaw(nativeStorage.getItem(KEMASAN_STORAGE_KEY)).length +
@@ -413,21 +501,17 @@ function autoBootSync() {
   const hasPulledBefore = !!nativeStorage.getItem('awb_last_pull_v1');
 
   if (totalLocal === 0 && !hasPulledBefore) {
-    console.log('[AUTO] Fresh install, pull dari Sheet...');
     pullFromSheet(true);
   }
 
-  // 4) AUTO SYNC PERIODIK — tiap 5 menit
   if (!window.__autoSyncInterval) {
     window.__autoSyncInterval = setInterval(() => {
       if (getSyncQueue().length > 0 && navigator.onLine && isAuthenticated && !syncBusy) {
-        console.log('[AUTO] Periodic sync...');
         syncQueue();
       }
     }, 5 * 60 * 1000);
   }
 
-  // 5) AUTO SYNC SAAT TAB AKTIF KEMBALI
   if (!window.__autoSyncVisibilityBound) {
     window.__autoSyncVisibilityBound = true;
     document.addEventListener('visibilitychange', () => {
@@ -436,7 +520,6 @@ function autoBootSync() {
           && navigator.onLine
           && isAuthenticated
           && !syncBusy) {
-        console.log('[AUTO] Tab aktif, sync...');
         syncQueue();
       }
     });
@@ -446,94 +529,119 @@ function autoBootSync() {
 }
 
 // ========== AUTO UPDATE VERSION CHECK ==========
-async function checkVersion(manual) {
+async function checkVersion(silent) {
   try {
     const res = await fetch('./version.json?t=' + Date.now(), { cache: 'no-store' });
-    if (!res.ok) {
-      if (manual) showToast('Gagal cek versi (file version.json tidak ditemukan)', 'error');
-      return;
-    }
+    if (!res.ok) return 'error';
     const remote = await res.json();
     currentRemoteVersion = remote;
     const localVer = localStorage.getItem(APP_VERSION_KEY);
 
-    // Update label versi di header
+    // Update label versi
     const labelEl = document.getElementById('app-version-label');
     if (labelEl) {
       labelEl.textContent = 'v' + (localVer || remote.version || '?') + ' · ' + (remote.released || '');
     }
 
-    // First time opening
+    // Update welcome screen version
+    const wvEl = document.getElementById('welcome-version');
+    if (wvEl) wvEl.textContent = remote.version || '?';
+
     if (!localVer) {
       localStorage.setItem(APP_VERSION_KEY, remote.version);
-      console.log('[VERSION] First time, saved version:', remote.version);
-      return;
+      return 'first';
     }
 
-    // Versi sama → tidak perlu update
     if (localVer === remote.version) {
-      console.log('[VERSION] Up to date:', localVer);
-      if (manual) showToast('✓ Sudah versi terbaru (v' + localVer + ')');
-      return;
+      return 'latest';
     }
 
-    // Versi beda → ada update!
-    console.log('[VERSION] Update available!', localVer, '→', remote.version);
+    // Ada update → tampilkan tombol kuning
     const btn = document.getElementById('updateBtn');
     if (btn) {
-      btn.style.display = 'inline-flex';
-      btn.textContent = '🆕 Update v' + remote.version;
-      btn.title = remote.notes || 'Versi baru tersedia — klik untuk update';
+      btn.classList.add('available');
+      btn.textContent = '🆕 v' + remote.version;
+      btn.title = remote.notes || 'Versi baru tersedia';
     }
-    if (manual) {
-      showToast('🆕 Versi baru tersedia: v' + remote.version);
-    }
+    return remote.version;
   } catch (err) {
     console.warn('[VERSION] Gagal cek version:', err);
-    if (manual) showToast('Gagal cek versi: ' + err.message, 'error');
+    return 'error';
   }
 }
 
-async function forceUpdate() {
-  if (!confirm('Update ke versi terbaru?\n\nHalaman akan dimuat ulang otomatis. Data kamu tidak akan hilang.')) return;
-  showToast('🔄 Memperbarui ke versi terbaru...');
+async function performHardReset(newVersion) {
+  // Save version marker
+  if (newVersion) {
+    localStorage.setItem(APP_VERSION_KEY, newVersion);
+  }
+
+  // Unregister semua service worker
+  if ('serviceWorker' in navigator) {
+    try {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    } catch (e) { console.warn('[UPDATE] SW unregister fail:', e); }
+  }
+
+  // Clear semua cache
+  if ('caches' in window) {
+    try {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    } catch (e) { console.warn('[UPDATE] Cache delete fail:', e); }
+  }
+
+  // Reload
+  setTimeout(() => {
+    window.location.replace(window.location.pathname + '?v=' + Date.now());
+  }, 800);
+}
+
+async function manualUpdate() {
+  const btn = document.getElementById('updateBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '⏳...';
+  }
+
+  showToast('🔄 Memeriksa update...');
 
   try {
-    // 1. Update version marker
-    if (currentRemoteVersion && currentRemoteVersion.version) {
-      localStorage.setItem(APP_VERSION_KEY, currentRemoteVersion.version);
+    const res = await fetch('./version.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('version.json tidak ditemukan');
+    const remote = await res.json();
+    const localVer = localStorage.getItem(APP_VERSION_KEY);
+
+    // First time
+    if (!localVer) {
+      localStorage.setItem(APP_VERSION_KEY, remote.version);
+      showToast('✓ Versi v' + remote.version + ' — memuat ulang...');
+      await performHardReset(remote.version);
+      return;
     }
 
-    // 2. Unregister semua service worker
-    if ('serviceWorker' in navigator) {
-      try {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(regs.map(r => r.unregister()));
-        console.log('[UPDATE] Unregistered', regs.length, 'service worker(s)');
-      } catch (e) { console.warn('[UPDATE] SW unregister fail:', e); }
+    // Ada versi baru
+    if (localVer !== remote.version) {
+      showToast('🆕 Versi baru v' + remote.version + ' — memperbarui...');
+      await performHardReset(remote.version);
+      return;
     }
 
-    // 3. Hapus semua cache storage
-    if ('caches' in window) {
-      try {
-        const keys = await caches.keys();
-        await Promise.all(keys.map(k => caches.delete(k)));
-        console.log('[UPDATE] Deleted', keys.length, 'cache(s)');
-      } catch (e) { console.warn('[UPDATE] Cache delete fail:', e); }
-    }
+    // Sudah versi terbaru — tetap clear cache & reload (biar user yakin fresh)
+    showToast('✓ Sudah versi terbaru (v' + localVer + ') — refresh...');
+    await performHardReset(remote.version);
 
-    // 4. Reload dengan cache-bust
-    setTimeout(() => {
-      const newUrl = window.location.pathname + '?v=' + Date.now();
-      window.location.replace(newUrl);
-    }, 800);
   } catch (err) {
     console.error(err);
-    showToast('Gagal update: ' + err.message, 'error');
+    showToast('Gagal cek update: ' + err.message, 'error');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '🔄 Update';
+    }
   }
 }
 
-// Cek versi otomatis tiap 30 menit
 function startVersionCheckInterval() {
   if (window.__versionCheckInterval) return;
   window.__versionCheckInterval = setInterval(() => {
@@ -606,7 +714,7 @@ function openImportModal(type) {
   const infos = {
     lks: `<b>Format kolom:</b> <code>tanggal, nama, grade, kegiatan, material, jobTambahan, perbantuan, jenisPerbantuan, keterangan</code><br>Multi-kegiatan/material dipisah dengan <b>|</b> (pipe).`,
     panen: `<b>Format kolom:</b> <code>tgl, p_hatsu, p_gradea, p_gradeb, rk_*, rp_*, k_*, m_*, t_*</code><br>1 baris = 1 tanggal. Kolom kosong = 0.`,
-    kemasan: `<b>Kolom utama:</b> <code>tgl, name, masuk, bongkarDus, aktualPcs, kirim, tamu, reject, ketTamu, ketReject</code><br>Kolom tambahan: <code>netfoamBall, netfoamPotong, netfoamTerpakai, layerSiap, layerPakai, sleeveSiap, sleevePakai, stikerMasuk, stikerPakai</code>`
+    kemasan: `<b>Kolom utama:</b> <code>tgl, name, masuk, bongkarDus, aktualPcs, kirim, tamu, reject, ketTamu, ketReject</code>`
   };
   document.getElementById('import-info').innerHTML = infos[type];
   document.getElementById('modal-import').classList.add('show');
@@ -629,8 +737,8 @@ function downloadTemplate() {
     csv += '2026-04-01,Astrin Julianti Kusmawan,Hatsuhana,Packing Grade Hatsuhana|Persiapan Mika,Mika Grade Hatsuhana|Lakban,,,,\n';
     filename = 'template_lks.csv';
   } else if (t === 'kemasan') {
-    csv = 'tgl,name,masuk,bongkarDus,aktualPcs,kirim,tamu,reject,ketTamu,ketReject,netfoamBall,netfoamPotong,netfoamTerpakai,netfoamOpname,layerSiap,layerPakai,layerOpname,sleeveSiap,sleevePakai,sleeveOpname,stikerMasuk,stikerPakai,stikerOpname\n';
-    csv += '2026-04-01,Hatsu,0,5,1000,500,0,0,,,0,1000,500,,,,,,,,900,500,\n';
+    csv = 'tgl,name,masuk,bongkarDus,aktualPcs,kirim,tamu,reject,ketTamu,ketReject\n';
+    csv += '2026-04-01,Hatsu,0,5,1000,500,0,0,,\n';
     filename = 'template_kemasan.csv';
   }
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -763,7 +871,6 @@ function executeImport() {
         if (entry.items.find(x => x.name === nm)) return;
         const bongkar = num(r.bongkarDus);
         const aktual = num(r.aktualPcs);
-        const rejectVal = num(r.reject);
         entry.items.push({
           ...emptyKemasanItem(nm, std),
           masuk: num(r.masuk),
@@ -773,7 +880,7 @@ function executeImport() {
           selisih: aktual - bongkar * std,
           kirim: num(r.kirim),
           tamu: num(r.tamu),
-          reject: rejectVal,
+          reject: num(r.reject),
           processingOpname: numOrNull(r.processingOpname),
           ketTamu: r.ketTamu || '',
           ketReject: r.ketReject || ''
