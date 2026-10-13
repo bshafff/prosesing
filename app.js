@@ -10,42 +10,46 @@ const VIEW_FILES = {
 
 async function loadAllViews() {
   const container = document.getElementById('app-container');
-  if (!container) return;
+  if (!container) {
+    console.error('[VIEW] Container #app-container tidak ditemukan!');
+    return;
+  }
   const entries = Object.entries(VIEW_FILES);
-  try {
-    const texts = await Promise.all(entries.map(([_, f]) =>
-      fetch('./' + f + '?t=' + Date.now(), { cache: 'no-store' }).then(r => {
-        if (!r.ok) throw new Error(`Gagal load ${f}: ${r.status}`);
+  console.log('[VIEW] Loading', entries.length, 'file:', entries.map(e => e[1]).join(', '));
+
+  const results = await Promise.allSettled(entries.map(([_, f]) =>
+    fetch('./' + f, { cache: 'no-store' })
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.text();
       })
-    ));
-    container.innerHTML = texts.join('\n');
-  } catch (err) {
-    console.error(err);
-    container.innerHTML = `<div class="card" style="color:#dc2626;">
-      <b>Gagal memuat tampilan.</b><br>
-      <small>${err.message}</small>
-    </div>`;
-  }
+      .then(t => ({ file: f, text: t }))
+      .catch(e => ({ file: f, error: e.message }))
+  ));
+
+  const texts = results.map(r => {
+    if (r.status === 'fulfilled' && r.value.error) {
+      console.error('[VIEW] Gagal:', r.value.file, r.value.error);
+      return `<div class="card" style="color:#dc2626;padding:1rem;">Gagal load <b>${r.value.file}</b>: ${r.value.error}</div>`;
+    }
+    if (r.status === 'fulfilled') return r.value.text;
+    console.error('[VIEW] Promise rejected:', r.reason);
+    return '';
+  });
+
+  container.innerHTML = texts.join('\n');
+  console.log('[VIEW] Container sekarang punya', container.innerHTML.length, 'karakter');
 }
 
 async function initApp() {
-  // Cek versi dulu (untuk isi label versi di welcome screen)
-  checkVersion(true);
+  console.log('[BOOT] AWB Init');
 
-  // Kalau belum "welcomed", tampil welcome screen aja
-  if (!isWelcomed()) {
-    showWelcomeScreen();
-    return;
-  }
-
-  // Kalau sudah welcomed → langsung load app
-  showAppScreen();
+  // 1. Load semua views dulu (WAJIB jalan pertama)
   await loadAllViews();
 
+  // 2. Set default tanggal
   const today = new Date().toISOString().split('T')[0];
   const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
-
   setVal('lks-tanggal', today);
   setVal('panen-tgl', today);
   setVal('kemasan-tgl', today);
@@ -54,6 +58,7 @@ async function initApp() {
   setVal('mika-bulan', today.substring(0, 7));
   setVal('minggu-bulan', today.substring(0, 7));
 
+  // 3. Init render data
   try { renderTableLks(); } catch (e) { console.warn('renderTableLks:', e); }
   try { renderTablePanen(); } catch (e) { console.warn('renderTablePanen:', e); }
   try { recalculateStockKemasan(); } catch (e) { console.warn('recalculateStockKemasan:', e); }
@@ -61,13 +66,23 @@ async function initApp() {
   try { renderKemasanTables(); } catch (e) { console.warn('renderKemasanTables:', e); }
   try { updateDashboard(); } catch (e) { console.warn('updateDashboard:', e); }
 
+  // 4. Sync & version
   updateSyncStatus();
   migrateExistingLocalData();
-  autoBootSync();
-
-  // Auto-check update tiap 30 menit
+  checkVersion(false);
   startVersionCheckInterval();
 
+  // 5. Tentukan tampilan: welcome atau app
+  if (!isWelcomed()) {
+    console.log('[BOOT] Belum welcomed → tampil welcome screen');
+    showWelcomeScreen();
+  } else {
+    console.log('[BOOT] Sudah welcomed → tampil app');
+    showAppScreen();
+    autoBootSync();
+  }
+
+  // 6. Register SW
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW gagal:', err));
   }
