@@ -12,6 +12,28 @@
 
   <title>Processing - AWB</title>
   <link rel="stylesheet" href="./style.css">
+  <style>
+    /* Tombol Update - hijau kuning mencolok */
+    .btn-update {
+      background: #facc15 !important;
+      color: #422006 !important;
+      border: 2px solid #eab308 !important;
+      font-weight: 800 !important;
+      animation: pulseUpdate 1.5s infinite;
+    }
+    .btn-update:hover {
+      background: #fde047 !important;
+    }
+    @keyframes pulseUpdate {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); }
+      50% { box-shadow: 0 0 0 10px rgba(250, 204, 21, 0); }
+    }
+    .app-version {
+      font-size: 0.65rem;
+      opacity: 0.7;
+      margin-top: 0.25rem;
+    }
+  </style>
 </head>
 <body>
 
@@ -20,7 +42,9 @@
   <h1>Processing AWB</h1>
   <p>PT. Agri Wangi Berry · Ciwidey</p>
   <div id="sync-status" class="auth-status"></div>
+  <div class="app-version" id="app-version-label"></div>
   <div class="header-actions">
+    <button id="updateBtn" class="btn btn-update" style="display:none" onclick="forceUpdate()">🆕 Update</button>
     <button id="pushBtn" class="btn btn-sync" style="display:none" onclick="syncQueue(true)">⬆ Sync</button>
     <button id="pullBtn" class="btn btn-sync" style="display:none" onclick="pullFromSheet()">⬇ Muat</button>
     <button id="authBtn" class="btn btn-primary" onclick="handleAuthClick()">☁️ Connect Sheets</button>
