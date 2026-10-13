@@ -458,7 +458,6 @@ function updateSyncStatus(mode, msg) {
   if (pending > 0) {
     st.textContent = `✓ Terhubung — ${pending} perubahan menunggu Sync`;
   } else {
-    // Tampilkan "Tersinkron" + waktu
     const lastSync = nativeStorage.getItem(SYNC_LAST_KEY);
     if (lastSync) {
       const t = new Date(lastSync).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
@@ -537,13 +536,11 @@ async function checkVersion(silent) {
     currentRemoteVersion = remote;
     const localVer = localStorage.getItem(APP_VERSION_KEY);
 
-    // Update label versi
     const labelEl = document.getElementById('app-version-label');
     if (labelEl) {
       labelEl.textContent = 'v' + (localVer || remote.version || '?') + ' · ' + (remote.released || '');
     }
 
-    // Update welcome screen version
     const wvEl = document.getElementById('welcome-version');
     if (wvEl) wvEl.textContent = remote.version || '?';
 
@@ -571,12 +568,10 @@ async function checkVersion(silent) {
 }
 
 async function performHardReset(newVersion) {
-  // Save version marker
   if (newVersion) {
     localStorage.setItem(APP_VERSION_KEY, newVersion);
   }
 
-  // Unregister semua service worker
   if ('serviceWorker' in navigator) {
     try {
       const regs = await navigator.serviceWorker.getRegistrations();
@@ -584,7 +579,6 @@ async function performHardReset(newVersion) {
     } catch (e) { console.warn('[UPDATE] SW unregister fail:', e); }
   }
 
-  // Clear semua cache
   if ('caches' in window) {
     try {
       const keys = await caches.keys();
@@ -592,7 +586,6 @@ async function performHardReset(newVersion) {
     } catch (e) { console.warn('[UPDATE] Cache delete fail:', e); }
   }
 
-  // Reload
   setTimeout(() => {
     window.location.replace(window.location.pathname + '?v=' + Date.now());
   }, 800);
@@ -613,23 +606,31 @@ async function manualUpdate() {
     const remote = await res.json();
     const localVer = localStorage.getItem(APP_VERSION_KEY);
 
-    // First time
+    // === KASUS 1: Pertama kali cek (belum ada versi tersimpan) ===
     if (!localVer) {
       localStorage.setItem(APP_VERSION_KEY, remote.version);
-      showToast('✓ Versi v' + remote.version + ' — memuat ulang...');
-      await performHardReset(remote.version);
+      showToast('✓ Versi v' + remote.version + ' tersimpan');
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = '🔄 Update';
+        btn.classList.remove('available');
+      }
       return;
     }
 
-    // Ada versi baru
-    if (localVer !== remote.version) {
-      showToast('🆕 Versi baru v' + remote.version + ' — memperbarui...');
-      await performHardReset(remote.version);
+    // === KASUS 2: Sudah versi terbaru → CUMA KASIH TOAST, TIDAK RELOAD ===
+    if (localVer === remote.version) {
+      showToast('✓ Sudah versi terbaru (v' + localVer + ')');
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = '🔄 Update';
+        btn.classList.remove('available');
+      }
       return;
     }
 
-    // Sudah versi terbaru — tetap clear cache & reload (biar user yakin fresh)
-    showToast('✓ Sudah versi terbaru (v' + localVer + ') — refresh...');
+    // === KASUS 3: Ada versi baru → update + reload ===
+    showToast('🆕 Versi baru v' + remote.version + ' — memperbarui...');
     await performHardReset(remote.version);
 
   } catch (err) {
