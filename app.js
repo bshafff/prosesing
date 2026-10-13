@@ -13,8 +13,9 @@ async function loadAllViews() {
   if (!container) return;
   const entries = Object.entries(VIEW_FILES);
   try {
+    // Tambah cache-bust biar selalu fresh
     const texts = await Promise.all(entries.map(([_, f]) =>
-      fetch('./' + f, { cache: 'no-cache' }).then(r => {
+      fetch('./' + f + '?t=' + Date.now(), { cache: 'no-store' }).then(r => {
         if (!r.ok) throw new Error(`Gagal load ${f}: ${r.status}`);
         return r.text();
       })
@@ -24,7 +25,7 @@ async function loadAllViews() {
     console.error(err);
     container.innerHTML = `<div class="card" style="color:#dc2626;">
       <b>Gagal memuat tampilan.</b><br>
-      <small>${err.message}. Pastikan semua file .html berada di folder yang sama dengan index.html dan diakses melalui web server (bukan file://).</small>
+      <small>${err.message}</small>
     </div>`;
   }
 }
@@ -53,6 +54,10 @@ async function initApp() {
   updateSyncStatus();
   migrateExistingLocalData();
   autoBootSync();
+
+  // Cek versi terbaru + mulai interval cek tiap 30 menit
+  checkVersion(false);
+  startVersionCheckInterval();
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW gagal:', err));
