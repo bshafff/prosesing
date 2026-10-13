@@ -1,5 +1,5 @@
 {
-  "version": "1.0.2",
+  "version": "1.0.3",
   "released": "2026-10-13",
-  "notes": "Halaman Awal dan Sinkronisasi"
+  "notes": "Fix welcome screen & load views"
 }
