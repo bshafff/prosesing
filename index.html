@@ -13,16 +13,21 @@
   <title>Processing - AWB</title>
   <link rel="stylesheet" href="./style.css">
   <style>
-    /* Tombol Update - hijau kuning mencolok */
+    /* ===== Tombol Update di header ===== */
     .btn-update {
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.35);
+      font-size: 0.95rem;
+      padding: 0.6rem 0.9rem;
+      min-width: auto;
+    }
+    .btn-update.available {
       background: #facc15 !important;
       color: #422006 !important;
-      border: 2px solid #eab308 !important;
+      border-color: #eab308 !important;
       font-weight: 800 !important;
       animation: pulseUpdate 1.5s infinite;
-    }
-    .btn-update:hover {
-      background: #fde047 !important;
     }
     @keyframes pulseUpdate {
       0%, 100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); }
@@ -32,27 +37,170 @@
       font-size: 0.65rem;
       opacity: 0.7;
       margin-top: 0.25rem;
+      color: #fff;
     }
+
+    /* ===== Welcome Screen ===== */
+    #welcome-screen {
+      display: none;
+      min-height: 100vh;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem 1.5rem;
+      background: #f5f7f4;
+      text-align: center;
+    }
+    #welcome-screen.show {
+      display: flex;
+    }
+    #welcome-screen .w-logo {
+      height: 80px;
+      width: auto;
+      margin-bottom: 1rem;
+    }
+    #welcome-screen .w-title {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: #2d5016;
+      margin: 0 0 0.25rem;
+      letter-spacing: -0.5px;
+    }
+    #welcome-screen .w-subtitle {
+      font-size: 0.95rem;
+      color: #666;
+      margin: 0 0 2rem;
+    }
+    #welcome-screen .w-card {
+      background: white;
+      border-radius: 16px;
+      padding: 2rem 1.5rem;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      border: 1px solid #e5e7eb;
+    }
+    #welcome-screen .w-card h2 {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #2d5016;
+      margin: 0 0 0.75rem;
+    }
+    #welcome-screen .w-desc {
+      font-size: 0.9rem;
+      color: #666;
+      line-height: 1.55;
+      margin-bottom: 1.75rem;
+    }
+    #welcome-screen .w-btn {
+      width: 100%;
+      padding: 1rem 1.25rem;
+      background: linear-gradient(135deg, #2d5016 0%, #5a8f3a 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 4px 12px rgba(45,80,22,0.2);
+    }
+    #welcome-screen .w-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(45,80,22,0.3);
+    }
+    #welcome-screen .w-btn:active {
+      transform: scale(0.98);
+    }
+    #welcome-screen .w-btn:disabled {
+      background: #999;
+      cursor: wait;
+      transform: none;
+      box-shadow: none;
+    }
+    #welcome-screen .w-features {
+      margin-top: 1.75rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #e5e7eb;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    #welcome-screen .w-feature {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.875rem;
+      color: #444;
+    }
+    #welcome-screen .w-feature-icon {
+      font-size: 1.25rem;
+      flex: none;
+    }
+    #welcome-screen .w-foot {
+      margin-top: 1.5rem;
+      font-size: 0.75rem;
+      color: #999;
+    }
+    .app-container-hidden { display: none !important; }
   </style>
 </head>
 <body>
 
-<header class="app-header">
+<!-- ========== WELCOME SCREEN ========== -->
+<div id="welcome-screen">
+  <img class="w-logo" src="./logo-awb.png" alt="Agri Wangi Berry">
+  <h1 class="w-title">Processing AWB</h1>
+  <p class="w-subtitle">PT. Agri Wangi Berry · Ciwidey</p>
+
+  <div class="w-card">
+    <h2>👋 Selamat Datang</h2>
+    <p class="w-desc">
+      Aplikasi untuk mencatat <b>panen harian</b>, <b>stok kemasan</b>, dan <b>laporan processing</b>.
+      Data otomatis tersimpan di perangkat & tersinkron ke Google Sheet.
+    </p>
+
+    <button id="welcome-btn" class="w-btn" onclick="welcomeConnect()">🔗 Sambung &amp; Mulai</button>
+
+    <div class="w-features">
+      <div class="w-feature">
+        <span class="w-feature-icon">📱</span>
+        <span>Tanpa daftar — langsung pakai</span>
+      </div>
+      <div class="w-feature">
+        <span class="w-feature-icon">☁️</span>
+        <span>Sinkron otomatis ke Google Sheet</span>
+      </div>
+      <div class="w-feature">
+        <span class="w-feature-icon">📶</span>
+        <span>Bisa dipakai offline — data aman</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="w-foot">v<span id="welcome-version">?</span> · Diinstall sebagai app dari browser</div>
+</div>
+
+<!-- ========== HEADER ========== -->
+<header class="app-header" id="app-header" style="display:none;">
   <img class="brand-logo" src="./logo-awb.png" alt="Agri Wangi Berry">
   <h1>Processing AWB</h1>
   <p>PT. Agri Wangi Berry · Ciwidey</p>
   <div id="sync-status" class="auth-status"></div>
   <div class="app-version" id="app-version-label"></div>
   <div class="header-actions">
-    <button id="updateBtn" class="btn btn-update" style="display:none" onclick="forceUpdate()">🆕 Update</button>
+    <button id="updateBtn" class="btn btn-update" onclick="manualUpdate()" title="Periksa update">🔄 Update</button>
     <button id="pushBtn" class="btn btn-sync" style="display:none" onclick="syncQueue(true)">⬆ Sync</button>
     <button id="pullBtn" class="btn btn-sync" style="display:none" onclick="pullFromSheet()">⬇ Muat</button>
     <button id="authBtn" class="btn btn-primary" onclick="handleAuthClick()">☁️ Connect Sheets</button>
   </div>
 </header>
 
-<div class="container" id="app-container"></div>
+<!-- ========== APP ========== -->
+<div class="container" id="app-container" style="display:none;"></div>
 
+<!-- ========== MODALS ========== -->
 <div id="modal-edit-panen" class="modal">
   <div class="modal-content">
     <div class="modal-header">✏️ Edit Data</div>
