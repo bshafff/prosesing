@@ -98,6 +98,7 @@
 
   <div class="btn-group">
     <button class="btn btn-primary" onclick="simpanDataPanen()">💾 Simpan Data Hari Ini</button>
+    <button class="btn btn-success" onclick="openWAModal()">📋 Format WA</button>
     <button class="btn btn-secondary" onclick="resetFormPanen()">🔄 Reset Form</button>
   </div>
 
@@ -132,5 +133,22 @@
       </table>
     </div>
     <div id="panen-pagination" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;margin-top:1rem;"></div>
+  </div>
+</div>
+
+<!-- ============ MODAL FORMAT WA ============ -->
+<div id="modal-wa" class="modal">
+  <div class="modal-content" style="max-width: 620px;">
+    <div class="modal-header">📋 Format WA</div>
+    <div class="modal-body">
+      <div class="info-box" style="margin-bottom:0.75rem;">
+        Data di bawah siap di-copy. Kamu bisa edit dulu (misal ubah tanggal pengiriman) sebelum klik <b>Copy ke Clipboard</b>.
+      </div>
+      <textarea id="wa-text-preview" style="width:100%; min-height:420px; padding:0.875rem; border:1.5px solid #d1d5db; border-radius:8px; font-family:'Courier New',monospace; font-size:0.85rem; line-height:1.5; resize:vertical; background:#fafafa;"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeWAModal()">Tutup</button>
+      <button class="btn btn-primary" onclick="copyWAText()">📋 Copy ke Clipboard</button>
+    </div>
   </div>
 </div>
