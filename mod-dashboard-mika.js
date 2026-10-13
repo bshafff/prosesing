@@ -104,7 +104,7 @@ function computeMikaTimeline() {
           const nOpname = (typeof it.netfoamOpname === 'number') ? it.netfoamOpname : null;
           st.netfoam.ball += nMasukBall - nPotongBall;
           if (nOpname !== null) st.netfoam.proc = nOpname;
-          else st.netfoam.proc += nAktualPcs - nPakai;
+          else if (nPotongBall > 0 || nAktualPcs > 0) st.netfoam.proc += nAktualPcs - nPakai;
 
           // Stiker
           const sMasukLembar = (it.stikerMasukLembar != null) ? it.stikerMasukLembar : (it.stikerMasuk || 0);
@@ -114,7 +114,7 @@ function computeMikaTimeline() {
           const sOpname = (typeof it.stikerOpname === 'number') ? it.stikerOpname : null;
           st.stiker.gudang += sMasukLembar - sBongkarLembar;
           if (sOpname !== null) st.stiker.proc = sOpname;
-          else if (sBongkarLembar > 0) st.stiker.proc += sAktualPcs - sPakai;
+          else if (sBongkarLembar > 0 || sAktualPcs > 0) st.stiker.proc += sAktualPcs - sPakai;
         }
         if (it.name === 'Grade A') {
           const lMasukDus = it.layerMasukDus || 0;
@@ -124,7 +124,7 @@ function computeMikaTimeline() {
           const lOpname = (typeof it.layerOpname === 'number') ? it.layerOpname : null;
           st.layer.gudang += lMasukDus - lBongkarDus;
           if (lOpname !== null) st.layer.proc = lOpname;
-          else st.layer.proc += lAktualPcs - lPakai;
+          else if (lBongkarDus > 0 || lAktualPcs > 0) st.layer.proc += lAktualPcs - lPakai;
         }
         if (it.name === 'Grade B') {
           const slMasukDus = it.sleeveMasukDus || 0;
@@ -134,7 +134,7 @@ function computeMikaTimeline() {
           const slOpname = (typeof it.sleeveOpname === 'number') ? it.sleeveOpname : null;
           st.sleeve.gudang += slMasukDus - slBongkarDus;
           if (slOpname !== null) st.sleeve.proc = slOpname;
-          else st.sleeve.proc += slAktualPcs - slPakai;
+          else if (slBongkarDus > 0 || slAktualPcs > 0) st.sleeve.proc += slAktualPcs - slPakai;
         }
       });
     });
