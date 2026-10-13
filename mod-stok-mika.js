@@ -126,13 +126,15 @@ function recalculateStockKemasan() {
   let summaryHtml = '';
   masterJenisKemasan.forEach(m => {
     const a = accum[m.name];
+    const estimasiPcs = a.gudang * m.std;
+    const totalAkhir = estimasiPcs + a.processing;
     totGudang += a.gudang; totProc += a.processing; totKeluar += a.keluar; totRej += a.reject;
     summaryHtml += `<tr>
       <td><strong><span class="badge ${m.badge}">${m.name}</span></strong></td>
       <td class="text-right">${a.gudang} Dus</td>
-      <td class="text-right">${a.processing} Pcs</td>
-      <td class="text-right"><strong>${a.processing} Pcs</strong></td>
-      <td class="text-right">${a.keluar} Pcs</td>
+      <td class="text-right">${estimasiPcs.toLocaleString('id-ID')} Pcs</td>
+      <td class="text-right">${a.processing.toLocaleString('id-ID')} Pcs</td>
+      <td class="text-right"><strong>${totalAkhir.toLocaleString('id-ID')} Pcs</strong></td>
       <td class="text-right" style="color:#dc2626;">${a.reject} Pcs</td>
     </tr>`;
   });
@@ -142,28 +144,23 @@ function recalculateStockKemasan() {
   // Render summary aksesoris
   const aksBody = document.getElementById('tbl-aks-body');
   if (aksBody) {
-    aksBody.innerHTML = `
-      <tr>
-        <td><strong><span class="badge gradea">Layer A11</span></strong></td>
-        <td class="text-right">${currentAksesoris.layer.gudang} Dus</td>
-        <td class="text-right">${currentAksesoris.layer.proc} Pcs</td>
-      </tr>
-      <tr>
-        <td><strong><span class="badge gradeb">Sleeve</span></strong></td>
-        <td class="text-right">${currentAksesoris.sleeve.gudang} Dus</td>
-        <td class="text-right">${currentAksesoris.sleeve.proc} Pcs</td>
-      </tr>
-      <tr>
-        <td><strong><span class="badge hatsu">Stiker</span></strong></td>
-        <td class="text-right">${currentAksesoris.stiker.gudang} Lembar</td>
-        <td class="text-right">${currentAksesoris.stiker.proc} Pcs</td>
-      </tr>
-      <tr>
-        <td><strong><span class="badge hatsu">Netfoam</span></strong></td>
-        <td class="text-right">${currentAksesoris.netfoam.ball} Ball</td>
-        <td class="text-right">${currentAksesoris.netfoam.proc} Pcs</td>
-      </tr>
-    `;
+    const aksList = [
+      { label: 'Layer A11', badge: 'gradea', gudang: currentAksesoris.layer.gudang, satuan: 'Dus', konversi: AKS_KONVERSI.layer, proc: currentAksesoris.layer.proc },
+      { label: 'Sleeve', badge: 'gradeb', gudang: currentAksesoris.sleeve.gudang, satuan: 'Dus', konversi: AKS_KONVERSI.sleeve, proc: currentAksesoris.sleeve.proc },
+      { label: 'Stiker', badge: 'hatsu', gudang: currentAksesoris.stiker.gudang, satuan: 'Lembar', konversi: AKS_KONVERSI.stiker, proc: currentAksesoris.stiker.proc },
+      { label: 'Netfoam', badge: 'hatsu', gudang: currentAksesoris.netfoam.ball, satuan: 'Ball', konversi: AKS_KONVERSI.netfoam, proc: currentAksesoris.netfoam.proc }
+    ];
+    aksBody.innerHTML = aksList.map(a => {
+      const estimasi = a.gudang * a.konversi;
+      const totalAkhir = estimasi + a.proc;
+      return `<tr>
+        <td><strong><span class="badge ${a.badge}">${a.label}</span></strong></td>
+        <td class="text-right">${a.gudang} ${a.satuan}</td>
+        <td class="text-right">${estimasi.toLocaleString('id-ID')} Pcs</td>
+        <td class="text-right">${a.proc.toLocaleString('id-ID')} Pcs</td>
+        <td class="text-right"><strong>${totalAkhir.toLocaleString('id-ID')} Pcs</strong></td>
+      </tr>`;
+    }).join('');
   }
 
   const elGdg = document.getElementById('k-stat-gudang');
