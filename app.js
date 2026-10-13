@@ -13,7 +13,6 @@ async function loadAllViews() {
   if (!container) return;
   const entries = Object.entries(VIEW_FILES);
   try {
-    // Tambah cache-bust biar selalu fresh
     const texts = await Promise.all(entries.map(([_, f]) =>
       fetch('./' + f + '?t=' + Date.now(), { cache: 'no-store' }).then(r => {
         if (!r.ok) throw new Error(`Gagal load ${f}: ${r.status}`);
@@ -31,6 +30,17 @@ async function loadAllViews() {
 }
 
 async function initApp() {
+  // Cek versi dulu (untuk isi label versi di welcome screen)
+  checkVersion(true);
+
+  // Kalau belum "welcomed", tampil welcome screen aja
+  if (!isWelcomed()) {
+    showWelcomeScreen();
+    return;
+  }
+
+  // Kalau sudah welcomed → langsung load app
+  showAppScreen();
   await loadAllViews();
 
   const today = new Date().toISOString().split('T')[0];
@@ -55,8 +65,7 @@ async function initApp() {
   migrateExistingLocalData();
   autoBootSync();
 
-  // Cek versi terbaru + mulai interval cek tiap 30 menit
-  checkVersion(false);
+  // Auto-check update tiap 30 menit
   startVersionCheckInterval();
 
   if ('serviceWorker' in navigator) {
