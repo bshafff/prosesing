@@ -46,45 +46,49 @@ function fmtInt(n) {
   return String(parseInt(n, 10) || 0);
 }
 
-function generateWAText() {
-  const tgl = document.getElementById('panen-tgl').value;
+// Generate WA text dari object data (generic)
+// item = { tgl, p_hatsu, p_gradea, p_gradeb, rk_crack, rk_poli, rk_hpt,
+//          rp_crack, rp_poli, rp_hpt, rp_bruise, rp_overripe, rp_kuning, rp_frozen,
+//          k_hatsu, k_a11, k_a15, k_frozen, m_hatsu, m_a11, m_a15 }
+function generateWATextFromItem(item) {
+  const tgl = item.tgl || '';
   const tglFmt = formatTanggalPanjang(tgl);
 
   // === Data Panen ===
-  const p_hatsu = getValP('p-hatsu');
-  const p_gradea = getValP('p-gradea');
-  const p_gradeb = getValP('p-gradeb');
+  const p_hatsu = parseFloat(item.p_hatsu) || 0;
+  const p_gradea = parseFloat(item.p_gradea) || 0;
+  const p_gradeb = parseFloat(item.p_gradeb) || 0;
   const totalGradePanen = p_hatsu + p_gradea + p_gradeb;
 
   // === Reject Kebun ===
-  const rk_crack = getValP('rk-crack');
-  const rk_poli = getValP('rk-poli');
-  const rk_hpt = getValP('rk-hpt');
+  const rk_crack = parseFloat(item.rk_crack) || 0;
+  const rk_poli = parseFloat(item.rk_poli) || 0;
+  const rk_hpt = parseFloat(item.rk_hpt) || 0;
   const rkTotal = rk_crack + rk_poli + rk_hpt;
   const totalPanen = totalGradePanen + rkTotal;
 
   // === Pengiriman ===
-  const k_hatsu = getValP('k-hatsu');
-  const k_a11 = getValP('k-a11');
-  const k_a15 = getValP('k-a15');
-  const k_frozen = getValP('k-frozen');
+  const k_hatsu = parseFloat(item.k_hatsu) || 0;
+  const k_a11 = parseFloat(item.k_a11) || 0;
+  const k_a15 = parseFloat(item.k_a15) || 0;
+  const k_frozen = parseFloat(item.k_frozen) || 0;
   const totalGradeKirim = k_hatsu + k_a11 + k_a15;
   const totalKirim = totalGradeKirim + k_frozen;
 
   // === Pack ===
-  const m_hatsu = parseInt(document.getElementById('m-hatsu').value || 0, 10);
-  const m_a11 = parseInt(document.getElementById('m-a11').value || 0, 10);
-  const m_a15 = parseInt(document.getElementById('m-a15').value || 0, 10);
+  const m_hatsu = parseInt(item.m_hatsu) || 0;
+  const m_a11 = parseInt(item.m_a11) || 0;
+  const m_a15 = parseInt(item.m_a15) || 0;
   const totalPack = m_hatsu + m_a11 + m_a15;
 
   // === Reject Processing ===
-  const rp_crack = getValP('rp-crack');
-  const rp_poli = getValP('rp-poli');
-  const rp_hpt = getValP('rp-hpt');
-  const rp_bruise = getValP('rp-bruise');
-  const rp_overripe = getValP('rp-overripe');
-  const rp_kuning = getValP('rp-kuning');
-  const rp_frozen = getValP('rp-frozen');
+  const rp_crack = parseFloat(item.rp_crack) || 0;
+  const rp_poli = parseFloat(item.rp_poli) || 0;
+  const rp_hpt = parseFloat(item.rp_hpt) || 0;
+  const rp_bruise = parseFloat(item.rp_bruise) || 0;
+  const rp_overripe = parseFloat(item.rp_overripe) || 0;
+  const rp_kuning = parseFloat(item.rp_kuning) || 0;
+  const rp_frozen = parseFloat(item.rp_frozen) || 0;
   const rpTotal = rp_crack + rp_poli + rp_hpt + rp_bruise + rp_overripe + rp_kuning + rp_frozen;
 
   // === Build text ===
@@ -125,6 +129,34 @@ function generateWAText() {
   return t;
 }
 
+// Wrapper: baca dari form input
+function generateWAText() {
+  const item = {
+    tgl: document.getElementById('panen-tgl').value,
+    p_hatsu: getValP('p-hatsu'),
+    p_gradea: getValP('p-gradea'),
+    p_gradeb: getValP('p-gradeb'),
+    rk_crack: getValP('rk-crack'),
+    rk_poli: getValP('rk-poli'),
+    rk_hpt: getValP('rk-hpt'),
+    rp_crack: getValP('rp-crack'),
+    rp_poli: getValP('rp-poli'),
+    rp_hpt: getValP('rp-hpt'),
+    rp_bruise: getValP('rp-bruise'),
+    rp_overripe: getValP('rp-overripe'),
+    rp_kuning: getValP('rp-kuning'),
+    rp_frozen: getValP('rp-frozen'),
+    k_hatsu: getValP('k-hatsu'),
+    k_a11: getValP('k-a11'),
+    k_a15: getValP('k-a15'),
+    k_frozen: getValP('k-frozen'),
+    m_hatsu: parseInt(document.getElementById('m-hatsu').value || 0, 10),
+    m_a11: parseInt(document.getElementById('m-a11').value || 0, 10),
+    m_a15: parseInt(document.getElementById('m-a15').value || 0, 10)
+  };
+  return generateWATextFromItem(item);
+}
+
 function openWAModal() {
   const tgl = document.getElementById('panen-tgl').value;
   if (!tgl) { showToast('Isi tanggal panen dulu!', 'error'); return; }
@@ -136,8 +168,26 @@ function openWAModal() {
   document.getElementById('modal-wa').classList.add('show');
 }
 
+// BARU: buka WA dari data historis
+function openWAModalFromHistory(id) {
+  const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+  const item = db.find(x => String(x.id) === String(id));
+  if (!item) { showToast('Data tidak ditemukan', 'error'); return; }
+
+  const text = generateWATextFromItem(item);
+  const ta = document.getElementById('wa-text-preview');
+  if (ta) ta.value = text;
+
+  const header = document.querySelector('#modal-wa .modal-header');
+  if (header) header.textContent = `📋 Format WA — ${item.tgl} (${ghOf(item)})`;
+
+  document.getElementById('modal-wa').classList.add('show');
+}
+
 function closeWAModal() {
   document.getElementById('modal-wa').classList.remove('show');
+  const header = document.querySelector('#modal-wa .modal-header');
+  if (header) header.textContent = '📋 Format WA';
 }
 
 async function copyWAText() {
@@ -241,8 +291,9 @@ function renderTablePanen() {
     return `
       <tr>
         <td>
-          <button class="btn btn-sm btn-secondary" onclick="editDataPanen('${item.id}')">✏</button>
-          <button class="btn btn-sm btn-danger" onclick="hapusDataPanen('${item.id}')">🗑️</button>
+          <button class="btn btn-sm btn-secondary" onclick="editDataPanen('${item.id}')" title="Edit">✏</button>
+          <button class="btn btn-sm btn-success" onclick="openWAModalFromHistory('${item.id}')" title="Format WA" style="margin-top:2px;">📋</button>
+          <button class="btn btn-sm btn-danger" onclick="hapusDataPanen('${item.id}')" title="Hapus" style="margin-top:2px;">🗑️</button>
         </td>
         <td>${item.tgl}</td>
         <td>${ghOf(item)}</td>
