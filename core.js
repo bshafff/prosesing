@@ -7,7 +7,11 @@ const KEMASAN_STORAGE_KEY = 'kemasan_awb_v1';
 // GANTI BARIS DI BAWAH dengan URL Web App Apps Script kamu (yang diakhiri /exec)
 const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyIDEcwqyXqyfB6cuJGer5bcphJ4bCWDBRAMBd432Nalz_uXEMWwphLNduxkKgDOtZq_A/exec';
 
-// ========== HELPER: ID GENERATOR (FIXED) ==========
+// ========== VERSION / AUTO-UPDATE ==========
+const APP_VERSION_KEY = 'awb_app_version_v1';
+let currentRemoteVersion = null;
+
+// ========== HELPER: ID GENERATOR ==========
 let __idCounter = 0;
 function generateId() {
   __idCounter = (__idCounter + 1) % 1000;
@@ -73,7 +77,12 @@ let currentStockStateKemasan = {
   'Grade B': { gudang: 0, processing: 0 }
 };
 
-let currentAksesoris = { layer: 0, sleeve: 0, stiker: 0, netfoam: 0 };
+let currentAksesoris = {
+  layer: { gudang: 0, proc: 0 },
+  sleeve: { gudang: 0, proc: 0 },
+  stiker: { gudang: 0, proc: 0 },
+  netfoam: { ball: 0, proc: 0 }
+};
 
 function rejMika(it) {
   if (!it) return 0;
@@ -99,7 +108,7 @@ function handleAuthClick() {
     isAuthenticated = false;
     localStorage.setItem('awb_sync_auth', '0');
     updateSyncStatus();
-    showToast('Koneksi Google Sheet diputus. Klik Connect lagi untuk menyambung.');
+    showToast('Koneksi Google Sheet diputus.');
     return;
   }
   const existingCustomUrl = localStorage.getItem('awb_script_url');
@@ -108,7 +117,7 @@ function handleAuthClick() {
     url = DEFAULT_SCRIPT_URL;
     if (!confirm('Sambung ke Google Sheet default?\n\n' + url)) return;
   } else {
-    url = prompt('URL Web App Apps Script (/exec):\n(Who has access = Anyone)', existingCustomUrl || DEFAULT_SCRIPT_URL || '');
+    url = prompt('URL Web App Apps Script (/exec):', existingCustomUrl || DEFAULT_SCRIPT_URL || '');
     if (!url || !url.trim()) return;
     url = url.trim().replace(/\/$/, '');
   }
@@ -125,7 +134,6 @@ function handleAuthClick() {
   showToast('✓ Tersambung — sinkronisasi...');
   syncQueue(true).then(() => {
     if (getSyncQueue().length === 0) pullFromSheet();
-    else showToast('Sync belum tuntas, pull dibatalkan otomatis', 'error');
   });
 }
 
@@ -397,7 +405,7 @@ function autoBootSync() {
     syncQueue();
   }
 
-  // 3) AUTO PULL — HANYA kalau lokal benar-benar kosong (fresh install)
+  // 3) AUTO PULL — HANYA kalau lokal kosong (fresh install)
   const totalLocal =
     readArrayRaw(nativeStorage.getItem(PANEN_STORAGE_KEY)).length +
     readArrayRaw(nativeStorage.getItem(KEMASAN_STORAGE_KEY)).length +
@@ -437,6 +445,102 @@ function autoBootSync() {
   updateSyncStatus();
 }
 
+// ========== AUTO UPDATE VERSION CHECK ==========
+async function checkVersion(manual) {
+  try {
+    const res = await fetch('./version.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) {
+      if (manual) showToast('Gagal cek versi (file version.json tidak ditemukan)', 'error');
+      return;
+    }
+    const remote = await res.json();
+    currentRemoteVersion = remote;
+    const localVer = localStorage.getItem(APP_VERSION_KEY);
+
+    // Update label versi di header
+    const labelEl = document.getElementById('app-version-label');
+    if (labelEl) {
+      labelEl.textContent = 'v' + (localVer || remote.version || '?') + ' · ' + (remote.released || '');
+    }
+
+    // First time opening
+    if (!localVer) {
+      localStorage.setItem(APP_VERSION_KEY, remote.version);
+      console.log('[VERSION] First time, saved version:', remote.version);
+      return;
+    }
+
+    // Versi sama → tidak perlu update
+    if (localVer === remote.version) {
+      console.log('[VERSION] Up to date:', localVer);
+      if (manual) showToast('✓ Sudah versi terbaru (v' + localVer + ')');
+      return;
+    }
+
+    // Versi beda → ada update!
+    console.log('[VERSION] Update available!', localVer, '→', remote.version);
+    const btn = document.getElementById('updateBtn');
+    if (btn) {
+      btn.style.display = 'inline-flex';
+      btn.textContent = '🆕 Update v' + remote.version;
+      btn.title = remote.notes || 'Versi baru tersedia — klik untuk update';
+    }
+    if (manual) {
+      showToast('🆕 Versi baru tersedia: v' + remote.version);
+    }
+  } catch (err) {
+    console.warn('[VERSION] Gagal cek version:', err);
+    if (manual) showToast('Gagal cek versi: ' + err.message, 'error');
+  }
+}
+
+async function forceUpdate() {
+  if (!confirm('Update ke versi terbaru?\n\nHalaman akan dimuat ulang otomatis. Data kamu tidak akan hilang.')) return;
+  showToast('🔄 Memperbarui ke versi terbaru...');
+
+  try {
+    // 1. Update version marker
+    if (currentRemoteVersion && currentRemoteVersion.version) {
+      localStorage.setItem(APP_VERSION_KEY, currentRemoteVersion.version);
+    }
+
+    // 2. Unregister semua service worker
+    if ('serviceWorker' in navigator) {
+      try {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.unregister()));
+        console.log('[UPDATE] Unregistered', regs.length, 'service worker(s)');
+      } catch (e) { console.warn('[UPDATE] SW unregister fail:', e); }
+    }
+
+    // 3. Hapus semua cache storage
+    if ('caches' in window) {
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+        console.log('[UPDATE] Deleted', keys.length, 'cache(s)');
+      } catch (e) { console.warn('[UPDATE] Cache delete fail:', e); }
+    }
+
+    // 4. Reload dengan cache-bust
+    setTimeout(() => {
+      const newUrl = window.location.pathname + '?v=' + Date.now();
+      window.location.replace(newUrl);
+    }, 800);
+  } catch (err) {
+    console.error(err);
+    showToast('Gagal update: ' + err.message, 'error');
+  }
+}
+
+// Cek versi otomatis tiap 30 menit
+function startVersionCheckInterval() {
+  if (window.__versionCheckInterval) return;
+  window.__versionCheckInterval = setInterval(() => {
+    checkVersion(false);
+  }, 30 * 60 * 1000);
+}
+
 // ========== NAVIGATION ==========
 function openModule(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -454,6 +558,7 @@ function showKemasanSubTab(subId, btn) {
 
 function showToast(msg, type = 'success') {
   const el = document.getElementById('toast');
+  if (!el) return;
   el.textContent = msg;
   el.className = 'toast show ' + (type === 'error' ? 'toast-error' : 'toast-success');
   setTimeout(() => el.classList.remove('show'), 3000);
@@ -500,8 +605,8 @@ function openImportModal(type) {
   document.getElementById('import-title').textContent = '📥 Import CSV — ' + titles[type];
   const infos = {
     lks: `<b>Format kolom:</b> <code>tanggal, nama, grade, kegiatan, material, jobTambahan, perbantuan, jenisPerbantuan, keterangan</code><br>Multi-kegiatan/material dipisah dengan <b>|</b> (pipe).`,
-    panen: `<b>Format kolom:</b> <code>tgl, p_hatsu, p_gradea, p_gradeb, rk_*, rp_*, k_*, m_*, t_*</code><br>1 baris = 1 tanggal. Kolom kosong akan dianggap 0.`,
-    kemasan: `<b>Kolom utama:</b> <code>tgl, name, masuk, bongkarDus, aktualPcs, kirim, tamu, reject, ketTamu, ketReject, processingOpname</code><br>Kolom <code>reject</code> = PCS mika reject.<br>Kolom <code>processingOpname</code> = koreksi stok fisik processing (opsional).<br>Kolom tambahan: <code>netfoamBall, netfoamPotong, netfoamTerpakai, layerSiap, layerPakai, sleeveSiap, sleevePakai, stikerMasuk, stikerPakai</code><br><b>Koreksi stok fisik (opsional):</b> <code>netfoamOpname, layerOpname, sleeveOpname, stikerOpname</code>`
+    panen: `<b>Format kolom:</b> <code>tgl, p_hatsu, p_gradea, p_gradeb, rk_*, rp_*, k_*, m_*, t_*</code><br>1 baris = 1 tanggal. Kolom kosong = 0.`,
+    kemasan: `<b>Kolom utama:</b> <code>tgl, name, masuk, bongkarDus, aktualPcs, kirim, tamu, reject, ketTamu, ketReject</code><br>Kolom tambahan: <code>netfoamBall, netfoamPotong, netfoamTerpakai, layerSiap, layerPakai, sleeveSiap, sleevePakai, stikerMasuk, stikerPakai</code>`
   };
   document.getElementById('import-info').innerHTML = infos[type];
   document.getElementById('modal-import').classList.add('show');
@@ -524,7 +629,7 @@ function downloadTemplate() {
     csv += '2026-04-01,Astrin Julianti Kusmawan,Hatsuhana,Packing Grade Hatsuhana|Persiapan Mika,Mika Grade Hatsuhana|Lakban,,,,\n';
     filename = 'template_lks.csv';
   } else if (t === 'kemasan') {
-    csv = 'tgl,name,masuk,bongkarDus,aktualPcs,kirim,tamu,reject,processingOpname,ketTamu,ketReject,netfoamBall,netfoamPotong,netfoamTerpakai,netfoamOpname,layerSiap,layerPakai,layerOpname,sleeveSiap,sleevePakai,sleeveOpname,stikerMasuk,stikerPakai,stikerOpname\n';
+    csv = 'tgl,name,masuk,bongkarDus,aktualPcs,kirim,tamu,reject,ketTamu,ketReject,netfoamBall,netfoamPotong,netfoamTerpakai,netfoamOpname,layerSiap,layerPakai,layerOpname,sleeveSiap,sleevePakai,sleeveOpname,stikerMasuk,stikerPakai,stikerOpname\n';
     csv += '2026-04-01,Hatsu,0,5,1000,500,0,0,,,0,1000,500,,,,,,,,900,500,\n';
     filename = 'template_kemasan.csv';
   }
@@ -546,7 +651,7 @@ function previewImport() {
     const text = String(ev.target.result).replace(/^\ufeff/, '');
     const rows = parseCSV(text);
     if (rows.length < 2) {
-      document.getElementById('import-preview').innerHTML = '<div class="warn-box">File kosong atau tidak ada baris data.</div>';
+      document.getElementById('import-preview').innerHTML = '<div class="warn-box">File kosong.</div>';
       importState.rows = [];
       return;
     }
@@ -616,11 +721,10 @@ function emptyKemasanItem(name, std) {
     kirim: 0, tamu: 0, ketTamu: '',
     reject: 0, rejectTutup: 0, rejectAlas: 0, ketReject: '',
     processingOpname: null,
-    netfoamBall: 0, netfoamPotong: 0, netfoamTerpakai: 0, netfoamAkhir: 0,
-    layerSiap: 0, layerPakai: 0, layerAkhir: 0, layerOpname: null,
-    sleeveSiap: 0, sleevePakai: 0, sleeveAkhir: 0, sleeveOpname: null,
-    netfoamOpname: null,
-    stikerMasuk: 0, stikerPakai: 0, stikerOpname: null
+    netfoamMasukBall: 0, netfoamPotongBall: 0, netfoamAktualPcs: 0, netfoamPakai: 0, netfoamOpname: null,
+    layerMasukDus: 0, layerBongkarDus: 0, layerAktualPcs: 0, layerPakai: 0, layerOpname: null,
+    sleeveMasukDus: 0, sleeveBongkarDus: 0, sleeveAktualPcs: 0, sleevePakai: 0, sleeveOpname: null,
+    stikerMasukLembar: 0, stikerBongkarLembar: 0, stikerAktualPcs: 0, stikerPakai: 0, stikerOpname: null
   };
 }
 
@@ -660,8 +764,6 @@ function executeImport() {
         const bongkar = num(r.bongkarDus);
         const aktual = num(r.aktualPcs);
         const rejectVal = num(r.reject);
-        const rejTutupVal = num(r.rejectTutup) || rejectVal;
-        const rejAlasVal = num(r.rejectAlas);
         entry.items.push({
           ...emptyKemasanItem(nm, std),
           masuk: num(r.masuk),
@@ -671,28 +773,10 @@ function executeImport() {
           selisih: aktual - bongkar * std,
           kirim: num(r.kirim),
           tamu: num(r.tamu),
-          reject: 0,
-          rejectTutup: rejTutupVal,
-          rejectAlas: rejAlasVal,
+          reject: rejectVal,
           processingOpname: numOrNull(r.processingOpname),
           ketTamu: r.ketTamu || '',
-          ketReject: r.ketReject || '',
-          netfoamBall: num(r.netfoamBall),
-          netfoamPotong: num(r.netfoamPotong),
-          netfoamTerpakai: num(r.netfoamTerpakai),
-          netfoamAkhir: num(r.netfoamPotong) - num(r.netfoamTerpakai),
-          netfoamOpname: numOrNull(r.netfoamOpname),
-          layerSiap: num(r.layerSiap),
-          layerPakai: num(r.layerPakai),
-          layerAkhir: num(r.layerSiap) - num(r.layerPakai),
-          layerOpname: numOrNull(r.layerOpname),
-          sleeveSiap: num(r.sleeveSiap),
-          sleevePakai: num(r.sleevePakai),
-          sleeveAkhir: num(r.sleeveSiap) - num(r.sleevePakai),
-          sleeveOpname: numOrNull(r.sleeveOpname),
-          stikerMasuk: num(r.stikerMasuk),
-          stikerPakai: num(r.stikerPakai),
-          stikerOpname: numOrNull(r.stikerOpname)
+          ketReject: r.ketReject || ''
         });
       });
       grouped.forEach(entry => {
@@ -706,7 +790,7 @@ function executeImport() {
       });
     }
 
-    if (count === 0) { showToast('Tidak ada baris valid untuk di-import.', 'error'); __bulkMode = false; return; }
+    if (count === 0) { showToast('Tidak ada baris valid.', 'error'); __bulkMode = false; return; }
 
     const usedIds = new Set();
     db = db.map(rec => ensureValidId(rec, usedIds));
@@ -736,7 +820,6 @@ function executeImport() {
       setTimeout(() => syncQueue(true), 500);
     } else {
       __bulkMode = false;
-      showToast('Tekan "Connect Sheets" lalu Sync untuk kirim ke Google Sheet');
     }
     closeImportModal();
   } catch (err) {
@@ -744,26 +827,4 @@ function executeImport() {
     console.error(err);
     showToast('Gagal import: ' + err.message, 'error');
   }
-}
-
-function regenerateAllIds() {
-  const types = [
-    { type: 'panen', key: PANEN_STORAGE_KEY },
-    { type: 'kemasan', key: KEMASAN_STORAGE_KEY },
-    { type: 'lks', key: LKS_STORAGE_KEY }
-  ];
-  types.forEach(({ type, key }) => {
-    const data = readArrayRaw(nativeStorage.getItem(key));
-    if (!data.length) { console.log(`${type}: kosong`); return; }
-    const usedIds = new Set();
-    const fixed = data.map(rec => ensureValidId(rec, usedIds));
-    const lengths = {};
-    fixed.forEach(x => {
-      const l = String(x.id).length;
-      lengths[l] = (lengths[l] || 0) + 1;
-    });
-    localStorage.setItem(key, JSON.stringify(fixed));
-    console.log(`${type}: ${fixed.length} record · ID:`, lengths);
-  });
-  console.log('✅ Selesai. Silakan reload halaman.');
 }
