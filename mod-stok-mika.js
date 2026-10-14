@@ -68,7 +68,8 @@ function recalculateStockKemasan() {
         aks.stiker.gudang += sMasukLembar - sBongkarLembar;
         if (sOpname !== null) {
           aks.stiker.proc = sOpname;
-        } else if (sBongkarLembar > 0 || sAktualPcs > 0) {
+        } else {
+          // FIX: hapus syarat — selalu kurangi terpakai
           aks.stiker.proc += sAktualPcs - sPakai;
         }
       }
@@ -463,7 +464,6 @@ function hitungKemasan(i) {
   const procAkhirEl = document.getElementById(`processing-akhir-${i}`);
   if (procAkhirEl) procAkhirEl.value = Math.max(0, pAkhirFinal);
 
-  // --- Aksesoris Hatsu (Netfoam + Stiker) ---
   if (item.name === 'Hatsu') {
     // Netfoam
     const nAwal = currentAksesoris.netfoam;
@@ -508,7 +508,6 @@ function hitungKemasan(i) {
     if (sProcEl) sProcEl.value = Math.max(0, sProcFinal);
   }
 
-  // --- Layer (Grade A) ---
   if (item.name === 'Grade A') {
     const lAwal = currentAksesoris.layer;
     const lMasukDus = getValK('layer-masuk-dus');
@@ -531,7 +530,6 @@ function hitungKemasan(i) {
     if (lProcEl) lProcEl.value = Math.max(0, lProcFinal);
   }
 
-  // --- Sleeve (Grade B) ---
   if (item.name === 'Grade B') {
     const slAwal = currentAksesoris.sleeve;
     const slMasukDus = getValK('sleeve-masuk-dus');
