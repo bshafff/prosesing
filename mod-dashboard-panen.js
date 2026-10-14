@@ -966,18 +966,243 @@ async function captureCardAsImage(cardId, filename, showToastWhenDone) {
 }
 
 function downloadRecapHarianImage() {
-  const bulan = document.getElementById('dashboard-bulan') ? document.getElementById('dashboard-bulan').value : '';
-  const gh = ghLabelOf(dashGh()).replace(/\s/g, '');
-  const filename = `Rekap_Harian_Panen_${bulan}_${gh}.png`;
-  captureCardAsImage('panen-recap-harian-card', filename, true);
-}
+  const bulan = document.getElementById('dashboard-bulan')?.value;
+  if (!bulan) { showToast('Pilih bulan dulu!', 'error'); return; }
+  const ghLabel = ghLabelOf(dashGh());
+  const panenDb = filterGh(JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]'), dashGh());
+  const filtered = panenDb.filter(x => x.tgl && x.tgl.startsWith(bulan)).sort((a, b) => new Date(a.tgl) - new Date(b.tgl));
+  const data = mergeByTgl(filtered);
+  if (!data.length) { showToast('Belum ada data untuk bulan ini', 'error'); return; }
 
-function downloadBulanCompareImage() {
-  const period = getBulanComparePeriod();
-  const gh = ghLabelOf(dashGh()).replace(/\s/g, '');
-  const periodLabel = period.mode === 'all'
-    ? 'SemuaBulan'
-    : `${period.from}_to_${period.to}`;
-  const filename = `Rekap_Perbandingan_Bulanan_${periodLabel}_${gh}.png`;
-  captureCardAsImage('panen-bulan-compare-card', filename, true);
+  const GROUPS = [
+    { key: 'base', label: '', color: '#2d5016', cols: [
+      { key: 'tgl', label: 'Tanggal', width: 92, isString: true }
+    ]},
+    { key: 'panen', label: 'PANEN (Kg)', color: '#dc2626', cols: [
+      { key: 'p_hatsu', label: 'Hatsu', width: 60 },
+      { key: 'p_gradea', label: 'Grade A', width: 66 },
+      { key: 'p_gradeb', label: 'Grade B', width: 66 },
+      { key: 'rk_total', label: 'Reject', width: 54 },
+      { key: 'panen_total', label: 'Total', width: 68, bold: true }
+    ]},
+    { key: 'reject', label: 'TOTAL REJECT (Kg)', color: '#ea580c', cols: [
+      { key: 'rp_crack', label: 'Crack', width: 54 },
+      { key: 'rp_poli', label: 'Polinasi', width: 58 },
+      { key: 'rp_hpt', label: 'HPT', width: 50 },
+      { key: 'rp_bruise', label: 'Bruise', width: 54 },
+      { key: 'rp_overripe', label: 'Overripe', width: 60 },
+      { key: 'rp_kuning', label: 'Kuning', width: 54 },
+      { key: 'rp_frozen', label: 'Frozen', width: 54 },
+      { key: 'rej_total', label: 'Total', width: 60, bold: true },
+      { key: 'rej_rate', label: 'Rej %', width: 56, isPercent: true, isRed: true }
+    ]},
+    { key: 'kirim', label: 'BERAT PENGIRIMAN (Kg)', color: '#2563eb', cols: [
+      { key: 'k_hatsu', label: 'Hatsu', width: 60 },
+      { key: 'k_a11', label: 'A11', width: 58 },
+      { key: 'k_a15', label: 'A15', width: 58 },
+      { key: 'k_frozen', label: 'Frozen', width: 58 },
+      { key: 'kirim_total', label: 'Total', width: 68, bold: true },
+      { key: 'rate_kirim', label: 'Rate %', width: 58, isPercent: true, isGreen: true }
+    ]},
+    { key: 'mika', label: 'JUMLAH KIRIM (Pcs)', color: '#9333ea', cols: [
+      { key: 'm_hatsu', label: 'Hatsu', width: 58, isInt: true },
+      { key: 'm_a11', label: 'A11', width: 56, isInt: true },
+      { key: 'm_a15', label: 'A15', width: 56, isInt: true },
+      { key: 'mika_total', label: 'Total', width: 62, isInt: true, bold: true }
+    ]}
+  ];
+
+  const enriched = data.map(it => {
+    const rk = (it.rk_crack || 0) + (it.rk_poli || 0) + (it.rk_hpt || 0);
+    const rpTotal = (it.rp_crack || 0) + (it.rp_poli || 0) + (it.rp_hpt || 0) + (it.rp_bruise || 0) + (it.rp_overripe || 0) + (it.rp_kuning || 0) + (it.rp_frozen || 0);
+    const panenTotal = (it.p_hatsu || 0) + (it.p_gradea || 0) + (it.p_gradeb || 0) + rk;
+    const rejTotal = rk + rpTotal;
+    const kirimTotal = (it.k_hatsu || 0) + (it.k_a11 || 0) + (it.k_a15 || 0) + (it.k_frozen || 0);
+    const mikaTotal = (it.m_hatsu || 0) + (it.m_a11 || 0) + (it.m_a15 || 0);
+    return {
+      ...it, rk_total: rk, panen_total: panenTotal, rej_total: rejTotal,
+      kirim_total: kirimTotal, mika_total: mikaTotal,
+      rej_rate: panenTotal > 0 ? (rejTotal / panenTotal * 100) : 0,
+      rate_kirim: panenTotal > 0 ? (kirimTotal / panenTotal * 100) : 0
+    };
+  });
+
+  const flatCols = [];
+  GROUPS.forEach(g => g.cols.forEach(c => flatCols.push({ ...c, group: g.key })));
+
+  const totals = {};
+  flatCols.forEach(c => {
+    if (c.key === 'tgl' || c.isPercent) return;
+    totals[c.key] = enriched.reduce((a, r) => a + (parseFloat(r[c.key]) || 0), 0);
+  });
+  const n = enriched.length;
+  const TpanenTotal = totals['panen_total'] || 0;
+  const TrejTotal = totals['rej_total'] || 0;
+  const TkirimTotal = totals['kirim_total'] || 0;
+  totals['rej_rate'] = TpanenTotal > 0 ? (TrejTotal / TpanenTotal * 100) : 0;
+  totals['rate_kirim'] = TpanenTotal > 0 ? (TkirimTotal / TpanenTotal * 100) : 0;
+
+  const averages = {};
+  flatCols.forEach(c => {
+    if (c.key === 'tgl') return;
+    if (c.isPercent) averages[c.key] = totals[c.key];
+    else averages[c.key] = (totals[c.key] || 0) / n;
+  });
+
+  const W = flatCols.reduce((a, c) => a + c.width, 0);
+  const titleH = 58, groupHeadH = 26, colHeadH = 30, headH = groupHeadH + colHeadH;
+  const rowH = 26, footRowH = 30;
+  const totalH = titleH + headH + enriched.length * rowH + footRowH * 2 + 16;
+  const sc = 2;
+
+  const cv = document.createElement('canvas');
+  cv.width = W * sc; cv.height = totalH * sc;
+  const ctx = cv.getContext('2d');
+  ctx.scale(sc, sc);
+  const F = 'system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+
+  const txt = (t, x, y, o = {}) => {
+    ctx.font = `${o.b ? '700' : '400'} ${o.s || 10.5}px ${F}`;
+    ctx.fillStyle = o.c || '#1a1a18';
+    ctx.textAlign = o.a || 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(t), x, y);
+  };
+  const fmtNum = (v, isInt) => {
+    const nn = parseFloat(v) || 0;
+    return isInt ? String(Math.round(nn)) : nn.toFixed(2);
+  };
+  const fmtPct = (v) => (parseFloat(v) || 0).toFixed(2) + '%';
+
+  // Background
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, totalH);
+
+  // TITLE BANNER
+  ctx.fillStyle = '#2d5016'; ctx.fillRect(0, 0, W, titleH);
+  txt('Rekap Harian Panen, Reject & Pengiriman', 14, titleH/2 - 8, { b: 1, s: 15, c: '#ffffff' });
+  txt(`${ghLabel} · ${formatBulanIndo(bulan)} · PT. Agri Wangi Berry — Processing`, 14, titleH/2 + 12, { s: 11, c: '#c9e8b0' });
+
+  // TANGGAL COLUMN (rowspan 2)
+  const tglW = GROUPS[0].cols[0].width;
+  ctx.fillStyle = '#2d5016'; ctx.fillRect(0, titleH, tglW, headH);
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1;
+  ctx.strokeRect(0.5, titleH + 0.5, tglW - 1, headH - 1);
+  txt('Tanggal', tglW/2, titleH + headH/2, { b: 1, s: 11, c: '#ffffff', a: 'center' });
+
+  // GROUP HEADERS (row 1)
+  let gx = tglW;
+  GROUPS.forEach(g => {
+    if (g.key === 'base') return;
+    const gw = g.cols.reduce((a, c) => a + c.width, 0);
+    ctx.fillStyle = g.color; ctx.fillRect(gx, titleH, gw, groupHeadH);
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.strokeRect(gx + 0.5, titleH + 0.5, gw - 1, groupHeadH - 1);
+    txt(g.label, gx + gw/2, titleH + groupHeadH/2, { b: 1, s: 11, c: '#ffffff', a: 'center' });
+    gx += gw;
+  });
+
+  // COLUMN HEADERS (row 2)
+  gx = tglW;
+  GROUPS.forEach(g => {
+    if (g.key === 'base') return;
+    g.cols.forEach(c => {
+      ctx.fillStyle = g.color; ctx.fillRect(gx, titleH + groupHeadH, c.width, colHeadH);
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+      ctx.strokeRect(gx + 0.5, titleH + groupHeadH + 0.5, c.width - 1, colHeadH - 1);
+      txt(c.label, gx + c.width/2, titleH + groupHeadH + colHeadH/2, { b: 1, s: 10, c: '#ffffff', a: 'center' });
+      gx += c.width;
+    });
+  });
+
+  // DATA ROWS
+  let ry = titleH + headH;
+  enriched.forEach((row, idx) => {
+    ctx.fillStyle = idx % 2 === 0 ? '#ffffff' : '#fafcfa';
+    ctx.fillRect(0, ry, W, rowH);
+    ctx.fillStyle = '#f9fafb';
+    ctx.fillRect(0, ry, tglW, rowH);
+    const [yy, mm, dd] = row.tgl.split('-');
+    txt(`${dd}/${mm}/${yy}`, tglW/2, ry + rowH/2, { b: 1, s: 10.5, c: '#1a1a18', a: 'center' });
+
+    let cx = tglW;
+    GROUPS.forEach(g => {
+      if (g.key === 'base') return;
+      g.cols.forEach(c => {
+        let text, color = '#1a1a18';
+        if (c.isPercent) {
+          text = fmtPct(row[c.key]);
+          if (c.isRed) color = '#dc2626';
+          if (c.isGreen) color = '#16a34a';
+        } else {
+          text = fmtNum(row[c.key], c.isInt);
+        }
+        txt(text, cx + c.width/2, ry + rowH/2, { b: c.bold, s: 10.5, c: color, a: 'center' });
+        cx += c.width;
+      });
+    });
+
+    ctx.strokeStyle = '#e5e7eb';
+    ctx.beginPath(); ctx.moveTo(0, ry + rowH); ctx.lineTo(W, ry + rowH); ctx.stroke();
+    let sx = tglW;
+    GROUPS.forEach(g => {
+      if (g.key === 'base') return;
+      g.cols.forEach(c => {
+        sx += c.width;
+        ctx.strokeStyle = '#f0f0f0';
+        ctx.beginPath(); ctx.moveTo(sx, ry); ctx.lineTo(sx, ry + rowH); ctx.stroke();
+      });
+    });
+    ry += rowH;
+  });
+
+  // FOOTER JUMLAH
+  ctx.fillStyle = '#1a1a18'; ctx.fillRect(0, ry, W, footRowH);
+  txt('Jumlah', tglW/2, ry + footRowH/2, { b: 1, s: 11, c: '#ffffff', a: 'center' });
+  let fx = tglW;
+  GROUPS.forEach(g => {
+    if (g.key === 'base') return;
+    g.cols.forEach(c => {
+      let text = '';
+      if (c.isPercent) text = fmtPct(totals[c.key]);
+      else if (c.isInt) text = Math.round(totals[c.key] || 0).toLocaleString('id-ID');
+      else text = (totals[c.key] || 0).toFixed(2);
+      txt(text, fx + c.width/2, ry + footRowH/2, { b: 1, s: 10.5, c: '#ffffff', a: 'center' });
+      fx += c.width;
+    });
+  });
+  ry += footRowH;
+
+  // FOOTER RATA-RATA
+  ctx.fillStyle = '#4b5563'; ctx.fillRect(0, ry, W, footRowH);
+  txt('Rata-rata', tglW/2, ry + footRowH/2, { b: 1, s: 11, c: '#ffffff', a: 'center' });
+  fx = tglW;
+  GROUPS.forEach(g => {
+    if (g.key === 'base') return;
+    g.cols.forEach(c => {
+      let text = '';
+      if (c.isPercent) text = fmtPct(averages[c.key]);
+      else if (c.isInt) text = Math.round(averages[c.key] || 0).toLocaleString('id-ID');
+      else text = (averages[c.key] || 0).toFixed(2);
+      txt(text, fx + c.width/2, ry + footRowH/2, { b: 1, s: 10.5, c: '#ffffff', a: 'center' });
+      fx += c.width;
+    });
+  });
+  ry += footRowH;
+
+  // Outer border
+  ctx.strokeStyle = '#2d5016'; ctx.lineWidth = 2;
+  ctx.strokeRect(1, 1, W - 2, ry - 2);
+
+  cv.toBlob(blob => {
+    if (!blob) { showToast('Gagal membuat gambar', 'error'); return; }
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    const [yy, mm] = bulan.split('-');
+    link.download = `Rekap_Harian_${ghLabel.replace(/\s/g, '')}_${yy}-${mm}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(link.href), 4000);
+    showToast('📸 Screenshot tersimpan');
+  }, 'image/png');
 }
