@@ -91,11 +91,65 @@
     </div>
   </div>
 
-  <div class="card" id="mika-daily-card">
-    <div class="card-title">📅 Stok Harian (posisi akhir hari)</div>
-    <div style="margin-bottom:0.75rem;" data-html2canvas-ignore="true">
-      <button type="button" class="btn btn-primary btn-sm" onclick="downloadMikaDailyImage()">📸 Screenshot</button>
+  <!-- ============ DETAIL KEMASAN MASUK ============ -->
+  <div class="card" id="mika-masuk-card">
+    <div class="card-title">📥 Detail Kemasan Masuk</div>
+    <div class="info-box" style="margin-bottom:0.75rem;">
+      Data kemasan yang masuk per tanggal (dus/lembar/ball). Ikut <b>Filter Periode</b> di atas.
     </div>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+      <button type="button" class="btn btn-success btn-sm" onclick="downloadMikaMasukCSV()">📥 Download CSV</button>
+    </div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Tanggal</th>
+            <th class="text-right">Hatsu<br><small style="font-weight:400;">(Dus)</small></th>
+            <th class="text-right">Grade A<br><small style="font-weight:400;">(Dus)</small></th>
+            <th class="text-right">Grade B<br><small style="font-weight:400;">(Dus)</small></th>
+            <th class="text-right">Layer<br><small style="font-weight:400;">(Dus)</small></th>
+            <th class="text-right">Sleeve<br><small style="font-weight:400;">(Dus)</small></th>
+            <th class="text-right">Stiker<br><small style="font-weight:400;">(Lembar)</small></th>
+            <th class="text-right">Netfoam<br><small style="font-weight:400;">(Ball)</small></th>
+          </tr>
+        </thead>
+        <tbody id="mika-masuk-detail-body">
+          <tr><td colspan="8" class="text-center" style="color:#999;">Belum ada data masuk pada periode ini</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============ DETAIL REJECT ============ -->
+  <div class="card" id="mika-reject-detail-card">
+    <div class="card-title">❌ Detail Reject</div>
+    <div class="info-box" style="margin-bottom:0.75rem;">
+      Data reject mika per tanggal dalam satuan <b>Pcs</b>. Ikut <b>Filter Periode</b> di atas.
+    </div>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+      <button type="button" class="btn btn-success btn-sm" onclick="downloadMikaRejectCSV()">📥 Download CSV</button>
+    </div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Tanggal</th>
+            <th class="text-right">Hatsu (Pcs)</th>
+            <th class="text-right">Grade A (Pcs)</th>
+            <th class="text-right">Grade B (Pcs)</th>
+            <th class="text-right">Total Reject (Pcs)</th>
+          </tr>
+        </thead>
+        <tbody id="mika-reject-detail-body">
+          <tr><td colspan="5" class="text-center" style="color:#999;">Belum ada data reject pada periode ini</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📅 Stok Harian (posisi akhir hari)</div>
     <div class="recap-wrap">
       <table class="recap-table" style="min-width:1150px;">
         <thead>
@@ -136,7 +190,7 @@
   <div class="card" style="margin-top:1.5rem;">
     <div class="card-title">📅 Rekap Bulanan (Stock Opname)</div>
     <div class="info-box" style="margin-bottom:0.75rem;">
-      Semua data di bawah mengikuti <b>Filter Periode</b> di atas. Ganti filter di atas untuk memperbarui semua tabel sekaligus.
+      Semua data di bawah mengikuti <b>Filter Periode</b> di atas.
     </div>
     <div class="row-2" style="align-items:flex-end;">
       <div class="input-group" style="margin-bottom:0;">
@@ -149,11 +203,7 @@
 
   <div class="card" id="mika-monthly-usage-card">
     <div class="card-title">📊 Rekap Penggunaan Bulanan (Stock Opname)</div>
-    <div class="info-box" style="margin-bottom:0.75rem;">
-      Data penggunaan mika per hari per grade. <b>Ruang Prosesing Pcs</b> = stok tersedia sebelum pengeluaran hari itu.
-      <b>Total Keluar</b> = total pcs yang keluar hari itu (kirim + tamu + reject). <b>Total Stok</b> = stok akhir setelah pengeluaran.
-    </div>
-    <div style="margin-bottom:0.75rem;" data-html2canvas-ignore="true">
+    <div style="margin-bottom:0.75rem;">
       <button type="button" class="btn btn-primary btn-sm" onclick="downloadMikaMonthlyImage()">📸 Screenshot</button>
     </div>
     <div class="recap-wrap">
