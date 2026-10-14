@@ -84,7 +84,6 @@ function computeMikaTimeline() {
     entries.forEach(entry => {
       entry.items.forEach(it => {
         if (!(it.name in st.proc)) return;
-        // Mika
         st.gudang[it.name] += (it.masuk || 0) - (it.bongkarDus || 0);
         const out = (it.kirim || 0) + (it.tamu || 0);
         const rej = rejMika(it);
@@ -94,33 +93,24 @@ function computeMikaTimeline() {
         else st.proc[it.name] += (it.aktualPcs || 0) - out - rej;
         keluar += out; reject += rej; rejectBy[it.name] += rej;
 
-        // Aksesoris — LOGIC SAMA DENGAN recalculateStockKemasan
         if (it.name === 'Hatsu') {
-          // Netfoam
           const nMasukBall = it.netfoamMasukBall || 0;
           const nPotongBall = it.netfoamPotongBall || 0;
           const nAktualPcs = (it.netfoamAktualPcs != null) ? it.netfoamAktualPcs : (it.netfoamPotong || 0);
           const nPakai = (it.netfoamPakai != null) ? it.netfoamPakai : (it.netfoamTerpakai || 0);
           const nOpname = (typeof it.netfoamOpname === 'number') ? it.netfoamOpname : null;
           st.netfoam.ball += nMasukBall - nPotongBall;
-          if (nOpname !== null) {
-            st.netfoam.proc = nOpname;
-          } else {
-            st.netfoam.proc += nAktualPcs - nPakai;
-          }
+          if (nOpname !== null) st.netfoam.proc = nOpname;
+          else st.netfoam.proc += nAktualPcs - nPakai;
 
-          // Stiker
           const sMasukLembar = (it.stikerMasukLembar != null) ? it.stikerMasukLembar : (it.stikerMasuk || 0);
           const sBongkarLembar = it.stikerBongkarLembar || 0;
           const sAktualPcs = (it.stikerAktualPcs != null) ? it.stikerAktualPcs : (sBongkarLembar * AKS_KONVERSI.stiker);
           const sPakai = it.stikerPakai || 0;
           const sOpname = (typeof it.stikerOpname === 'number') ? it.stikerOpname : null;
           st.stiker.gudang += sMasukLembar - sBongkarLembar;
-          if (sOpname !== null) {
-            st.stiker.proc = sOpname;
-          } else {
-            st.stiker.proc += sAktualPcs - sPakai;
-          }
+          if (sOpname !== null) st.stiker.proc = sOpname;
+          else st.stiker.proc += sAktualPcs - sPakai;
         }
         if (it.name === 'Grade A') {
           const lMasukDus = it.layerMasukDus || 0;
@@ -129,11 +119,8 @@ function computeMikaTimeline() {
           const lPakai = it.layerPakai || 0;
           const lOpname = (typeof it.layerOpname === 'number') ? it.layerOpname : null;
           st.layer.gudang += lMasukDus - lBongkarDus;
-          if (lOpname !== null) {
-            st.layer.proc = lOpname;
-          } else {
-            st.layer.proc += lAktualPcs - lPakai;
-          }
+          if (lOpname !== null) st.layer.proc = lOpname;
+          else st.layer.proc += lAktualPcs - lPakai;
         }
         if (it.name === 'Grade B') {
           const slMasukDus = it.sleeveMasukDus || 0;
@@ -142,11 +129,8 @@ function computeMikaTimeline() {
           const slPakai = it.sleevePakai || 0;
           const slOpname = (typeof it.sleeveOpname === 'number') ? it.sleeveOpname : null;
           st.sleeve.gudang += slMasukDus - slBongkarDus;
-          if (slOpname !== null) {
-            st.sleeve.proc = slOpname;
-          } else {
-            st.sleeve.proc += slAktualPcs - slPakai;
-          }
+          if (slOpname !== null) st.sleeve.proc = slOpname;
+          else st.sleeve.proc += slAktualPcs - slPakai;
         }
       });
     });
@@ -254,6 +238,8 @@ function renderMikaDashboard() {
 
   renderMikaRejectTamu(period);
   renderMikaKPI(period);
+  renderMikaMasukDetail(period);
+  renderMikaRejectDetail(period);
   renderMikaMonthly(period);
 }
 
@@ -391,6 +377,227 @@ function renderMikaKPI(period) {
   </tr>`;
 
   tbody.innerHTML = rowsHtml + totalRow;
+}
+
+// ========== DETAIL KEMASAN MASUK ==========
+function getMikaMasukPerTanggal(period) {
+  const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]')
+    .filter(e => e && e.tgl && e.tgl >= period.from && e.tgl <= period.to && Array.isArray(e.items))
+    .sort((a, b) => a.tgl.localeCompare(b.tgl));
+
+  const byDate = new Map();
+  db.forEach(entry => {
+    entry.items.forEach(it => {
+      // Ambil field masuk per grade
+      let hatsu = 0, gradeA = 0, gradeB = 0, layer = 0, sleeve = 0, stiker = 0, netfoam = 0;
+      if (it.name === 'Hatsu') {
+        hatsu = it.masuk || 0;
+        stiker = (it.stikerMasukLembar != null) ? it.stikerMasukLembar : (it.stikerMasuk || 0);
+        netfoam = it.netfoamMasukBall || 0;
+      } else if (it.name === 'Grade A') {
+        gradeA = it.masuk || 0;
+        layer = it.layerMasukDus || 0;
+      } else if (it.name === 'Grade B') {
+        gradeB = it.masuk || 0;
+        sleeve = it.sleeveMasukDus || 0;
+      }
+      if (hatsu || gradeA || gradeB || layer || sleeve || stiker || netfoam) {
+        if (!byDate.has(entry.tgl)) byDate.set(entry.tgl, { tgl: entry.tgl, hatsu: 0, gradeA: 0, gradeB: 0, layer: 0, sleeve: 0, stiker: 0, netfoam: 0 });
+        const r = byDate.get(entry.tgl);
+        r.hatsu += hatsu;
+        r.gradeA += gradeA;
+        r.gradeB += gradeB;
+        r.layer += layer;
+        r.sleeve += sleeve;
+        r.stiker += stiker;
+        r.netfoam += netfoam;
+      }
+    });
+  });
+
+  return [...byDate.values()].sort((a, b) => a.tgl.localeCompare(b.tgl));
+}
+
+function renderMikaMasukDetail(period) {
+  const data = getMikaMasukPerTanggal(period);
+  const tbody = document.getElementById('mika-masuk-detail-body');
+  if (!tbody) return;
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center" style="color:#999;">Belum ada data masuk pada periode ini</td></tr>';
+    return;
+  }
+
+  const fmt = n => Number(n || 0).toLocaleString('id-ID');
+  const totals = { hatsu: 0, gradeA: 0, gradeB: 0, layer: 0, sleeve: 0, stiker: 0, netfoam: 0 };
+
+  let html = data.map(r => {
+    totals.hatsu += r.hatsu;
+    totals.gradeA += r.gradeA;
+    totals.gradeB += r.gradeB;
+    totals.layer += r.layer;
+    totals.sleeve += r.sleeve;
+    totals.stiker += r.stiker;
+    totals.netfoam += r.netfoam;
+    const [y, m, d] = r.tgl.split('-');
+    return `<tr>
+      <td>${d}/${m}/${y}</td>
+      <td class="text-right">${r.hatsu ? fmt(r.hatsu) : ''}</td>
+      <td class="text-right">${r.gradeA ? fmt(r.gradeA) : ''}</td>
+      <td class="text-right">${r.gradeB ? fmt(r.gradeB) : ''}</td>
+      <td class="text-right">${r.layer ? fmt(r.layer) : ''}</td>
+      <td class="text-right">${r.sleeve ? fmt(r.sleeve) : ''}</td>
+      <td class="text-right">${r.stiker ? fmt(r.stiker) : ''}</td>
+      <td class="text-right">${r.netfoam ? fmt(r.netfoam) : ''}</td>
+    </tr>`;
+  }).join('');
+
+  html += `<tr style="background:#f0fdf4;font-weight:800;">
+    <td>TOTAL</td>
+    <td class="text-right">${fmt(totals.hatsu)}</td>
+    <td class="text-right">${fmt(totals.gradeA)}</td>
+    <td class="text-right">${fmt(totals.gradeB)}</td>
+    <td class="text-right">${fmt(totals.layer)}</td>
+    <td class="text-right">${fmt(totals.sleeve)}</td>
+    <td class="text-right">${fmt(totals.stiker)}</td>
+    <td class="text-right">${fmt(totals.netfoam)}</td>
+  </tr>`;
+
+  tbody.innerHTML = html;
+}
+
+function downloadMikaMasukCSV() {
+  const period = getMikaPeriod();
+  if (!period.from || !period.to) { showToast('Pilih periode!', 'error'); return; }
+  const data = getMikaMasukPerTanggal(period);
+  if (!data.length) { showToast('Tidak ada data masuk!', 'error'); return; }
+
+  const q = v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+  let csv = '';
+  csv += 'DETAIL KEMASAN MASUK - ' + period.label + '\n';
+  csv += 'PT. Agri Wangi Berry - Processing\n';
+  csv += 'Periode: ' + period.from + ' s.d. ' + period.to + '\n\n';
+  csv += ['Tanggal','Hatsu (Dus)','Grade A (Dus)','Grade B (Dus)','Layer (Dus)','Sleeve (Dus)','Stiker (Lembar)','Netfoam (Ball)'].join(',') + '\n';
+
+  const totals = { hatsu: 0, gradeA: 0, gradeB: 0, layer: 0, sleeve: 0, stiker: 0, netfoam: 0 };
+  data.forEach(r => {
+    totals.hatsu += r.hatsu; totals.gradeA += r.gradeA; totals.gradeB += r.gradeB;
+    totals.layer += r.layer; totals.sleeve += r.sleeve; totals.stiker += r.stiker; totals.netfoam += r.netfoam;
+    const [y, m, d] = r.tgl.split('-');
+    csv += [q(`${d}/${m}/${y}`), r.hatsu, r.gradeA, r.gradeB, r.layer, r.sleeve, r.stiker, r.netfoam].join(',') + '\n';
+  });
+  csv += '\n';
+  csv += [q('TOTAL'), totals.hatsu, totals.gradeA, totals.gradeB, totals.layer, totals.sleeve, totals.stiker, totals.netfoam].join(',') + '\n';
+
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.setAttribute('download', `Kemasan_Masuk_${period.from}_to_${period.to}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(link.href), 3000);
+  showToast(`📥 Download kemasan masuk (${data.length} baris)`);
+}
+
+// ========== DETAIL REJECT ==========
+function getMikaRejectPerTanggal(period) {
+  const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]')
+    .filter(e => e && e.tgl && e.tgl >= period.from && e.tgl <= period.to && Array.isArray(e.items))
+    .sort((a, b) => a.tgl.localeCompare(b.tgl));
+
+  const byDate = new Map();
+  db.forEach(entry => {
+    let hatsu = 0, gradeA = 0, gradeB = 0;
+    entry.items.forEach(it => {
+      const rej = rejMika(it);
+      if (!rej) return;
+      if (it.name === 'Hatsu') hatsu += rej;
+      else if (it.name === 'Grade A') gradeA += rej;
+      else if (it.name === 'Grade B') gradeB += rej;
+    });
+    if (hatsu || gradeA || gradeB) {
+      if (!byDate.has(entry.tgl)) byDate.set(entry.tgl, { tgl: entry.tgl, hatsu: 0, gradeA: 0, gradeB: 0 });
+      const r = byDate.get(entry.tgl);
+      r.hatsu += hatsu;
+      r.gradeA += gradeA;
+      r.gradeB += gradeB;
+    }
+  });
+
+  return [...byDate.values()].sort((a, b) => a.tgl.localeCompare(b.tgl));
+}
+
+function renderMikaRejectDetail(period) {
+  const data = getMikaRejectPerTanggal(period);
+  const tbody = document.getElementById('mika-reject-detail-body');
+  if (!tbody) return;
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="color:#999;">Belum ada data reject pada periode ini</td></tr>';
+    return;
+  }
+
+  const fmt = n => Number(n || 0).toLocaleString('id-ID');
+  const totals = { hatsu: 0, gradeA: 0, gradeB: 0, total: 0 };
+
+  let html = data.map(r => {
+    const total = r.hatsu + r.gradeA + r.gradeB;
+    totals.hatsu += r.hatsu;
+    totals.gradeA += r.gradeA;
+    totals.gradeB += r.gradeB;
+    totals.total += total;
+    const [y, m, d] = r.tgl.split('-');
+    return `<tr>
+      <td>${d}/${m}/${y}</td>
+      <td class="text-right">${r.hatsu ? fmt(r.hatsu) : ''}</td>
+      <td class="text-right">${r.gradeA ? fmt(r.gradeA) : ''}</td>
+      <td class="text-right">${r.gradeB ? fmt(r.gradeB) : ''}</td>
+      <td class="text-right" style="color:#dc2626;font-weight:700;">${fmt(total)}</td>
+    </tr>`;
+  }).join('');
+
+  html += `<tr style="background:#fee2e2;font-weight:800;">
+    <td>TOTAL</td>
+    <td class="text-right">${fmt(totals.hatsu)}</td>
+    <td class="text-right">${fmt(totals.gradeA)}</td>
+    <td class="text-right">${fmt(totals.gradeB)}</td>
+    <td class="text-right" style="color:#dc2626;">${fmt(totals.total)}</td>
+  </tr>`;
+
+  tbody.innerHTML = html;
+}
+
+function downloadMikaRejectCSV() {
+  const period = getMikaPeriod();
+  if (!period.from || !period.to) { showToast('Pilih periode!', 'error'); return; }
+  const data = getMikaRejectPerTanggal(period);
+  if (!data.length) { showToast('Tidak ada data reject!', 'error'); return; }
+
+  const q = v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+  let csv = '';
+  csv += 'DETAIL REJECT MIKA - ' + period.label + '\n';
+  csv += 'PT. Agri Wangi Berry - Processing\n';
+  csv += 'Periode: ' + period.from + ' s.d. ' + period.to + '\n\n';
+  csv += ['Tanggal','Hatsu (Pcs)','Grade A (Pcs)','Grade B (Pcs)','Total Reject (Pcs)'].join(',') + '\n';
+
+  const totals = { hatsu: 0, gradeA: 0, gradeB: 0, total: 0 };
+  data.forEach(r => {
+    const total = r.hatsu + r.gradeA + r.gradeB;
+    totals.hatsu += r.hatsu; totals.gradeA += r.gradeA; totals.gradeB += r.gradeB; totals.total += total;
+    const [y, m, d] = r.tgl.split('-');
+    csv += [q(`${d}/${m}/${y}`), r.hatsu, r.gradeA, r.gradeB, total].join(',') + '\n';
+  });
+  csv += '\n';
+  csv += [q('TOTAL'), totals.hatsu, totals.gradeA, totals.gradeB, totals.total].join(',') + '\n';
+
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.setAttribute('download', `Reject_Mika_${period.from}_to_${period.to}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(link.href), 3000);
+  showToast(`📥 Download reject (${data.length} baris)`);
 }
 
 // ========== REKAP BULANAN (STOCK OPNAME) ==========
@@ -546,7 +753,7 @@ function renderMikaMonthlySelisih(period) {
   }
 }
 
-// ========== EXPORT CSV ==========
+// ========== EXPORT CSV STOCK OPNAME ==========
 function exportMikaCSV() {
   const period = getMikaPeriod();
   if (!period.from || !period.to) { showToast('Pilih periode!', 'error'); return; }
