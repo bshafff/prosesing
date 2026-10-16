@@ -186,22 +186,44 @@ function renderMikaDashboard() {
     warnEl.innerHTML = '';
   } else {
     titleEl.textContent = `📋 Stok Kemasan per ${latest.tgl}`;
+
+    // Helper: bikin item card dengan info lengkap
+    const makeCard = (label, cls, gudangQty, gudangSatuan, konversi, processing) => {
+      const estimasi = gudangQty * konversi;
+      const totalAkhir = estimasi + processing;
+      return {
+        label, cls,
+        processing,
+        gudangQty, gudangSatuan,
+        estimasi, totalAkhir
+      };
+    };
+
     const items = [
-      { label: 'Hatsu', val: latest.proc['Hatsu'], cls: 'blue', meta: `Gudang ${fmt(Math.max(0, latest.gudang['Hatsu']))} dus` },
-      { label: 'Hy 11 (Grade A)', val: latest.proc['Grade A'], cls: 'green', meta: `Gudang ${fmt(Math.max(0, latest.gudang['Grade A']))} dus` },
-      { label: 'Hy 15 (Grade B)', val: latest.proc['Grade B'], cls: 'orange', meta: `Gudang ${fmt(Math.max(0, latest.gudang['Grade B']))} dus` },
-      { label: 'Layer', val: latest.layer.proc, cls: 'purple', meta: `Gudang ${fmt(Math.max(0, latest.layer.gudang))} dus` },
-      { label: 'Sleeve', val: latest.sleeve.proc, cls: 'orange', meta: `Gudang ${fmt(Math.max(0, latest.sleeve.gudang))} dus` },
-      { label: 'Stiker', val: latest.stiker.proc, cls: 'blue', meta: `Gudang ${fmt(Math.max(0, latest.stiker.gudang))} lembar` },
-      { label: 'Netfoam', val: latest.netfoam.proc, cls: 'green', meta: `Ball ${fmt(Math.max(0, latest.netfoam.ball))}` }
+      makeCard('Hatsu', 'blue', Math.max(0, latest.gudang['Hatsu']), 'dus', 200, latest.proc['Hatsu']),
+      makeCard('Hy 11 (Grade A)', 'green', Math.max(0, latest.gudang['Grade A']), 'dus', 200, latest.proc['Grade A']),
+      makeCard('Hy 15 (Grade B)', 'orange', Math.max(0, latest.gudang['Grade B']), 'dus', 300, latest.proc['Grade B']),
+      makeCard('Layer A11', 'purple', Math.max(0, latest.layer.gudang), 'dus', AKS_KONVERSI.layer, latest.layer.proc),
+      makeCard('Sleeve', 'orange', Math.max(0, latest.sleeve.gudang), 'dus', AKS_KONVERSI.sleeve, latest.sleeve.proc),
+      makeCard('Stiker', 'blue', Math.max(0, latest.stiker.gudang), 'lembar', AKS_KONVERSI.stiker, latest.stiker.proc),
+      makeCard('Netfoam', 'green', Math.max(0, latest.netfoam.ball), 'ball', AKS_KONVERSI.netfoam, latest.netfoam.proc)
     ];
+
     cardsEl.innerHTML = items.map(x => `
       <div class="stat-card ${x.cls}">
         <div class="stat-label">${x.label}</div>
-        <div class="stat-value">${cell(x.val)}</div>
-        <div class="stat-meta">${x.meta}</div>
+        <div style="display:flex;align-items:center;gap:0.9rem;flex-wrap:nowrap;">
+          <div class="stat-value" style="margin-bottom:0;flex:none;">${cell(x.processing)}</div>
+          <div style="font-size:0.72rem;line-height:1.6;color:#666;border-left:2px solid #e5e7eb;padding-left:0.75rem;min-width:0;">
+            <div style="white-space:nowrap;">Gudang: <b style="color:#1a1a18;">${fmt(x.gudangQty)} ${x.gudangSatuan}</b></div>
+            <div style="white-space:nowrap;">Est: <b style="color:#1a1a18;">${fmt(x.estimasi)} Pcs</b></div>
+            <div style="white-space:nowrap;">Total: <b style="color:#2d5016;">${fmt(x.totalAkhir)} Pcs</b></div>
+          </div>
+        </div>
+        <div class="stat-meta" style="margin-top:0.4rem;">Pcs · Processing</div>
       </div>`).join('');
-    const minus = items.filter(x => x.val < 0).map(x => x.label);
+
+    const minus = items.filter(x => x.processing < 0).map(x => x.label);
     warnEl.innerHTML = minus.length
       ? `<div class="warn-box" style="margin-top:0.5rem;">⚠️ Stok minus: <b>${minus.join(', ')}</b>.</div>`
       : '';
@@ -388,7 +410,6 @@ function getMikaMasukPerTanggal(period) {
   const byDate = new Map();
   db.forEach(entry => {
     entry.items.forEach(it => {
-      // Ambil field masuk per grade
       let hatsu = 0, gradeA = 0, gradeB = 0, layer = 0, sleeve = 0, stiker = 0, netfoam = 0;
       if (it.name === 'Hatsu') {
         hatsu = it.masuk || 0;
