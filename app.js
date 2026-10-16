@@ -41,6 +41,11 @@ async function loadAllViews() {
   console.log('[VIEW] Container sekarang punya', container.innerHTML.length, 'karakter');
 }
 
+// Bersihkan query ?v=... dari URL setelah update
+if (window.location.search.includes('v=')) {
+  window.history.replaceState(null, '', window.location.pathname + window.location.hash);
+}
+
 async function initApp() {
   console.log('[BOOT] AWB Init');
 
@@ -72,7 +77,10 @@ async function initApp() {
   checkVersion(false);
   startVersionCheckInterval();
 
-  // 5. Tentukan tampilan: welcome atau app
+  // 5. Init back button handler (WAJIB untuk support tombol back browser/HP)
+  __initBackHandler();
+
+  // 6. Tentukan tampilan: welcome atau app
   if (!isWelcomed()) {
     console.log('[BOOT] Belum welcomed → tampil welcome screen');
     showWelcomeScreen();
@@ -82,7 +90,7 @@ async function initApp() {
     autoBootSync();
   }
 
-  // 6. Register SW
+  // 7. Register SW
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW gagal:', err));
   }
