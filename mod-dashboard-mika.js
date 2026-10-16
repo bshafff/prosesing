@@ -187,7 +187,6 @@ function renderMikaDashboard() {
   } else {
     titleEl.textContent = `📋 Stok Kemasan per ${latest.tgl}`;
 
-    // Helper: bikin item card dengan info lengkap
     const makeCard = (label, cls, gudangQty, gudangSatuan, konversi, processing) => {
       const estimasi = gudangQty * konversi;
       const totalAkhir = estimasi + processing;
@@ -335,70 +334,67 @@ function renderMikaRejectTamu(period) {
   }
 }
 
+// ========== KPI PERGERAKAN KEMASAN (BARU — CARDS PER GRADE) ==========
 function renderMikaKPI(period) {
   const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]')
     .filter(e => e && e.tgl && e.tgl >= period.from && e.tgl <= period.to && Array.isArray(e.items));
 
   const totals = {};
   masterJenisKemasan.forEach(m => {
-    totals[m.name] = { masukDus: 0, bongkarDus: 0, pcsBongkar: 0, kirim: 0, tamu: 0, reject: 0 };
+    totals[m.name] = { kirim: 0, tamu: 0, reject: 0 };
   });
 
   db.forEach(entry => {
     entry.items.forEach(it => {
       const t = totals[it.name];
       if (!t) return;
-      t.masukDus += it.masuk || 0;
-      t.bongkarDus += it.bongkarDus || 0;
-      t.pcsBongkar += it.aktualPcs || 0;
       t.kirim += it.kirim || 0;
       t.tamu += it.tamu || 0;
       t.reject += rejMika(it);
     });
   });
 
-  const sum = (key) => Object.values(totals).reduce((a, t) => a + t[key], 0);
+  const totalKirimAll = Object.values(totals).reduce((a, t) => a + t.kirim, 0);
+  const totalTamuAll = Object.values(totals).reduce((a, t) => a + t.tamu, 0);
+  const totalRejectAll = Object.values(totals).reduce((a, t) => a + t.reject, 0);
   const fmt = n => Number(n || 0).toLocaleString('id-ID');
 
   const cardsEl = document.getElementById('mika-kpi-cards');
-  if (cardsEl) {
-    cardsEl.innerHTML = `
-      <div class="stat-card blue"><div class="stat-label">Total Kemasan Masuk</div><div class="stat-value">${fmt(sum('masukDus'))}</div><div class="stat-meta">Dus</div></div>
-      <div class="stat-card orange"><div class="stat-label">Total Dibongkar</div><div class="stat-value">${fmt(sum('bongkarDus'))}</div><div class="stat-meta">Dus · ${fmt(sum('pcsBongkar'))} Pcs</div></div>
-      <div class="stat-card green"><div class="stat-label">Total Kirim Packing</div><div class="stat-value">${fmt(sum('kirim'))}</div><div class="stat-meta">Pcs</div></div>
-      <div class="stat-card purple"><div class="stat-label">Total Mika Tamu</div><div class="stat-value">${fmt(sum('tamu'))}</div><div class="stat-meta">Pcs</div></div>
-      <div class="stat-card red"><div class="stat-label">Total Reject</div><div class="stat-value">${fmt(sum('reject'))}</div><div class="stat-meta">Pcs</div></div>
-      <div class="stat-card"><div class="stat-label">Hari Transaksi</div><div class="stat-value">${db.length}</div><div class="stat-meta">Hari</div></div>
-    `;
-  }
+  if (!cardsEl) return;
 
-  const tbody = document.getElementById('mika-kpi-table-body');
-  if (!tbody) return;
-
-  const rowsHtml = masterJenisKemasan.map(m => {
+  // Card per grade
+  const gradeCards = masterJenisKemasan.map(m => {
     const t = totals[m.name];
-    return `<tr>
-      <td><span class="badge ${m.badge}">${m.name}</span></td>
-      <td class="text-right">${fmt(t.masukDus)}</td>
-      <td class="text-right">${fmt(t.bongkarDus)}</td>
-      <td class="text-right">${fmt(t.pcsBongkar)}</td>
-      <td class="text-right">${fmt(t.kirim)}</td>
-      <td class="text-right">${fmt(t.tamu)}</td>
-      <td class="text-right" style="color:#dc2626;">${fmt(t.reject)}</td>
-    </tr>`;
+    const pct = totalKirimAll > 0 ? (t.kirim / totalKirimAll * 100) : 0;
+    return `
+      <div class="stat-card ${m.badge === 'hatsu' ? 'blue' : m.badge === 'gradea' ? 'green' : 'orange'}">
+        <div class="stat-label">${m.name}</div>
+        <div class="stat-value">${fmt(t.kirim)}</div>
+        <div class="stat-meta" style="margin-bottom:0.5rem;">Pcs · Kirim Packing</div>
+        <div style="padding-top:0.5rem;border-top:1px dashed #e5e7eb;font-size:0.75rem;line-height:1.8;color:#666;">
+          <div style="white-space:nowrap;">Rate: <b style="color:#2d5016;">${pct.toFixed(2)}%</b></div>
+          <div style="white-space:nowrap;">🎁 Tamu: <b style="color:#1a1a18;">${fmt(t.tamu)} Pcs</b></div>
+          <div style="white-space:nowrap;">❌ Reject: <b style="color:#dc2626;">${fmt(t.reject)} Pcs</b></div>
+        </div>
+      </div>
+    `;
   }).join('');
 
-  const totalRow = `<tr style="background:#f0fdf4;font-weight:800;">
-    <td>TOTAL</td>
-    <td class="text-right">${fmt(sum('masukDus'))}</td>
-    <td class="text-right">${fmt(sum('bongkarDus'))}</td>
-    <td class="text-right">${fmt(sum('pcsBongkar'))}</td>
-    <td class="text-right">${fmt(sum('kirim'))}</td>
-    <td class="text-right">${fmt(sum('tamu'))}</td>
-    <td class="text-right" style="color:#dc2626;">${fmt(sum('reject'))}</td>
-  </tr>`;
+  // Card TOTAL
+  const totalCard = `
+    <div class="stat-card purple">
+      <div class="stat-label">TOTAL</div>
+      <div class="stat-value">${fmt(totalKirimAll)}</div>
+      <div class="stat-meta" style="margin-bottom:0.5rem;">Pcs · Kirim Packing</div>
+      <div style="padding-top:0.5rem;border-top:1px dashed #e5e7eb;font-size:0.75rem;line-height:1.8;color:#666;">
+        <div style="white-space:nowrap;">Rate: <b style="color:#2d5016;">100.00%</b></div>
+        <div style="white-space:nowrap;">🎁 Tamu: <b style="color:#1a1a18;">${fmt(totalTamuAll)} Pcs</b></div>
+        <div style="white-space:nowrap;">❌ Reject: <b style="color:#dc2626;">${fmt(totalRejectAll)} Pcs</b></div>
+      </div>
+    </div>
+  `;
 
-  tbody.innerHTML = rowsHtml + totalRow;
+  cardsEl.innerHTML = gradeCards + totalCard;
 }
 
 // ========== DETAIL KEMASAN MASUK ==========
