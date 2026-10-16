@@ -46,28 +46,21 @@ function fmtInt(n) {
   return String(parseInt(n, 10) || 0);
 }
 
-// Generate WA text dari object data (generic)
-// item = { tgl, p_hatsu, p_gradea, p_gradeb, rk_crack, rk_poli, rk_hpt,
-//          rp_crack, rp_poli, rp_hpt, rp_bruise, rp_overripe, rp_kuning, rp_frozen,
-//          k_hatsu, k_a11, k_a15, k_frozen, m_hatsu, m_a11, m_a15 }
 function generateWATextFromItem(item) {
   const tgl = item.tgl || '';
   const tglFmt = formatTanggalPanjang(tgl);
 
-  // === Data Panen ===
   const p_hatsu = parseFloat(item.p_hatsu) || 0;
   const p_gradea = parseFloat(item.p_gradea) || 0;
   const p_gradeb = parseFloat(item.p_gradeb) || 0;
   const totalGradePanen = p_hatsu + p_gradea + p_gradeb;
 
-  // === Reject Kebun ===
   const rk_crack = parseFloat(item.rk_crack) || 0;
   const rk_poli = parseFloat(item.rk_poli) || 0;
   const rk_hpt = parseFloat(item.rk_hpt) || 0;
   const rkTotal = rk_crack + rk_poli + rk_hpt;
   const totalPanen = totalGradePanen + rkTotal;
 
-  // === Pengiriman ===
   const k_hatsu = parseFloat(item.k_hatsu) || 0;
   const k_a11 = parseFloat(item.k_a11) || 0;
   const k_a15 = parseFloat(item.k_a15) || 0;
@@ -75,13 +68,11 @@ function generateWATextFromItem(item) {
   const totalGradeKirim = k_hatsu + k_a11 + k_a15;
   const totalKirim = totalGradeKirim + k_frozen;
 
-  // === Pack ===
   const m_hatsu = parseInt(item.m_hatsu) || 0;
   const m_a11 = parseInt(item.m_a11) || 0;
   const m_a15 = parseInt(item.m_a15) || 0;
   const totalPack = m_hatsu + m_a11 + m_a15;
 
-  // === Reject Processing ===
   const rp_crack = parseFloat(item.rp_crack) || 0;
   const rp_poli = parseFloat(item.rp_poli) || 0;
   const rp_hpt = parseFloat(item.rp_hpt) || 0;
@@ -91,7 +82,6 @@ function generateWATextFromItem(item) {
   const rp_frozen = parseFloat(item.rp_frozen) || 0;
   const rpTotal = rp_crack + rp_poli + rp_hpt + rp_bruise + rp_overripe + rp_kuning + rp_frozen;
 
-  // === Build text ===
   let t = '';
   t += `*Data Panen*\n*${tglFmt}*\n\n`;
   t += `Hatsuhana : ${fmtKg(p_hatsu)} kg\n`;
@@ -129,7 +119,6 @@ function generateWATextFromItem(item) {
   return t;
 }
 
-// Wrapper: baca dari form input
 function generateWAText() {
   const item = {
     tgl: document.getElementById('panen-tgl').value,
@@ -165,10 +154,12 @@ function openWAModal() {
   const ta = document.getElementById('wa-text-preview');
   if (ta) ta.value = text;
 
+  const header = document.querySelector('#modal-wa .modal-header');
+  if (header) header.textContent = '📋 Format WA';
+
   document.getElementById('modal-wa').classList.add('show');
 }
 
-// BARU: buka WA dari data historis
 function openWAModalFromHistory(id) {
   const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
   const item = db.find(x => String(x.id) === String(id));
@@ -186,8 +177,6 @@ function openWAModalFromHistory(id) {
 
 function closeWAModal() {
   document.getElementById('modal-wa').classList.remove('show');
-  const header = document.querySelector('#modal-wa .modal-header');
-  if (header) header.textContent = '📋 Format WA';
 }
 
 async function copyWAText() {
@@ -345,6 +334,7 @@ function renderTablePanen() {
   }
 }
 
+// ========== EDIT MODAL (LENGKAP) ==========
 function editDataPanen(id) {
   const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
   const item = db.find(x => String(x.id) === String(id));
@@ -356,22 +346,55 @@ function editDataPanen(id) {
   body.innerHTML = `
     <div class="input-group"><label>Tanggal</label><input type="date" id="edit-p-tgl" value="${item.tgl}"></div>
     <div class="input-group"><label>Greenhouse</label><select id="edit-p-gh"><option value="GH 1" ${ghOf(item) === 'GH 1' ? 'selected' : ''}>GH 1</option><option value="GH 2" ${ghOf(item) === 'GH 2' ? 'selected' : ''}>GH 2</option></select></div>
+
+    <hr style="border:0;border-top:2px solid #e5e7eb;margin:1rem 0;">
+    <div style="font-size:0.75rem;font-weight:800;color:#2d5016;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.75rem;">🌾 Panen</div>
+
     <div class="input-group"><label>Panen Hatsu (Kg)</label><input type="number" step="0.01" id="edit-p-hatsu" value="${item.p_hatsu}"></div>
     <div class="input-group"><label>Panen Grade A (Kg)</label><input type="number" step="0.01" id="edit-p-gradea" value="${item.p_gradea}"></div>
     <div class="input-group"><label>Panen Grade B (Kg)</label><input type="number" step="0.01" id="edit-p-gradeb" value="${item.p_gradeb}"></div>
-    <hr>
-    <div class="input-group"><label>Reject Processing - Buah Kuning &lt;80% (Kg)</label><input type="number" step="0.01" id="edit-rp-kuning" value="${item.rp_kuning || 0}"></div>
-    <hr>
+
+    <hr style="border:0;border-top:2px solid #e5e7eb;margin:1rem 0;">
+    <div style="font-size:0.75rem;font-weight:800;color:#2d5016;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.75rem;">🍃 Reject Kebun</div>
+
+    <div class="input-group"><label>Cracking (Kg)</label><input type="number" step="0.01" id="edit-rk-crack" value="${item.rk_crack || 0}"></div>
+    <div class="input-group"><label>Polinasi (Kg)</label><input type="number" step="0.01" id="edit-rk-poli" value="${item.rk_poli || 0}"></div>
+    <div class="input-group"><label>HPT (Kg)</label><input type="number" step="0.01" id="edit-rk-hpt" value="${item.rk_hpt || 0}"></div>
+
+    <hr style="border:0;border-top:2px solid #e5e7eb;margin:1rem 0;">
+    <div style="font-size:0.75rem;font-weight:800;color:#2d5016;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.75rem;">🏭 Reject Processing</div>
+
+    <div class="input-group"><label>Cracking (Kg)</label><input type="number" step="0.01" id="edit-rp-crack" value="${item.rp_crack || 0}"></div>
+    <div class="input-group"><label>Polinasi (Kg)</label><input type="number" step="0.01" id="edit-rp-poli" value="${item.rp_poli || 0}"></div>
+    <div class="input-group"><label>HPT (Kg)</label><input type="number" step="0.01" id="edit-rp-hpt" value="${item.rp_hpt || 0}"></div>
+    <div class="input-group"><label>Bruise (Kg)</label><input type="number" step="0.01" id="edit-rp-bruise" value="${item.rp_bruise || 0}"></div>
+    <div class="input-group"><label>Overripe (Kg)</label><input type="number" step="0.01" id="edit-rp-overripe" value="${item.rp_overripe || 0}"></div>
+    <div class="input-group"><label>Buah Kuning &lt;80% (Kg)</label><input type="number" step="0.01" id="edit-rp-kuning" value="${item.rp_kuning || 0}"></div>
+    <div class="input-group"><label>Frozen &lt;11 gr (Kg)</label><input type="number" step="0.01" id="edit-rp-frozen" value="${item.rp_frozen || 0}"></div>
+
+    <hr style="border:0;border-top:2px solid #e5e7eb;margin:1rem 0;">
+    <div style="font-size:0.75rem;font-weight:800;color:#2d5016;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.75rem;">📦 Berat Pengiriman</div>
+
     <div class="input-group"><label>Kirim Hatsu (Kg)</label><input type="number" step="0.01" id="edit-k-hatsu" value="${item.k_hatsu}"></div>
     <div class="input-group"><label>Kirim A11 (Kg)</label><input type="number" step="0.01" id="edit-k-a11" value="${item.k_a11}"></div>
     <div class="input-group"><label>Kirim A15 (Kg)</label><input type="number" step="0.01" id="edit-k-a15" value="${item.k_a15}"></div>
     <div class="input-group"><label>Kirim Frozen (Kg)</label><input type="number" step="0.01" id="edit-k-frozen" value="${item.k_frozen || 0}"></div>
-    <hr>
+
+    <hr style="border:0;border-top:2px solid #e5e7eb;margin:1rem 0;">
+    <div style="font-size:0.75rem;font-weight:800;color:#2d5016;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.75rem;">🍓 Jumlah Pengiriman (Mika / Pcs)</div>
+
     <div class="input-group"><label>Mika Hatsu (Pcs)</label><input type="number" id="edit-m-hatsu" value="${item.m_hatsu}"></div>
     <div class="input-group"><label>Mika A11 (Pcs)</label><input type="number" id="edit-m-a11" value="${item.m_a11}"></div>
     <div class="input-group"><label>Mika A15 (Pcs)</label><input type="number" id="edit-m-a15" value="${item.m_a15}"></div>
-    <hr>
-    <div class="input-group"><label>Keterangan Tamu & Sampel</label><input type="text" id="edit-t-ket" value="${item.t_ket || ''}"></div>
+
+    <hr style="border:0;border-top:2px solid #e5e7eb;margin:1rem 0;">
+    <div style="font-size:0.75rem;font-weight:800;color:#2d5016;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.75rem;">🎁 Tamu & Sampel</div>
+
+    <div class="input-group"><label>Curah (Kg)</label><input type="number" step="0.01" id="edit-t-curah" value="${item.t_curah || 0}"></div>
+    <div class="input-group"><label>Mika Hatsu (Pcs)</label><input type="number" id="edit-t-hatsu" value="${item.t_hatsu || 0}"></div>
+    <div class="input-group"><label>Mika A11 (Pcs)</label><input type="number" id="edit-t-a11" value="${item.t_a11 || 0}"></div>
+    <div class="input-group"><label>Mika A15 (Pcs)</label><input type="number" id="edit-t-a15" value="${item.t_a15 || 0}"></div>
+    <div class="input-group"><label>Keterangan Tamu & Sampel</label><input type="text" id="edit-t-ket" value="${(item.t_ket || '').replace(/"/g, '&quot;')}"></div>
   `;
   document.getElementById('modal-edit-panen').classList.add('show');
 }
@@ -388,22 +411,59 @@ function saveEditPanen() {
   const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
   const idx = db.findIndex(x => String(x.id) === String(window.editingPanenId));
   if (idx === -1) return;
+  const g = id => {
+    const el = document.getElementById(id);
+    return el ? parseFloat(el.value || 0) : 0;
+  };
+  const gInt = id => {
+    const el = document.getElementById(id);
+    return el ? (parseInt(el.value || 0) || 0) : 0;
+  };
+  const gStr = id => {
+    const el = document.getElementById(id);
+    return el ? el.value : '';
+  };
   db[idx] = {
     ...db[idx],
-    tgl: document.getElementById('edit-p-tgl').value,
-    gh: document.getElementById('edit-p-gh').value,
-    p_hatsu: parseFloat(document.getElementById('edit-p-hatsu').value || 0),
-    p_gradea: parseFloat(document.getElementById('edit-p-gradea').value || 0),
-    p_gradeb: parseFloat(document.getElementById('edit-p-gradeb').value || 0),
-    rp_kuning: parseFloat((document.getElementById('edit-rp-kuning') || {}).value || 0),
-    k_hatsu: parseFloat(document.getElementById('edit-k-hatsu').value || 0),
-    k_a11: parseFloat(document.getElementById('edit-k-a11').value || 0),
-    k_a15: parseFloat(document.getElementById('edit-k-a15').value || 0),
-    k_frozen: parseFloat(document.getElementById('edit-k-frozen').value || 0),
-    m_hatsu: parseInt(document.getElementById('edit-m-hatsu').value || 0),
-    m_a11: parseInt(document.getElementById('edit-m-a11').value || 0),
-    m_a15: parseInt(document.getElementById('edit-m-a15').value || 0),
-    t_ket: document.getElementById('edit-t-ket') ? document.getElementById('edit-t-ket').value : (db[idx].t_ket || '')
+    tgl: gStr('edit-p-tgl'),
+    gh: gStr('edit-p-gh') || 'GH 1',
+
+    // Panen
+    p_hatsu: g('edit-p-hatsu'),
+    p_gradea: g('edit-p-gradea'),
+    p_gradeb: g('edit-p-gradeb'),
+
+    // Reject Kebun
+    rk_crack: g('edit-rk-crack'),
+    rk_poli: g('edit-rk-poli'),
+    rk_hpt: g('edit-rk-hpt'),
+
+    // Reject Processing
+    rp_crack: g('edit-rp-crack'),
+    rp_poli: g('edit-rp-poli'),
+    rp_hpt: g('edit-rp-hpt'),
+    rp_bruise: g('edit-rp-bruise'),
+    rp_overripe: g('edit-rp-overripe'),
+    rp_kuning: g('edit-rp-kuning'),
+    rp_frozen: g('edit-rp-frozen'),
+
+    // Pengiriman
+    k_hatsu: g('edit-k-hatsu'),
+    k_a11: g('edit-k-a11'),
+    k_a15: g('edit-k-a15'),
+    k_frozen: g('edit-k-frozen'),
+
+    // Mika
+    m_hatsu: gInt('edit-m-hatsu'),
+    m_a11: gInt('edit-m-a11'),
+    m_a15: gInt('edit-m-a15'),
+
+    // Tamu & Sampel
+    t_curah: g('edit-t-curah'),
+    t_hatsu: gInt('edit-t-hatsu'),
+    t_a11: gInt('edit-t-a11'),
+    t_a15: gInt('edit-t-a15'),
+    t_ket: gStr('edit-t-ket')
   };
   localStorage.setItem(PANEN_STORAGE_KEY, JSON.stringify(db));
   showToast('✅ Data panen berhasil diupdate!');
