@@ -120,25 +120,20 @@ async function welcomeConnect() {
     btn.textContent = '⏳ Menyambungkan...';
   }
 
-  // Set flag welcommed
   localStorage.setItem(WELCOMED_KEY, '1');
 
-  // Auto-set default URL
   if (DEFAULT_SCRIPT_URL && DEFAULT_SCRIPT_URL.indexOf('/exec') > 0) {
     scriptUrl = DEFAULT_SCRIPT_URL;
     isAuthenticated = true;
     localStorage.setItem('awb_sync_auth', '1');
   }
 
-  // Tampilkan app (dashboard)
   showAppScreen();
   updateSyncStatus('syncing');
 
-  // Load data & sync
   setTimeout(async () => {
     try {
       if (isAuthenticated && currentScriptUrl()) {
-        // Kalau lokal kosong → pull dari Sheet
         const totalLocal =
           readArrayRaw(nativeStorage.getItem(PANEN_STORAGE_KEY)).length +
           readArrayRaw(nativeStorage.getItem(KEMASAN_STORAGE_KEY)).length +
@@ -154,7 +149,6 @@ async function welcomeConnect() {
           showToast('✓ Tersinkron');
         }
 
-        // Update status jadi "Tersinkron"
         const st = document.getElementById('sync-status');
         if (st) {
           const now = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
@@ -490,22 +484,20 @@ function autoBootSync() {
   }
 
   if (getSyncQueue().length > 0 && navigator.onLine) {
+    console.log('[AUTO] Queue pending, sync otomatis...');
     syncQueue();
+    return;
   }
 
-  const totalLocal =
-    readArrayRaw(nativeStorage.getItem(PANEN_STORAGE_KEY)).length +
-    readArrayRaw(nativeStorage.getItem(KEMASAN_STORAGE_KEY)).length +
-    readArrayRaw(nativeStorage.getItem(LKS_STORAGE_KEY)).length;
-  const hasPulledBefore = !!nativeStorage.getItem('awb_last_pull_v1');
-
-  if (totalLocal === 0 && !hasPulledBefore) {
+  if (getSyncQueue().length === 0 && navigator.onLine) {
+    console.log('[AUTO] Queue kosong, pull data terbaru dari Sheet...');
     pullFromSheet(true);
   }
 
   if (!window.__autoSyncInterval) {
     window.__autoSyncInterval = setInterval(() => {
       if (getSyncQueue().length > 0 && navigator.onLine && isAuthenticated && !syncBusy) {
+        console.log('[AUTO] Periodic sync...');
         syncQueue();
       }
     }, 5 * 60 * 1000);
@@ -514,12 +506,14 @@ function autoBootSync() {
   if (!window.__autoSyncVisibilityBound) {
     window.__autoSyncVisibilityBound = true;
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible'
-          && getSyncQueue().length > 0
-          && navigator.onLine
-          && isAuthenticated
-          && !syncBusy) {
-        syncQueue();
+      if (document.visibilityState === 'visible' && navigator.onLine && isAuthenticated && !syncBusy) {
+        if (getSyncQueue().length > 0) {
+          console.log('[AUTO] Tab aktif + queue pending, sync...');
+          syncQueue();
+        } else {
+          console.log('[AUTO] Tab aktif, pull data terbaru...');
+          pullFromSheet(true);
+        }
       }
     });
   }
@@ -553,7 +547,6 @@ async function checkVersion(silent) {
       return 'latest';
     }
 
-    // Ada update → tampilkan tombol kuning
     const btn = document.getElementById('updateBtn');
     if (btn) {
       btn.classList.add('available');
@@ -606,7 +599,6 @@ async function manualUpdate() {
     const remote = await res.json();
     const localVer = localStorage.getItem(APP_VERSION_KEY);
 
-    // === KASUS 1: Pertama kali cek (belum ada versi tersimpan) ===
     if (!localVer) {
       localStorage.setItem(APP_VERSION_KEY, remote.version);
       showToast('✓ Versi v' + remote.version + ' tersimpan');
@@ -618,7 +610,6 @@ async function manualUpdate() {
       return;
     }
 
-    // === KASUS 2: Sudah versi terbaru → CUMA KASIH TOAST, TIDAK RELOAD ===
     if (localVer === remote.version) {
       showToast('✓ Sudah versi terbaru (v' + localVer + ')');
       if (btn) {
@@ -629,7 +620,6 @@ async function manualUpdate() {
       return;
     }
 
-    // === KASUS 3: Ada versi baru → update + reload ===
     showToast('🆕 Versi baru v' + remote.version + ' — memperbarui...');
     await performHardReset(remote.version);
 
@@ -650,13 +640,46 @@ function startVersionCheckInterval() {
   }, 30 * 60 * 1000);
 }
 
-// ========== NAVIGATION ==========
+// ========== NAVIGATION (dengan BACK button handler) ==========
+let __currentView = 'home';
+let __isBackNavigation = false;
+
 function openModule(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  const target = document.getElementById(id);
+  if (target) target.classList.add('active');
   window.scrollTo(0, 0);
+
+  // Push history kalau bukan back navigation & view beda
+  if (!__isBackNavigation && __currentView !== id) {
+    try {
+      history.pushState({ view: id, ts: Date.now() }, '', '#' + id);
+    } catch (e) { console.warn('pushState gagal:', e); }
+  }
+  __isBackNavigation = false;
+  __currentView = id;
 }
-function goHome() { openModule('home'); }
+
+function __initBackHandler() {
+  // Set state awal biar ada "home" di history
+  try {
+    history.replaceState({ view: 'home', ts: Date.now() }, '', '#home');
+  } catch (e) {}
+
+  window.addEventListener('popstate', (e) => {
+    __isBackNavigation = true;
+    const state = e.state;
+    const targetView = (state && state.view) ? state.view : 'home';
+    openModule(targetView);
+  });
+}
+
+function goHome() {
+  openModule('home');
+  try {
+    history.pushState({ view: 'home', ts: Date.now() }, '', '#home');
+  } catch (e) {}
+}
 
 function showKemasanSubTab(subId, btn) {
   document.querySelectorAll('.k-panel').forEach(p => p.classList.remove('active'));
