@@ -4,95 +4,116 @@
     <span class="view-title">🌾 Rekap Panen & Sortir</span>
     <button class="btn btn-sm" onclick="openImportModal('panen')" style="margin-left:auto;flex:none;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;">📥 Import</button>
   </div>
+  
   <div class="card">
     <div class="card-title">📅 Tanggal Panen & Greenhouse</div>
     <div class="row-2">
       <div class="input-group" style="margin-bottom:0;"><label>Tanggal</label><input type="date" id="panen-tgl"></div>
       <div class="input-group" style="margin-bottom:0;"><label class="required">Greenhouse</label>
-        <select id="panen-gh"><option value="GH 1">GH 1</option><option value="GH 2">GH 2</option></select>
+        <select id="panen-gh" onchange="toggleFormPanen()">
+          <option value="GH 1">GH 1</option>
+          <option value="GH 2">GH 2</option>
+          <option value="GLOBAL">🌐 GLOBAL (Frozen & Tamu)</option>
+        </select>
       </div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-title">🌾 1. Panen (Kg)</div>
-    <div class="row-3">
-      <div class="input-group"><label>Hatsuhana</label><input type="number" step="0.01" id="p-hatsu" placeholder="0.00" oninput="hitungAllPanen()"></div>
-      <div class="input-group"><label>Grade A</label><input type="number" step="0.01" id="p-gradea" placeholder="0.00" oninput="hitungAllPanen()"></div>
-      <div class="input-group"><label>Grade B</label><input type="number" step="0.01" id="p-gradeb" placeholder="0.00" oninput="hitungAllPanen()"></div>
+  <!-- ================= FORM KHUSUS PER GH (1-5) ================= -->
+  <div id="form-khusus-gh">
+    <div class="card">
+      <div class="card-title">🌾 1. Panen (Kg)</div>
+      <div class="row-3">
+        <div class="input-group"><label>Hatsuhana</label><input type="number" step="0.01" id="p-hatsu" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>Grade A</label><input type="number" step="0.01" id="p-gradea" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>Grade B</label><input type="number" step="0.01" id="p-gradeb" placeholder="0.00" oninput="hitungAllPanen()"></div>
+      </div>
+      <div style="background: #fff7e6; border-left: 4px solid #ea580c; padding: 1rem; border-radius: 6px; margin-top: 0.75rem;">
+        <strong>Total Panen (Termasuk Reject Kebun):</strong> <span id="calc-total-panen" style="font-size: 1.25rem; font-weight: 800;">0.00 Kg</span>
+      </div>
     </div>
-    <div style="background: #fff7e6; border-left: 4px solid #ea580c; padding: 1rem; border-radius: 6px; margin-top: 0.75rem;">
-      <strong>Total Panen (Termasuk Reject Kebun):</strong> <span id="calc-total-panen" style="font-size: 1.25rem; font-weight: 800;">0.00 Kg</span>
+
+    <div class="card">
+      <div class="card-title">🍃 2. Reject Kebun (Kg)</div>
+      <div class="row-3">
+        <div class="input-group"><label>Cracking</label><input type="number" step="0.01" id="rk-crack" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>Polinasi</label><input type="number" step="0.01" id="rk-poli" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>HPT</label><input type="number" step="0.01" id="rk-hpt" placeholder="0.00" oninput="hitungAllPanen()"></div>
+      </div>
+      <div style="background: #f0fdf4; border-left: 4px solid #16a34a; padding: 1rem; border-radius: 6px; margin-top: 0.75rem;">
+        <strong>Total Reject Kebun:</strong> <span id="calc-total-rk" style="font-size: 1.25rem; font-weight: 800;">0.00 Kg</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🏭 3. Reject Processing (Kg)</div>
+      <div class="row-6">
+        <div class="input-group"><label>Cracking</label><input type="number" step="0.01" id="rp-crack" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>Polinasi</label><input type="number" step="0.01" id="rp-poli" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>HPT</label><input type="number" step="0.01" id="rp-hpt" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>Bruise</label><input type="number" step="0.01" id="rp-bruise" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>Overripe</label><input type="number" step="0.01" id="rp-overripe" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>Buah Kuning (&lt;80%)</label><input type="number" step="0.01" id="rp-kuning" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>Frozen (&lt;11 gr)</label><input type="number" step="0.01" id="rp-frozen" placeholder="0.00" oninput="hitungAllPanen()"></div>
+      </div>
+      <div style="background: #fee2e2; border-left: 4px solid #dc2626; padding: 1rem; border-radius: 6px; margin-top: 0.75rem;">
+        <strong>Total Reject Processing:</strong> <span id="calc-total-rp" style="font-size: 1.25rem; font-weight: 800;">0.00 Kg</span> | 
+        <strong>Grand Total Reject:</strong> <span id="calc-grand-total-r" style="color: #dc2626; font-size: 1.25rem;">0.00 Kg</span> | 
+        <strong>Reject Rate:</strong> <span id="calc-reject-rate" style="color: #dc2626; font-size: 1.25rem;">0.00%</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📦 4. Berat Pengiriman (Kg)</div>
+      <div class="row-3">
+        <div class="input-group"><label>Hatsuhana</label><input type="number" step="0.01" id="k-hatsu" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>A11</label><input type="number" step="0.01" id="k-a11" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>A15</label><input type="number" step="0.01" id="k-a15" placeholder="0.00" oninput="hitungAllPanen()"></div>
+      </div>
+      <div style="background: #e8f5e9; border-left: 4px solid #16a34a; padding: 1rem; border-radius: 6px; margin-top: 0.75rem;">
+        <strong>Total Pengiriman Grade:</strong> <span id="calc-total-kirim" style="font-size: 1.25rem; font-weight: 800;">0.00 Kg</span> | 
+        <strong>Rate Kirim:</strong> <span id="calc-rate-kirim" style="color: #16a34a; font-size: 1.25rem;">0.00%</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🍓 5. Jumlah Pengiriman (Mika / Pcs)</div>
+      <div class="row-3">
+        <div class="input-group"><label>Hatsuhana</label><input type="number" id="m-hatsu" placeholder="0" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>A11</label><input type="number" id="m-a11" placeholder="0" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>A15</label><input type="number" id="m-a15" placeholder="0" oninput="hitungAllPanen()"></div>
+      </div>
+      <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 6px; margin-top: 0.75rem;">
+        <strong>Total Pengiriman Mika:</strong> <span id="calc-total-mika" style="font-size: 1.25rem; font-weight: 800;">0 Pcs</span>
+      </div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-title">🍃 2. Reject Kebun (Kg)</div>
-    <div class="row-3">
-      <div class="input-group"><label>Cracking</label><input type="number" step="0.01" id="rk-crack" placeholder="0.00" oninput="hitungAllPanen()"></div>
-      <div class="input-group"><label>Polinasi</label><input type="number" step="0.01" id="rk-poli" placeholder="0.00" oninput="hitungAllPanen()"></div>
-      <div class="input-group"><label>HPT</label><input type="number" step="0.01" id="rk-hpt" placeholder="0.00" oninput="hitungAllPanen()"></div>
+  <!-- ================= FORM GLOBAL (FROZEN & TAMU) ================= -->
+  <div id="form-global" style="display:none;">
+    <div class="card">
+      <div class="card-title">❄️ 6. Frozen (Global Pabrik)</div>
+      <div class="input-group">
+        <label>Total Frozen (Kg)</label>
+        <input type="number" step="0.01" id="k-frozen" placeholder="0.00" oninput="hitungAllPanen()">
+      </div>
+      <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 1rem; border-radius: 6px;">
+        <strong>Total Frozen:</strong> <span id="calc-total-frozen-global" style="font-size: 1.25rem; font-weight: 800;">0.00 Kg</span>
+      </div>
     </div>
-    <div style="background: #f0fdf4; border-left: 4px solid #16a34a; padding: 1rem; border-radius: 6px; margin-top: 0.75rem;">
-      <strong>Total Reject Kebun:</strong> <span id="calc-total-rk" style="font-size: 1.25rem; font-weight: 800;">0.00 Kg</span>
-    </div>
-  </div>
 
-  <div class="card">
-    <div class="card-title">🏭 3. Reject Processing (Kg)</div>
-    <div class="row-6">
-      <div class="input-group"><label>Cracking</label><input type="number" step="0.01" id="rp-crack" placeholder="0.00" oninput="hitungAllPanen()"></div>
-      <div class="input-group"><label>Polinasi</label><input type="number" step="0.01" id="rp-poli" placeholder="0.00" oninput="hitungAllPanen()"></div>
-      <div class="input-group"><label>HPT</label><input type="number" step="0.01" id="rp-hpt" placeholder="0.00" oninput="hitungAllPanen()"></div>
-      <div class="input-group"><label>Bruise</label><input type="number" step="0.01" id="rp-bruise" placeholder="0.00" oninput="hitungAllPanen()"></div>
-      <div class="input-group"><label>Overripe</label><input type="number" step="0.01" id="rp-overripe" placeholder="0.00" oninput="hitungAllPanen()"></div>
-      <div class="input-group"><label>Buah Kuning (&lt;80%)</label><input type="number" step="0.01" id="rp-kuning" placeholder="0.00" oninput="hitungAllPanen()"></div>
-      <div class="input-group"><label>Frozen (&lt;11 gr)</label><input type="number" step="0.01" id="rp-frozen" placeholder="0.00" oninput="hitungAllPanen()"></div>
-    </div>
-    <div style="background: #fee2e2; border-left: 4px solid #dc2626; padding: 1rem; border-radius: 6px; margin-top: 0.75rem;">
-      <strong>Total Reject Processing:</strong> <span id="calc-total-rp" style="font-size: 1.25rem; font-weight: 800;">0.00 Kg</span> | 
-      <strong>Grand Total Reject:</strong> <span id="calc-grand-total-r" style="color: #dc2626; font-size: 1.25rem;">0.00 Kg</span> | 
-      <strong>Reject Rate:</strong> <span id="calc-reject-rate" style="color: #dc2626; font-size: 1.25rem;">0.00%</span>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">📦 4. Berat Pengiriman (Kg)</div>
-    <div class="row-4">
-      <div class="input-group"><label>Hatsuhana</label><input type="number" step="0.01" id="k-hatsu" placeholder="0.00" oninput="hitungAllPanen()"></div>
-      <div class="input-group"><label>A11</label><input type="number" step="0.01" id="k-a11" placeholder="0.00" oninput="hitungAllPanen()"></div>
-      <div class="input-group"><label>A15</label><input type="number" step="0.01" id="k-a15" placeholder="0.00" oninput="hitungAllPanen()"></div>
-      <div class="input-group"><label>Frozen</label><input type="number" step="0.01" id="k-frozen" placeholder="0.00" oninput="hitungAllPanen()"></div>
-    </div>
-    <div style="background: #e8f5e9; border-left: 4px solid #16a34a; padding: 1rem; border-radius: 6px; margin-top: 0.75rem;">
-      <strong>Total Pengiriman (Hatsuhana + A11 + A15 + Frozen):</strong> <span id="calc-total-kirim" style="font-size: 1.25rem; font-weight: 800;">0.00 Kg</span> | 
-      <strong>Rate Kirim:</strong> <span id="calc-rate-kirim" style="color: #16a34a; font-size: 1.25rem;">0.00%</span>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">🍓 5. Jumlah Pengiriman (Mika / Pcs)</div>
-    <div class="row-3">
-      <div class="input-group"><label>Hatsuhana</label><input type="number" id="m-hatsu" placeholder="0" oninput="hitungAllPanen()"></div>
-      <div class="input-group"><label>A11</label><input type="number" id="m-a11" placeholder="0" oninput="hitungAllPanen()"></div>
-      <div class="input-group"><label>A15</label><input type="number" id="m-a15" placeholder="0" oninput="hitungAllPanen()"></div>
-    </div>
-    <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 6px; margin-top: 0.75rem;">
-      <strong>Total Pengiriman Mika:</strong> <span id="calc-total-mika" style="font-size: 1.25rem; font-weight: 800;">0 Pcs</span>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">🎁 6. Untuk Tamu & Sampel</div>
-    <div class="row-4">
-      <div class="input-group"><label>Curah (Kg)</label><input type="number" step="0.01" id="t-curah" placeholder="0.00"></div>
-      <div class="input-group"><label>Mika Hatsuhana</label><input type="number" id="t-hatsu" placeholder="0"></div>
-      <div class="input-group"><label>Mika A11</label><input type="number" id="t-a11" placeholder="0"></div>
-      <div class="input-group"><label>Mika A15</label><input type="number" id="t-a15" placeholder="0"></div>
-    </div>
-    <div class="input-group" style="margin-top: 0.75rem;">
-      <label>Keterangan Tamu & Sampel</label>
-      <input type="text" id="t-ket" placeholder="Opsional / Catatan keperluan tamu & sampel">
+    <div class="card">
+      <div class="card-title">🎁 7. Untuk Tamu & Sampel (Global Pabrik)</div>
+      <div class="row-4">
+        <div class="input-group"><label>Curah (Kg)</label><input type="number" step="0.01" id="t-curah" placeholder="0.00"></div>
+        <div class="input-group"><label>Mika Hatsuhana</label><input type="number" id="t-hatsu" placeholder="0"></div>
+        <div class="input-group"><label>Mika A11</label><input type="number" id="t-a11" placeholder="0"></div>
+        <div class="input-group"><label>Mika A15</label><input type="number" id="t-a15" placeholder="0"></div>
+      </div>
+      <div class="input-group" style="margin-top: 0.75rem;">
+        <label>Keterangan Tamu & Sampel</label>
+        <input type="text" id="t-ket" placeholder="Opsional / Catatan">
+      </div>
     </div>
   </div>
 
@@ -107,7 +128,10 @@
     <div class="input-group" style="max-width:220px;">
       <label>Filter Greenhouse</label>
       <select id="panen-hist-gh" onchange="panenResetPage()">
-        <option value="all">Semua GH</option><option value="GH 1">GH 1</option><option value="GH 2">GH 2</option>
+        <option value="all">Semua GH</option>
+        <option value="GH 1">GH 1</option>
+        <option value="GH 2">GH 2</option>
+        <option value="GLOBAL">Global</option>
       </select>
     </div>
     <div class="table-container">
@@ -136,13 +160,13 @@
   </div>
 </div>
 
-<!-- ============ MODAL FORMAT WA ============ -->
+<!-- MODAL WA -->
 <div id="modal-wa" class="modal">
   <div class="modal-content" style="max-width: 620px;">
     <div class="modal-header">📋 Format WA</div>
     <div class="modal-body">
       <div class="info-box" style="margin-bottom:0.75rem;">
-        Data di bawah siap di-copy. Kamu bisa edit dulu (misal ubah tanggal pengiriman) sebelum klik <b>Copy ke Clipboard</b>.
+        Data di bawah siap di-copy. Kamu bisa edit dulu sebelum klik <b>Copy ke Clipboard</b>.
       </div>
       <textarea id="wa-text-preview" style="width:100%; min-height:420px; padding:0.875rem; border:1.5px solid #d1d5db; border-radius:8px; font-family:'Courier New',monospace; font-size:0.85rem; line-height:1.5; resize:vertical; background:#fafafa;"></textarea>
     </div>
