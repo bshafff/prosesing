@@ -385,7 +385,9 @@ function renderChartRejectPie(T) {
     { label: 'Overripe', value: T.rp_overripe, color: '#0891b2' },
     { label: 'Buah Kuning <80%', value: T.rp_kuning, color: '#eab308' },
     { label: 'Frozen', value: T.rp_frozen, color: '#7c3aed' }
-  ].filter(s => s.value > 0);
+  ].filter(s => s.value > 0)
+    .sort((a, b) => b.value - a.value);
+
   if (!segments.length) {
     el.innerHTML = '<div style="text-align:center;color:#999;padding:2rem;">Tidak ada rincian reject</div>';
     return;
@@ -873,98 +875,7 @@ function renderWeeklyChart(weeks) {
     `</div>`;
 }
 
-// ========== SCREENSHOT FUNCTIONS ==========
-async function loadHtml2Canvas() {
-  if (window.html2canvas) return;
-  await new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-    s.onload = resolve;
-    s.onerror = () => reject(new Error('Gagal load html2canvas'));
-    document.head.appendChild(s);
-  });
-}
-
-async function captureCardAsImage(cardId, filename, showToastWhenDone) {
-  const card = document.getElementById(cardId);
-  if (!card) { showToast('Elemen tidak ditemukan', 'error'); return; }
-  let tempContainer = null;
-  try {
-    showToast('📸 Membuat gambar...');
-    await loadHtml2Canvas();
-
-    // ==== Clone card ke container off-screen ====
-    const clone = card.cloneNode(true);
-    clone.querySelectorAll('[data-html2canvas-ignore="true"]').forEach(el => el.remove());
-
-    tempContainer = document.createElement('div');
-    tempContainer.style.cssText = 'position:fixed;left:-99999px;top:0;background:#ffffff;padding:0;margin:0;z-index:-1;';
-    tempContainer.appendChild(clone);
-    document.body.appendChild(tempContainer);
-
-    clone.querySelectorAll('.recap-wrap, .table-container, .chart-scroll').forEach(w => {
-      w.style.overflow = 'visible';
-      w.style.overflowX = 'visible';
-      w.style.overflowY = 'visible';
-      w.style.width = 'auto';
-      w.style.maxWidth = 'none';
-      w.style.display = 'block';
-    });
-
-    clone.querySelectorAll('table').forEach(t => {
-      t.style.width = 'auto';
-      t.style.minWidth = '100%';
-      t.style.tableLayout = 'auto';
-    });
-
-    clone.style.width = 'max-content';
-    clone.style.maxWidth = 'none';
-
-    await new Promise(r => setTimeout(r, 200));
-
-    const fullWidth = Math.max(clone.scrollWidth, clone.offsetWidth);
-    const fullHeight = Math.max(clone.scrollHeight, clone.offsetHeight);
-
-    tempContainer.style.width = fullWidth + 'px';
-    clone.style.width = fullWidth + 'px';
-
-    await new Promise(r => setTimeout(r, 100));
-
-    const canvas = await html2canvas(clone, {
-      backgroundColor: '#ffffff',
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      width: fullWidth,
-      height: fullHeight,
-      windowWidth: fullWidth,
-      windowHeight: fullHeight,
-      scrollX: 0,
-      scrollY: 0
-    });
-
-    const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-    if (!blob) { showToast('Gagal membuat gambar', 'error'); return; }
-
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(link.href), 4000);
-
-    if (showToastWhenDone) showToast('📸 Screenshot tersimpan');
-  } catch (err) {
-    console.error(err);
-    showToast('Screenshot gagal: ' + err.message, 'error');
-  } finally {
-    if (tempContainer && tempContainer.parentNode) {
-      tempContainer.parentNode.removeChild(tempContainer);
-    }
-  }
-}
-
+// ========== SCREENSHOT: REKAP HARIAN (CANVAS MANUAL) ==========
 function downloadRecapHarianImage() {
   const bulan = document.getElementById('dashboard-bulan')?.value;
   if (!bulan) { showToast('Pilih bulan dulu!', 'error'); return; }
@@ -1074,7 +985,6 @@ function downloadRecapHarianImage() {
   };
   const fmtPct = (v) => (parseFloat(v) || 0).toFixed(2) + '%';
 
-  // Background
   ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, totalH);
 
   // TITLE BANNER
@@ -1205,4 +1115,13 @@ function downloadRecapHarianImage() {
     setTimeout(() => URL.revokeObjectURL(link.href), 4000);
     showToast('📸 Screenshot tersimpan');
   }, 'image/png');
+}
+
+// ========== SCREENSHOT: PERBANDINGAN BULANAN ==========
+async function downloadBulanCompareImage() {
+  const period = getBulanComparePeriod();
+  const gh = ghLabelOf(dashGh()).replace(/\s/g, '');
+  const periodLabel = period.mode === 'all' ? 'SemuaBulan' : `${period.from}_to_${period.to}`;
+  const filename = `Rekap_Perbandingan_Bulanan_${periodLabel}_${gh}.png`;
+  captureCardAsImage('panen-bulan-compare-card', filename, true);
 }
