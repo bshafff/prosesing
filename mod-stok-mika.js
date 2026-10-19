@@ -1,11 +1,10 @@
 // ========== STOK MIKA / KEMASAN MODULE ==========
 
-// Konversi default per item aksesoris
 const AKS_KONVERSI = {
-  layer: 100,    // 1 dus = 100 pcs
-  sleeve: 100,   // 1 dus = 100 pcs
-  stiker: 136,   // 1 lembar = 136 pcs
-  netfoam: 1800  // 1 ball = 1800 potong
+  layer: 100,
+  sleeve: 100,
+  stiker: 136,
+  netfoam: 1800
 };
 
 function defaultAksState() {
@@ -15,6 +14,50 @@ function defaultAksState() {
     stiker: { gudang: 0, proc: 0 },
     netfoam: { ball: 0, proc: 0 }
   };
+}
+
+// Fungsi Auto-Fill dari Rekap Panen
+function autoFillFromPanen() {
+  const tgl = document.getElementById('kemasan-tgl').value;
+  if (!tgl) return;
+
+  const panenDb = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+  const filtered = panenDb.filter(x => x.tgl === tgl);
+
+  if (!filtered.length) return; // Tidak ada data di tanggal ini
+
+  let totalKirim = [0, 0, 0]; // 0: Hatsu, 1: Grade A (A11), 2: Grade B (A15)
+  let totalTamu = [0, 0, 0];
+
+  filtered.forEach(item => {
+    totalKirim[0] += (item.m_hatsu || 0);
+    totalKirim[1] += (item.m_a11 || 0);
+    totalKirim[2] += (item.m_a15 || 0);
+
+    totalTamu[0] += (item.t_hatsu || 0);
+    totalTamu[1] += (item.t_a11 || 0);
+    totalTamu[2] += (item.t_a15 || 0);
+  });
+
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.value = val || '';
+      el.dispatchEvent(new Event('input')); // Trigger hitungKemasan
+    }
+  };
+
+  setVal('kirim-0', totalKirim[0]);
+  setVal('kirim-1', totalKirim[1]);
+  setVal('kirim-2', totalKirim[2]);
+
+  setVal('tamu-0', totalTamu[0]);
+  setVal('tamu-1', totalTamu[1]);
+  setVal('tamu-2', totalTamu[2]);
+
+  if (totalKirim.some(x => x > 0) || totalTamu.some(x => x > 0)) {
+    showToast('✅ Data Kirim & Tamu terisi otomatis dari Rekap Panen');
+  }
 }
 
 function recalculateStockKemasan() {
@@ -42,68 +85,46 @@ function recalculateStockKemasan() {
         accum[item.name].reject += totalRej;
       }
 
-      // --- Netfoam & Stiker (khusus Hatsu) ---
       if (item.name === 'Hatsu') {
         const nMasukBall = item.netfoamMasukBall || 0;
         const nPotongBall = item.netfoamPotongBall || 0;
-        const nAktualPcs = (item.netfoamAktualPcs != null) ? item.netfoamAktualPcs
-                          : (item.netfoamPotong || 0);
-        const nPakai = (item.netfoamPakai != null) ? item.netfoamPakai
-                     : (item.netfoamTerpakai || 0);
+        const nAktualPcs = (item.netfoamAktualPcs != null) ? item.netfoamAktualPcs : (item.netfoamPotong || 0);
+        const nPakai = (item.netfoamPakai != null) ? item.netfoamPakai : (item.netfoamTerpakai || 0);
         const nOpname = (typeof item.netfoamOpname === 'number') ? item.netfoamOpname : null;
         aks.netfoam.ball += nMasukBall - nPotongBall;
-        if (nOpname !== null) {
-          aks.netfoam.proc = nOpname;
-        } else {
-          aks.netfoam.proc += nAktualPcs - nPakai;
-        }
+        if (nOpname !== null) aks.netfoam.proc = nOpname;
+        else aks.netfoam.proc += nAktualPcs - nPakai;
 
-        const sMasukLembar = (item.stikerMasukLembar != null) ? item.stikerMasukLembar
-                            : (item.stikerMasuk || 0);
+        const sMasukLembar = (item.stikerMasukLembar != null) ? item.stikerMasukLembar : (item.stikerMasuk || 0);
         const sBongkarLembar = item.stikerBongkarLembar || 0;
-        const sAktualPcs = (item.stikerAktualPcs != null) ? item.stikerAktualPcs
-                         : (sBongkarLembar * AKS_KONVERSI.stiker);
+        const sAktualPcs = (item.stikerAktualPcs != null) ? item.stikerAktualPcs : (sBongkarLembar * AKS_KONVERSI.stiker);
         const sPakai = item.stikerPakai || 0;
         const sOpname = (typeof item.stikerOpname === 'number') ? item.stikerOpname : null;
         aks.stiker.gudang += sMasukLembar - sBongkarLembar;
-        if (sOpname !== null) {
-          aks.stiker.proc = sOpname;
-        } else {
-          // FIX: hapus syarat — selalu kurangi terpakai
-          aks.stiker.proc += sAktualPcs - sPakai;
-        }
+        if (sOpname !== null) aks.stiker.proc = sOpname;
+        else aks.stiker.proc += sAktualPcs - sPakai;
       }
 
-      // --- Layer (khusus Grade A) ---
       if (item.name === 'Grade A') {
         const lMasukDus = item.layerMasukDus || 0;
         const lBongkarDus = item.layerBongkarDus || 0;
-        const lAktualPcs = (item.layerAktualPcs != null) ? item.layerAktualPcs
-                         : (item.layerSiap || 0);
+        const lAktualPcs = (item.layerAktualPcs != null) ? item.layerAktualPcs : (item.layerSiap || 0);
         const lPakai = item.layerPakai || 0;
         const lOpname = (typeof item.layerOpname === 'number') ? item.layerOpname : null;
         aks.layer.gudang += lMasukDus - lBongkarDus;
-        if (lOpname !== null) {
-          aks.layer.proc = lOpname;
-        } else {
-          aks.layer.proc += lAktualPcs - lPakai;
-        }
+        if (lOpname !== null) aks.layer.proc = lOpname;
+        else aks.layer.proc += lAktualPcs - lPakai;
       }
 
-      // --- Sleeve (khusus Grade B) ---
       if (item.name === 'Grade B') {
         const slMasukDus = item.sleeveMasukDus || 0;
         const slBongkarDus = item.sleeveBongkarDus || 0;
-        const slAktualPcs = (item.sleeveAktualPcs != null) ? item.sleeveAktualPcs
-                          : (item.sleeveSiap || 0);
+        const slAktualPcs = (item.sleeveAktualPcs != null) ? item.sleeveAktualPcs : (item.sleeveSiap || 0);
         const slPakai = item.sleevePakai || 0;
         const slOpname = (typeof item.sleeveOpname === 'number') ? item.sleeveOpname : null;
         aks.sleeve.gudang += slMasukDus - slBongkarDus;
-        if (slOpname !== null) {
-          aks.sleeve.proc = slOpname;
-        } else {
-          aks.sleeve.proc += slAktualPcs - slPakai;
-        }
+        if (slOpname !== null) aks.sleeve.proc = slOpname;
+        else aks.sleeve.proc += slAktualPcs - slPakai;
       }
     });
   });
@@ -121,57 +142,6 @@ function recalculateStockKemasan() {
     stiker: { gudang: Math.max(0, aks.stiker.gudang), proc: Math.max(0, aks.stiker.proc) },
     netfoam: { ball: Math.max(0, aks.netfoam.ball), proc: Math.max(0, aks.netfoam.proc) }
   };
-
-  // Render summary mika
-  let totGudang = 0, totProc = 0, totKeluar = 0, totRej = 0;
-  let summaryHtml = '';
-  masterJenisKemasan.forEach(m => {
-    const a = accum[m.name];
-    const estimasiPcs = a.gudang * m.std;
-    const totalAkhir = estimasiPcs + a.processing;
-    totGudang += a.gudang; totProc += a.processing; totKeluar += a.keluar; totRej += a.reject;
-    summaryHtml += `<tr>
-      <td><strong><span class="badge ${m.badge}">${m.name}</span></strong></td>
-      <td class="text-right">${a.gudang} Dus</td>
-      <td class="text-right">${estimasiPcs.toLocaleString('id-ID')} Pcs</td>
-      <td class="text-right">${a.processing.toLocaleString('id-ID')} Pcs</td>
-      <td class="text-right"><strong>${totalAkhir.toLocaleString('id-ID')} Pcs</strong></td>
-      <td class="text-right" style="color:#dc2626;">${a.reject} Pcs</td>
-    </tr>`;
-  });
-  const sumBody = document.getElementById('tbl-summary-body');
-  if (sumBody) sumBody.innerHTML = summaryHtml;
-
-  // Render summary aksesoris
-  const aksBody = document.getElementById('tbl-aks-body');
-  if (aksBody) {
-    const aksList = [
-      { label: 'Layer A11', badge: 'gradea', gudang: currentAksesoris.layer.gudang, satuan: 'Dus', konversi: AKS_KONVERSI.layer, proc: currentAksesoris.layer.proc },
-      { label: 'Sleeve', badge: 'gradeb', gudang: currentAksesoris.sleeve.gudang, satuan: 'Dus', konversi: AKS_KONVERSI.sleeve, proc: currentAksesoris.sleeve.proc },
-      { label: 'Stiker', badge: 'hatsu', gudang: currentAksesoris.stiker.gudang, satuan: 'Lembar', konversi: AKS_KONVERSI.stiker, proc: currentAksesoris.stiker.proc },
-      { label: 'Netfoam', badge: 'hatsu', gudang: currentAksesoris.netfoam.ball, satuan: 'Ball', konversi: AKS_KONVERSI.netfoam, proc: currentAksesoris.netfoam.proc }
-    ];
-    aksBody.innerHTML = aksList.map(a => {
-      const estimasi = a.gudang * a.konversi;
-      const totalAkhir = estimasi + a.proc;
-      return `<tr>
-        <td><strong><span class="badge ${a.badge}">${a.label}</span></strong></td>
-        <td class="text-right">${a.gudang} ${a.satuan}</td>
-        <td class="text-right">${estimasi.toLocaleString('id-ID')} Pcs</td>
-        <td class="text-right">${a.proc.toLocaleString('id-ID')} Pcs</td>
-        <td class="text-right"><strong>${totalAkhir.toLocaleString('id-ID')} Pcs</strong></td>
-      </tr>`;
-    }).join('');
-  }
-
-  const elGdg = document.getElementById('k-stat-gudang');
-  const elProc = document.getElementById('k-stat-processing');
-  const elKel = document.getElementById('k-stat-keluar');
-  const elRej = document.getElementById('k-stat-reject');
-  if (elGdg) elGdg.textContent = totGudang;
-  if (elProc) elProc.textContent = totProc;
-  if (elKel) elKel.textContent = totKeluar;
-  if (elRej) elRej.textContent = totRej;
 }
 
 function getOpname(id) {
@@ -398,6 +368,9 @@ function renderKemasanForms() {
   gradeAPanel.innerHTML = buildMikaForm(masterJenisKemasan[1], 1);
   gradeBPanel.innerHTML = buildMikaForm(masterJenisKemasan[2], 2);
   stikerPanel.innerHTML = stikerCardHtml();
+  
+  // Setelah render, coba auto-fill
+  setTimeout(autoFillFromPanen, 100);
 }
 
 function showInputKemasanTab(tab, btn) {
@@ -465,7 +438,6 @@ function hitungKemasan(i) {
   if (procAkhirEl) procAkhirEl.value = Math.max(0, pAkhirFinal);
 
   if (item.name === 'Hatsu') {
-    // Netfoam
     const nAwal = currentAksesoris.netfoam;
     const nMasukBall = getValK('netfoam-masuk-ball');
     const nPotongBall = getValK('netfoam-potong-ball');
@@ -486,7 +458,6 @@ function hitungKemasan(i) {
     const nProcEl = document.getElementById('netfoam-proc-akhir');
     if (nProcEl) nProcEl.value = Math.max(0, nProcFinal);
 
-    // Stiker
     const sAwal = currentAksesoris.stiker;
     const sMasukLembar = getValK('stiker-masuk-lembar');
     const sDitempelLembar = getValK('stiker-bongkar-lembar');
@@ -780,7 +751,6 @@ function editKemasanHistory(id) {
     `;
   });
 
-  // Stiker (standalone, dari Hatsu)
   const hatsuItem = entry.items.find(x => x.name === 'Hatsu') || {};
   html += `
     <div style="border:1px solid #e5e7eb;padding:0.75rem;border-radius:8px;margin-bottom:0.75rem;background:#f3e8ff;">
@@ -851,7 +821,6 @@ function saveEditKemasan() {
     return item;
   });
 
-  // Stiker → simpan ke items[0] (Hatsu)
   const hatsuIdx = masterJenisKemasan.findIndex(m => m.name === 'Hatsu');
   if (hatsuIdx >= 0) {
     const sMasuk = parseFloat((document.getElementById('edit-stiker-masuk-lembar') || {}).value || 0);
