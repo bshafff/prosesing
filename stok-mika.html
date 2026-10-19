@@ -6,15 +6,14 @@
   </div>
   <div class="sub-tabs">
     <button class="sub-tab active" onclick="showKemasanSubTab('k-input', this)">📝 Input Hari Ini</button>
-    <button class="sub-tab" onclick="showKemasanSubTab('k-summary', this)">📊 Ringkasan Stok</button>
-    <button class="sub-tab" onclick="showKemasanSubTab('k-variance', this)">⚖️ Selisih Bongkar</button>
     <button class="sub-tab" onclick="showKemasanSubTab('k-history', this)">📜 History Data</button>
   </div>
 
   <div id="k-input" class="k-panel active">
     <div class="card">
       <div class="card-title">📅 Tanggal Input Kemasan</div>
-      <input type="date" id="kemasan-tgl">
+      <input type="date" id="kemasan-tgl" onchange="autoFillFromPanen()">
+      <small style="color:#666;display:block;margin-top:0.5rem;">Tanggal diubah otomatis menarik data Kirim & Tamu dari Rekap Panen.</small>
     </div>
 
     <div class="sub-tabs" id="input-kemasan-tabs">
@@ -34,102 +33,6 @@
     <div class="btn-group">
       <button class="btn btn-primary" onclick="simpanDataKemasan()">💾 Simpan Semua Data Kemasan</button>
       <button class="btn btn-secondary" onclick="resetFormKemasan()">🔄 Reset Form</button>
-    </div>
-  </div>
-
-  <div id="k-summary" class="k-panel">
-    <div class="card">
-      <div class="card-title">📊 Ringkasan Akumulasi Stok</div>
-      <div class="stats">
-        <div class="stat-card green">
-          <div class="stat-label">STOK GUDANG</div>
-          <div class="stat-value" id="k-stat-gudang">0</div>
-          <div class="stat-meta">Dus Utuh</div>
-        </div>
-        <div class="stat-card orange">
-          <div class="stat-label">PROCESSING</div>
-          <div class="stat-value" id="k-stat-processing">0</div>
-          <div class="stat-meta">PCS Mika Ready</div>
-        </div>
-        <div class="stat-card blue">
-          <div class="stat-label">TOTAL KELUAR</div>
-          <div class="stat-value" id="k-stat-keluar">0</div>
-          <div class="stat-meta">PCS</div>
-        </div>
-        <div class="stat-card red">
-          <div class="stat-label">TOTAL REJECT</div>
-          <div class="stat-value" id="k-stat-reject">0</div>
-          <div class="stat-meta">PCS</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">📋 Detail Stok Per Jenis Grade</div>
-      <div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Jenis Grade</th>
-              <th class="text-right">Gudang (Dus)</th>
-              <th class="text-right">Estimasi (Pcs)</th>
-              <th class="text-right">Processing (Pcs)</th>
-              <th class="text-right">Total Akhir (Pcs)</th>
-              <th class="text-right">Total Reject (Pcs)</th>
-            </tr>
-          </thead>
-          <tbody id="tbl-summary-body">
-            <tr><td colspan="6" class="text-center" style="color: #999;">Belum ada data</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">📋 Detail Stok Aksesoris</div>
-      <div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Aksesoris</th>
-              <th class="text-right">Gudang</th>
-              <th class="text-right">Estimasi (Pcs)</th>
-              <th class="text-right">Processing (Pcs)</th>
-              <th class="text-right">Total Akhir (Pcs)</th>
-            </tr>
-          </thead>
-          <tbody id="tbl-aks-body">
-            <tr><td colspan="5" class="text-center" style="color: #999;">Belum ada data</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <div id="k-variance" class="k-panel">
-    <div class="card">
-      <div class="card-title">📋 Log Selisih Bongkar Fisik</div>
-      <div class="info-box">
-        PCS aktual hasil bongkar tetap masuk ke ruang Processing. Catatan selisih berguna untuk mengevaluasi akurasi isi per dus.
-      </div>
-      <div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Tanggal</th>
-              <th>Jenis</th>
-              <th class="text-right">Dus</th>
-              <th class="text-right">Standar</th>
-              <th class="text-right">Aktual</th>
-              <th class="text-right">Selisih</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="tbl-variance-body">
-            <tr><td colspan="7" class="text-center" style="color: #999;">Belum ada data selisih bongkar</td></tr>
-          </tbody>
-        </table>
-      </div>
     </div>
   </div>
 
