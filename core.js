@@ -34,7 +34,7 @@ function ensureValidId(rec, usedIds) {
 }
 
 // ========== HELPERS ==========
-function ghOf(item) { return item && item.gh === 'GH 2' ? 'GH 2' : 'GH 1'; }
+function ghOf(item) { return item && item.gh ? item.gh : 'GH 1'; }
 function filterGh(arr, gh) { return (!gh || gh === 'all') ? arr : arr.filter(x => ghOf(x) === gh); }
 function dashGh() { const el = document.getElementById('dashboard-gh'); return el ? el.value : 'all'; }
 function weekGh() { const el = document.getElementById('minggu-gh'); return el ? el.value : 'all'; }
