@@ -21,18 +21,59 @@ function updateDashboard() {
   const selectedMonth = bulanEl.value;
   const infoEl = document.getElementById('dashboard-period-info');
   if (infoEl) infoEl.innerHTML = `Menampilkan data: <b>${formatBulanIndo(selectedMonth)}</b> · <b>${ghLabelOf(dashGh())}</b>`;
-  const panenDb = filterGh(JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]'), dashGh());
-  const filtered = panenDb.filter(x => x.tgl && x.tgl.startsWith(selectedMonth)).sort((a, b) => new Date(a.tgl) - new Date(b.tgl));
+  
+  const allPanenDb = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+  
+  // 1. Ambil semua data GLOBAL (Frozen) untuk bulan ini
+  const frozenDb = allPanenDb.filter(x => x.tgl && x.tgl.startsWith(selectedMonth) && x.gh === 'GLOBAL');
+  const frozenPerTgl = {};
+  frozenDb.forEach(x => {
+    frozenPerTgl[x.tgl] = (frozenPerTgl[x.tgl] || 0) + (x.k_frozen || 0);
+  });
+
+  // 2. Hitung Total Kirim Grade (Hatsu+A11+A15) per tanggal untuk alokasi proporsional
+  const allGradeKirimPerTgl = {};
+  allPanenDb.filter(x => x.tgl && x.tgl.startsWith(selectedMonth) && x.gh !== 'GLOBAL').forEach(x => {
+    const totalG = (x.k_hatsu || 0) + (x.k_a11 || 0) + (x.k_a15 || 0);
+    allGradeKirimPerTgl[x.tgl] = (allGradeKirimPerTgl[x.tgl] || 0) + totalG;
+  });
+
+  // 3. Ambil data sesuai filter GH (GH 1 / GH 2 / GLOBAL / All)
+  const filtered = filterGh(allPanenDb, dashGh())
+    .filter(x => x.tgl && x.tgl.startsWith(selectedMonth))
+    .sort((a, b) => new Date(a.tgl) - new Date(b.tgl));
+
+  // Helper untuk alokasi Frozen proporsional
+  const getFrozenAlokasi = (item) => {
+    if (item.gh === 'GLOBAL') return 0;
+    const tgl = item.tgl;
+    const totalFrozenHariItu = frozenPerTgl[tgl] || 0;
+    if (totalFrozenHariItu === 0) return 0;
+
+    const gradeKirimGHIni = (item.k_hatsu || 0) + (item.k_a11 || 0) + (item.k_a15 || 0);
+    const gradeKirimSemua = allGradeKirimPerTgl[tgl] || 0;
+    
+    if (gradeKirimSemua === 0) return 0;
+    return (gradeKirimGHIni / gradeKirimSemua) * totalFrozenHariItu;
+  };
+
   const T = {
     p_hatsu: 0, p_gradea: 0, p_gradeb: 0, rk_total: 0, panen_total: 0,
     rk_crack: 0, rk_poli: 0, rk_hpt: 0,
     rp_crack: 0, rp_poli: 0, rp_hpt: 0, rp_bruise: 0, rp_overripe: 0, rp_kuning: 0, rp_frozen: 0, rej_total: 0,
     k_hatsu: 0, k_a11: 0, k_a15: 0, k_frozen: 0, kirim_total: 0,
-    m_hatsu: 0, m_a11: 0, m_a15: 0, mika_total: 0
+    m_hatsu: 0, m_a11: 0, m_a15: 0, mika_total: 0,
+    // Khusus GLOBAL
+    t_curah: 0, t_hatsu: 0, t_a11: 0, t_a15: 0
   };
+
   filtered.forEach(item => {
     const rk = (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
     const rp = (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0) + (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_kuning || 0) + (item.rp_frozen || 0);
+    
+    // Alokasi Frozen
+    const alokasiFrozen = getFrozenAlokasi(item);
+
     T.p_hatsu += item.p_hatsu || 0;
     T.p_gradea += item.p_gradea || 0;
     T.p_gradeb += item.p_gradeb || 0;
@@ -49,22 +90,38 @@ function updateDashboard() {
     T.rp_kuning += item.rp_kuning || 0;
     T.rp_frozen += item.rp_frozen || 0;
     T.rej_total += rk + rp;
+    
     T.k_hatsu += item.k_hatsu || 0;
     T.k_a11 += item.k_a11 || 0;
     T.k_a15 += item.k_a15 || 0;
-    T.k_frozen += item.k_frozen || 0;
-    T.kirim_total += (item.k_hatsu || 0) + (item.k_a11 || 0) + (item.k_a15 || 0) + (item.k_frozen || 0);
+    T.k_frozen += alokasiFrozen; // Pakai alokasi
+    T.kirim_total += (item.k_hatsu || 0) + (item.k_a11 || 0) + (item.k_a15 || 0) + alokasiFrozen;
+    
     T.m_hatsu += item.m_hatsu || 0;
     T.m_a11 += item.m_a11 || 0;
     T.m_a15 += item.m_a15 || 0;
     T.mika_total += (item.m_hatsu || 0) + (item.m_a11 || 0) + (item.m_a15 || 0);
+
+    // Data Global
+    if (item.gh === 'GLOBAL') {
+      T.k_frozen += item.k_frozen || 0; // Untuk filter GLOBAL, langsung ambil aslinya
+      T.kirim_total += item.k_frozen || 0;
+      T.t_curah += item.t_curah || 0;
+      T.t_hatsu += item.t_hatsu || 0;
+      T.t_a11 += item.t_a11 || 0;
+      T.t_a15 += item.t_a15 || 0;
+    }
   });
+
   const rejectRate = T.panen_total > 0 ? (T.rej_total / T.panen_total * 100) : 0;
   const rateKirim = T.panen_total > 0 ? (T.kirim_total / T.panen_total * 100) : 0;
+  
+  // Update Cards
   document.getElementById('stat-panen').textContent = T.panen_total.toFixed(2);
   document.getElementById('stat-dikirim').textContent = T.kirim_total.toFixed(2);
   document.getElementById('stat-kirim').textContent = T.mika_total;
   document.getElementById('stat-rate-kirim').textContent = rateKirim.toFixed(2) + '%';
+  
   const rejPacking = T.rej_total - T.rk_total;
   document.getElementById('stat-rej-total').textContent = T.rej_total.toFixed(2);
   document.getElementById('stat-rej-meta').textContent = `Kg · Kebun ${T.rk_total.toFixed(2)} | Packing ${rejPacking.toFixed(2)}`;
@@ -73,6 +130,8 @@ function updateDashboard() {
   else if (rejectRate > 10) { badgeClass = 'warn'; badgeMsg = '⚠️ Perhatian'; }
   document.getElementById('stat-rej-rate').textContent = rejectRate.toFixed(2) + '%';
   document.getElementById('stat-rej-badge').innerHTML = T.panen_total > 0 ? `<span class="notif-badge ${badgeClass}">${badgeMsg}</span>` : '';
+
+  // Delta Perbandingan Bulan Lalu
   const [selY2, selM2] = selectedMonth.split('-').map(Number);
   const prevDate = new Date(selY2, selM2 - 2, 1);
   const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
@@ -80,9 +139,10 @@ function updateDashboard() {
   const nowYM = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, '0')}`;
   const cutoffDay = (selectedMonth === nowYM) ? nowD.getDate() : 31;
   const cutoffLabel = (selectedMonth === nowYM) ? ` (s/d tgl ${cutoffDay})` : '';
+  
   let pPanen = 0, pRej = 0, pCount = 0;
-  panenDb.forEach(item => {
-    if (!item.tgl || !item.tgl.startsWith(prevMonth)) return;
+  allPanenDb.filter(x => dashGh() === 'all' || x.gh === dashGh() || (dashGh() !== 'GLOBAL' && x.gh === 'GLOBAL')).forEach(item => {
+    if (!item.tgl || !item.tgl.startsWith(prevMonth) || item.gh === 'GLOBAL') return; // Skip global for base panen
     if (parseInt(item.tgl.substring(8, 10), 10) > cutoffDay) return;
     const rk = (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
     const rp = (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0) + (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_kuning || 0) + (item.rp_frozen || 0);
@@ -90,6 +150,7 @@ function updateDashboard() {
     pRej += rk + rp;
     pCount++;
   });
+
   const dPanenEl = document.getElementById('stat-panen-delta');
   if (pCount === 0 || pPanen <= 0) {
     dPanenEl.className = 'stat-delta';
@@ -99,6 +160,7 @@ function updateDashboard() {
     dPanenEl.className = 'stat-delta ' + (pct > 0 ? 'up' : pct < 0 ? 'down' : '');
     dPanenEl.textContent = `${pct > 0 ? '▲' : pct < 0 ? '▼' : '='} ${Math.abs(pct).toFixed(1)}% vs bulan lalu${cutoffLabel}`;
   }
+
   const dRejEl = document.getElementById('stat-rej-rate-delta');
   if (pCount === 0 || pPanen <= 0) {
     dRejEl.className = 'stat-delta';
@@ -109,22 +171,28 @@ function updateDashboard() {
     dRejEl.className = 'stat-delta ' + (diff > 0 ? 'down' : diff < 0 ? 'up' : '');
     dRejEl.textContent = `${diff > 0 ? '▲' : diff < 0 ? '▼' : '='} ${Math.abs(diff).toFixed(2)} poin vs bulan lalu (${pRate.toFixed(2)}%)${cutoffLabel}`;
   }
+
+  // Render Tabel Recap
   const tbody = document.getElementById('recap-body');
   if (!filtered.length) {
     tbody.innerHTML = `<tr><td colspan="25" style="text-align:center;color:#999;padding:1rem;">Belum ada data bulan ini</td></tr>`;
   } else {
     tbody.innerHTML = filtered.map(item => {
+      const isGlobal = item.gh === 'GLOBAL';
       const rk = (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
       const panenTotal = (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + rk;
       const rpTotal = (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0) + (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_kuning || 0) + (item.rp_frozen || 0);
       const totalRej = rk + rpTotal;
       const rejRate = panenTotal > 0 ? (totalRej / panenTotal * 100) : 0;
-      const kirimTotal = (item.k_hatsu || 0) + (item.k_a11 || 0) + (item.k_a15 || 0) + (item.k_frozen || 0);
+      
+      const alokasiFrozen = getFrozenAlokasi(item);
+      const kirimTotal = (item.k_hatsu || 0) + (item.k_a11 || 0) + (item.k_a15 || 0) + alokasiFrozen + (isGlobal ? (item.k_frozen||0) : 0);
       const rKirim = panenTotal > 0 ? (kirimTotal / panenTotal * 100) : 0;
       const mikaTotal = (item.m_hatsu || 0) + (item.m_a11 || 0) + (item.m_a15 || 0);
       const tglFmt = item.tgl.split('-').reverse().join('/');
+      
       return `<tr>
-        <td class="tgl-col">${tglFmt}${dashGh() === 'all' ? `<br><small style="color:#64748b;">${ghOf(item)}</small>` : ''}</td>
+        <td class="tgl-col">${tglFmt}<br><small style="color:#64748b;">${isGlobal ? '🌐 Global' : ghOf(item)}</small></td>
         <td>${(item.p_hatsu || 0).toFixed(2)}</td>
         <td>${(item.p_gradea || 0).toFixed(2)}</td>
         <td>${(item.p_gradeb || 0).toFixed(2)}</td>
@@ -142,7 +210,7 @@ function updateDashboard() {
         <td>${(item.k_hatsu || 0).toFixed(2)}</td>
         <td>${(item.k_a11 || 0).toFixed(2)}</td>
         <td>${(item.k_a15 || 0).toFixed(2)}</td>
-        <td>${(item.k_frozen || 0).toFixed(2)}</td>
+        <td>${(isGlobal ? (item.k_frozen||0) : alokasiFrozen).toFixed(2)}</td>
         <td><strong>${kirimTotal.toFixed(2)}</strong></td>
         <td class="rate-kirim">${rKirim.toFixed(2)}%</td>
         <td>${item.m_hatsu || 0}</td>
@@ -152,6 +220,8 @@ function updateDashboard() {
       </tr>`;
     }).join('');
   }
+
+  // Render Footer
   const n = filtered.length || 1;
   document.getElementById('recap-foot').innerHTML = `
     <tr>
@@ -209,6 +279,7 @@ function updateDashboard() {
       <td>${(T.mika_total / n).toFixed(0)}</td>
     </tr>
   `;
+
   renderChartRejectPie(T);
   renderMikaDashboard();
   const mgEl = document.getElementById('minggu-bulan');
