@@ -264,7 +264,6 @@ function generateGraphicCanvas(item) {
   const ctx = cv.getContext('2d');
   ctx.scale(sc, sc);
 
-  // Helper draw functions
   const fillRect = (x, y, w, h, color) => { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); };
   const text = (t, x, y, size, color, align, bold) => {
     ctx.font = `${bold ? '700' : '400'} ${size}px system-ui, sans-serif`;
@@ -303,22 +302,17 @@ function generateGraphicCanvas(item) {
   const fmt = n => (parseFloat(n) || 0).toFixed(2).replace('.', ',');
   const tglFmt = formatTanggalPanjang(item.tgl);
 
-  // 1. BACKGROUND
   fillRect(0, 0, W, H, '#f8fafc');
 
-  // 2. HEADER
   fillRect(0, 0, W, 100, '#2d5016');
   text('Laporan Harian Panen & Pengiriman', 40, 40, 24, '#ffffff', 'left', true);
   text(`${item.gh} • ${tglFmt}`, 40, 70, 16, '#bbf7d0', 'left');
   text('PT. Agri Wangi Berry', W - 40, 55, 14, '#86efac', 'right', true);
 
-  // 3. TABEL / KARTU GRADES
   const grX = 40, grY = 130, grW = 720, grH = 280;
   roundRect(grX, grY, grW, grH, 12, '#ffffff');
-  
   text('Rincian Panen, Pengiriman & Pack', grX + 20, grY + 30, 16, '#2d5016', 'left', true);
   
-  // Table Header
   fillRect(grX + 20, grY + 60, grW - 40, 40, '#f1f5f9');
   text('Grade', grX + 40, grY + 80, 14, '#475569', 'left', true);
   text('Panen (Kg)', grX + 200, grY + 80, 14, '#475569', 'right', true);
@@ -340,7 +334,6 @@ function generateGraphicCanvas(item) {
     ctx.beginPath(); ctx.moveTo(grX+20, ry+40); ctx.lineTo(grX+grW-20, ry+40); ctx.strokeStyle='#f1f5f9'; ctx.stroke();
   });
 
-  // Total Row
   const sumP = item.p_hatsu + item.p_gradea + item.p_gradeb;
   const sumK = item.k_hatsu + item.k_a11 + item.k_a15;
   const sumM = item.m_hatsu + item.m_a11 + item.m_a15;
@@ -350,7 +343,7 @@ function generateGraphicCanvas(item) {
   text(fmt(sumK), grX + 380, ryTotal + 20, 14, '#0f172a', 'right', true);
   text(sumM, grX + 560, ryTotal + 20, 14, '#0f172a', 'right', true);
 
-  // 4. SECTION REJECT
+  // 4. SECTION REJECT (Diperbaiki)
   const rjX = 40, rjY = 430, rjW = 350, rjH = 350;
   roundRect(rjX, rjY, rjW, rjH, 12, '#ffffff');
   text('Komposisi Reject', rjX + 20, rjY + 30, 16, '#2d5016', 'left', true);
@@ -367,21 +360,24 @@ function generateGraphicCanvas(item) {
   
   const totalReject = rejects.reduce((a, r) => a + r.v, 0);
 
-  drawPie(rjX + 120, rjY + 170, 90, rejects);
+  // Pie Chart (Kiri - digeser dan dikecilkan sedikit)
+  const pieCx = rjX + 90;
+  const pieCy = rjY + 170;
+  const pieR = 80;
+  drawPie(pieCx, pieCy, pieR, rejects);
   
-  // Center text pie
-  ctx.beginPath(); ctx.arc(rjX + 120, rjY + 170, 50, 0, Math.PI*2); ctx.fillStyle = '#ffffff'; ctx.fill();
-  text('TOTAL', rjX + 120, rjY + 155, 12, '#64748b', 'center', true);
-  text(fmt(totalReject), rjX + 120, rjY + 175, 16, '#dc2626', 'center', true);
-  text('Kg', rjX + 120, rjY + 195, 10, '#64748b', 'center');
+  ctx.beginPath(); ctx.arc(pieCx, pieCy, 45, 0, Math.PI*2); ctx.fillStyle = '#ffffff'; ctx.fill();
+  text('TOTAL', pieCx, pieCy - 15, 11, '#64748b', 'center', true);
+  text(fmt(totalReject), pieCx, pieCy + 5, 16, '#dc2626', 'center', true);
+  text('Kg', pieCx, pieCy + 22, 10, '#64748b', 'center');
 
-  // Legend kanan
+  // Legend (Kanan - digeser ke kanan, font disesuaikan)
   let lgY = rjY + 80;
   rejects.forEach(r => {
-    fillRect(rjX + 230, lgY - 6, 12, 12, r.c);
-    text(r.label, rjX + 250, lgY, 12, '#1e293b', 'left');
-    text(fmt(r.v) + ' kg', rjX + 330, lgY, 12, '#1e293b', 'right', true);
-    lgY += 24;
+    fillRect(rjX + 190, lgY - 5, 10, 10, r.c);
+    text(r.label, rjX + 210, lgY, 11, '#1e293b', 'left');
+    text(fmt(r.v) + ' kg', rjX + 330, lgY, 11, '#1e293b', 'right', true);
+    lgY += 22;
   });
 
   // 5. SECTION RINGKASAN REJECT (Kanan)
@@ -394,22 +390,18 @@ function generateGraphicCanvas(item) {
   const totalPanenAsli = sumP + rkTotal;
   const rateReject = totalPanenAsli > 0 ? (totalReject / totalPanenAsli * 100) : 0;
 
-  // Card Reject Kebun
   fillRect(smX + 20, smY + 70, smW - 40, 60, '#f0fdf4');
   text('Reject Kebun', smX + 40, smY + 90, 12, '#166534');
   text(fmt(rkTotal) + ' Kg', smX + 40, smY + 110, 18, '#166534', 'left', true);
 
-  // Card Reject Prosesing
   fillRect(smX + 20, smY + 150, smW - 40, 60, '#fef2f2');
   text('Reject Prosesing', smX + 40, smY + 170, 12, '#991b1b');
   text(fmt(rpTotal) + ' Kg', smX + 40, smY + 190, 18, '#991b1b', 'left', true);
 
-  // Card Reject Rate
   fillRect(smX + 20, smY + 230, smW - 40, 80, '#fff7ed');
   text('Reject Rate', smX + 40, smY + 255, 12, '#9a3412');
   text(rateReject.toFixed(2) + '%', smX + 40, smY + 285, 24, '#ea580c', 'left', true);
 
-  // 6. FOOTER
   text(`Dibuat pada: ${new Date().toLocaleString('id-ID')}`, W / 2, H - 30, 12, '#94a3b8', 'center');
 
   return cv.toDataURL('image/png');
