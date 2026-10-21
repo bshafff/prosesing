@@ -199,7 +199,6 @@ function openGraphicModal() {
   const gh = document.getElementById('panen-gh').value;
   if (gh === 'GLOBAL') { showToast('Format Grafik hanya untuk GH 1 & GH 2', 'error'); return; }
 
-  // Ambil data
   const item = {
     tgl: tgl,
     gh: gh,
@@ -216,7 +215,22 @@ function openGraphicModal() {
   const dataURL = generateGraphicCanvas(item);
   document.getElementById('grafik-preview-img').src = dataURL;
   
-  // Convert dataURL to Blob for download
+  fetch(dataURL).then(res => res.blob()).then(blob => {
+    generatedGraphicBlob = blob;
+  });
+
+  document.getElementById('modal-grafik').classList.add('show');
+}
+
+function openGraphicModalFromHistory(id) {
+  const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+  const item = db.find(x => String(x.id) === String(id));
+  if (!item) { showToast('Data tidak ditemukan', 'error'); return; }
+  if (item.gh === 'GLOBAL') { showToast('Format Grafik hanya untuk GH 1 & GH 2', 'error'); return; }
+
+  const dataURL = generateGraphicCanvas(item);
+  document.getElementById('grafik-preview-img').src = dataURL;
+  
   fetch(dataURL).then(res => res.blob()).then(blob => {
     generatedGraphicBlob = blob;
   });
@@ -231,11 +245,9 @@ function closeGraphicModal() {
 
 function downloadGraphic() {
   if (!generatedGraphicBlob) return;
-  const tgl = document.getElementById('panen-tgl').value;
-  const gh = document.getElementById('panen-gh').value;
   const link = document.createElement('a');
   link.href = URL.createObjectURL(generatedGraphicBlob);
-  link.download = `Laporan_Panen_${gh}_${tgl}.png`;
+  link.download = `Laporan_Panen_${new Date().getTime()}.png`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -479,9 +491,10 @@ function renderTablePanen() {
 
     return `
       <tr>
-        <td>
+        <td style="white-space:nowrap;">
           <button class="btn btn-sm btn-secondary" onclick="editDataPanen('${item.id}')" title="Edit">✏</button>
           <button class="btn btn-sm btn-success" onclick="openWAModalFromHistory('${item.id}')" title="Format WA" style="margin-top:2px;">📋</button>
+          <button class="btn btn-sm btn-info" onclick="openGraphicModalFromHistory('${item.id}')" title="Format Grafik" style="margin-top:2px; background:#0284c7; color:white;">📊</button>
           <button class="btn btn-sm btn-danger" onclick="hapusDataPanen('${item.id}')" title="Hapus" style="margin-top:2px;">🗑️</button>
         </td>
         <td>${item.tgl}</td>
