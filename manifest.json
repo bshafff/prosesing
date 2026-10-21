@@ -2,7 +2,7 @@
   "name": "Processing AWB",
   "short_name": "AWB",
   "description": "Processing AWB - Dashboard Panen & Kemasan PT. Agri Wangi Berry",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
