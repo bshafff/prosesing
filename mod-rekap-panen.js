@@ -2,7 +2,6 @@
 let panenCurrentPage = 1;
 const PANEN_PER_PAGE = 10;
 
-// Toggle tampilan form berdasarkan GH yang dipilih
 function toggleFormPanen() {
   const gh = document.getElementById('panen-gh').value;
   const formGh = document.getElementById('form-khusus-gh');
@@ -21,9 +20,6 @@ function toggleFormPanen() {
 function getValP(id) { return parseFloat(document.getElementById(id).value) || 0; }
 
 function hitungAllPanen() {
-  const gh = document.getElementById('panen-gh').value;
-  
-  // Hitung GH (jika bukan global)
   const totRkBun = getValP('rk-crack') + getValP('rk-poli') + getValP('rk-hpt');
   document.getElementById('calc-total-rk').textContent = totRkBun.toFixed(2) + ' Kg';
 
@@ -46,7 +42,6 @@ function hitungAllPanen() {
   const totalMika = parseInt(document.getElementById('m-hatsu').value || 0) + parseInt(document.getElementById('m-a11').value || 0) + parseInt(document.getElementById('m-a15').value || 0);
   document.getElementById('calc-total-mika').textContent = totalMika + ' Pcs';
 
-  // Hitung Global
   document.getElementById('calc-total-frozen-global').textContent = getValP('k-frozen').toFixed(2) + ' Kg';
 }
 
@@ -67,7 +62,6 @@ function generateWATextFromItem(item) {
   const tglFmt = formatTanggalPanjang(tgl);
   const ghLabel = item.gh === 'GLOBAL' ? ' (Global)' : ' (' + item.gh + ')';
 
-  // Panen
   const p_hatsu = parseFloat(item.p_hatsu) || 0;
   const p_gradea = parseFloat(item.p_gradea) || 0;
   const p_gradeb = parseFloat(item.p_gradeb) || 0;
@@ -78,7 +72,6 @@ function generateWATextFromItem(item) {
   const rkTotal = rk_crack + rk_poli + rk_hpt;
   const totalPanen = totalGradePanen + rkTotal;
 
-  // Kirim
   const k_hatsu = parseFloat(item.k_hatsu) || 0;
   const k_a11 = parseFloat(item.k_a11) || 0;
   const k_a15 = parseFloat(item.k_a15) || 0;
@@ -86,13 +79,11 @@ function generateWATextFromItem(item) {
   const totalGradeKirim = k_hatsu + k_a11 + k_a15;
   const totalKirim = totalGradeKirim + k_frozen;
 
-  // Pack
   const m_hatsu = parseInt(item.m_hatsu) || 0;
   const m_a11 = parseInt(item.m_a11) || 0;
   const m_a15 = parseInt(item.m_a15) || 0;
   const totalPack = m_hatsu + m_a11 + m_a15;
 
-  // Reject Proses
   const rp_crack = parseFloat(item.rp_crack) || 0;
   const rp_poli = parseFloat(item.rp_poli) || 0;
   const rp_hpt = parseFloat(item.rp_hpt) || 0;
@@ -198,7 +189,221 @@ async function copyWAText() {
   }
 }
 
-// ========== SIMPAN ==========
+// ========== FORMAT GRAFIK (CANVAS) ==========
+let generatedGraphicBlob = null;
+
+function openGraphicModal() {
+  const tgl = document.getElementById('panen-tgl').value;
+  if (!tgl) { showToast('Isi tanggal panen dulu!', 'error'); return; }
+  
+  const gh = document.getElementById('panen-gh').value;
+  if (gh === 'GLOBAL') { showToast('Format Grafik hanya untuk GH 1 & GH 2', 'error'); return; }
+
+  // Ambil data
+  const item = {
+    tgl: tgl,
+    gh: gh,
+    p_hatsu: getValP('p-hatsu'), p_gradea: getValP('p-gradea'), p_gradeb: getValP('p-gradeb'),
+    rk_crack: getValP('rk-crack'), rk_poli: getValP('rk-poli'), rk_hpt: getValP('rk-hpt'),
+    rp_crack: getValP('rp-crack'), rp_poli: getValP('rp-poli'), rp_hpt: getValP('rp-hpt'),
+    rp_bruise: getValP('rp-bruise'), rp_overripe: getValP('rp-overripe'), rp_kuning: getValP('rp-kuning'), rp_frozen: getValP('rp-frozen'),
+    k_hatsu: getValP('k-hatsu'), k_a11: getValP('k-a11'), k_a15: getValP('k-a15'),
+    m_hatsu: parseInt(document.getElementById('m-hatsu').value || 0, 10),
+    m_a11: parseInt(document.getElementById('m-a11').value || 0, 10),
+    m_a15: parseInt(document.getElementById('m-a15').value || 0, 10)
+  };
+
+  const dataURL = generateGraphicCanvas(item);
+  document.getElementById('grafik-preview-img').src = dataURL;
+  
+  // Convert dataURL to Blob for download
+  fetch(dataURL).then(res => res.blob()).then(blob => {
+    generatedGraphicBlob = blob;
+  });
+
+  document.getElementById('modal-grafik').classList.add('show');
+}
+
+function closeGraphicModal() {
+  document.getElementById('modal-grafik').classList.remove('show');
+  generatedGraphicBlob = null;
+}
+
+function downloadGraphic() {
+  if (!generatedGraphicBlob) return;
+  const tgl = document.getElementById('panen-tgl').value;
+  const gh = document.getElementById('panen-gh').value;
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(generatedGraphicBlob);
+  link.download = `Laporan_Panen_${gh}_${tgl}.png`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(link.href), 4000);
+  showToast('📸 Gambar berhasil disimpan');
+}
+
+function generateGraphicCanvas(item) {
+  const W = 800;
+  const H = 880;
+  const sc = 2;
+  const cv = document.createElement('canvas');
+  cv.width = W * sc; cv.height = H * sc;
+  const ctx = cv.getContext('2d');
+  ctx.scale(sc, sc);
+
+  // Helper draw functions
+  const fillRect = (x, y, w, h, color) => { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); };
+  const text = (t, x, y, size, color, align, bold) => {
+    ctx.font = `${bold ? '700' : '400'} ${size}px system-ui, sans-serif`;
+    ctx.fillStyle = color;
+    ctx.textAlign = align || 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(t), x, y);
+  };
+  const roundRect = (x, y, w, h, r, color) => {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.fill();
+  };
+  const drawPie = (cx, cy, r, parts) => {
+    let start = -Math.PI / 2;
+    const total = parts.reduce((a, p) => a + p.v, 0);
+    if (total <= 0) {
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fillStyle = '#e5e7eb'; ctx.fill();
+      return;
+    }
+    parts.forEach(p => {
+      if (p.v <= 0) return;
+      const angle = (p.v / total) * Math.PI * 2;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, r, start, start + angle);
+      ctx.fillStyle = p.c; ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+      start += angle;
+    });
+  };
+
+  const fmt = n => (parseFloat(n) || 0).toFixed(2).replace('.', ',');
+  const tglFmt = formatTanggalPanjang(item.tgl);
+
+  // 1. BACKGROUND
+  fillRect(0, 0, W, H, '#f8fafc');
+
+  // 2. HEADER
+  fillRect(0, 0, W, 100, '#2d5016');
+  text('Laporan Harian Panen & Pengiriman', 40, 40, 24, '#ffffff', 'left', true);
+  text(`${item.gh} • ${tglFmt}`, 40, 70, 16, '#bbf7d0', 'left');
+  text('PT. Agri Wangi Berry', W - 40, 55, 14, '#86efac', 'right', true);
+
+  // 3. TABEL / KARTU GRADES
+  const grX = 40, grY = 130, grW = 720, grH = 280;
+  roundRect(grX, grY, grW, grH, 12, '#ffffff');
+  
+  text('Rincian Panen, Pengiriman & Pack', grX + 20, grY + 30, 16, '#2d5016', 'left', true);
+  
+  // Table Header
+  fillRect(grX + 20, grY + 60, grW - 40, 40, '#f1f5f9');
+  text('Grade', grX + 40, grY + 80, 14, '#475569', 'left', true);
+  text('Panen (Kg)', grX + 200, grY + 80, 14, '#475569', 'right', true);
+  text('Kirim (Kg)', grX + 380, grY + 80, 14, '#475569', 'right', true);
+  text('Pack (Pcs)', grX + 560, grY + 80, 14, '#475569', 'right', true);
+
+  const rows = [
+    { name: 'Hatsuhana', p: item.p_hatsu, k: item.k_hatsu, m: item.m_hatsu, color: '#1e40af' },
+    { name: 'Grade A', p: item.p_gradea, k: item.k_a11, m: item.m_a11, color: '#15803d' },
+    { name: 'Grade B', p: item.p_gradeb, k: item.k_a15, m: item.m_a15, color: '#b45309' }
+  ];
+
+  rows.forEach((row, i) => {
+    const ry = grY + 100 + (i * 45);
+    text(row.name, grX + 40, ry + 20, 14, row.color, 'left', true);
+    text(fmt(row.p), grX + 200, ry + 20, 14, '#1e293b', 'right');
+    text(fmt(row.k), grX + 380, ry + 20, 14, '#1e293b', 'right');
+    text(row.m, grX + 560, ry + 20, 14, '#1e293b', 'right');
+    ctx.beginPath(); ctx.moveTo(grX+20, ry+40); ctx.lineTo(grX+grW-20, ry+40); ctx.strokeStyle='#f1f5f9'; ctx.stroke();
+  });
+
+  // Total Row
+  const sumP = item.p_hatsu + item.p_gradea + item.p_gradeb;
+  const sumK = item.k_hatsu + item.k_a11 + item.k_a15;
+  const sumM = item.m_hatsu + item.m_a11 + item.m_a15;
+  const ryTotal = grY + 100 + (3 * 45);
+  text('TOTAL', grX + 40, ryTotal + 20, 14, '#0f172a', 'left', true);
+  text(fmt(sumP), grX + 200, ryTotal + 20, 14, '#0f172a', 'right', true);
+  text(fmt(sumK), grX + 380, ryTotal + 20, 14, '#0f172a', 'right', true);
+  text(sumM, grX + 560, ryTotal + 20, 14, '#0f172a', 'right', true);
+
+  // 4. SECTION REJECT
+  const rjX = 40, rjY = 430, rjW = 350, rjH = 350;
+  roundRect(rjX, rjY, rjW, rjH, 12, '#ffffff');
+  text('Komposisi Reject', rjX + 20, rjY + 30, 16, '#2d5016', 'left', true);
+
+  const rejects = [
+    { label: 'Cracking', v: (item.rk_crack || 0) + item.rp_crack, c: '#dc2626' },
+    { label: 'Polinasi', v: (item.rk_poli || 0) + item.rp_poli, c: '#ea580c' },
+    { label: 'HPT', v: (item.rk_hpt || 0) + item.rp_hpt, c: '#f59e0b' },
+    { label: 'Bruise', v: item.rp_bruise, c: '#84cc16' },
+    { label: 'Overripe', v: item.rp_overripe, c: '#0891b2' },
+    { label: 'Buah Kuning', v: item.rp_kuning, c: '#eab308' },
+    { label: 'Frozen', v: item.rp_frozen, c: '#7c3aed' }
+  ].filter(r => r.v > 0);
+  
+  const totalReject = rejects.reduce((a, r) => a + r.v, 0);
+
+  drawPie(rjX + 120, rjY + 170, 90, rejects);
+  
+  // Center text pie
+  ctx.beginPath(); ctx.arc(rjX + 120, rjY + 170, 50, 0, Math.PI*2); ctx.fillStyle = '#ffffff'; ctx.fill();
+  text('TOTAL', rjX + 120, rjY + 155, 12, '#64748b', 'center', true);
+  text(fmt(totalReject), rjX + 120, rjY + 175, 16, '#dc2626', 'center', true);
+  text('Kg', rjX + 120, rjY + 195, 10, '#64748b', 'center');
+
+  // Legend kanan
+  let lgY = rjY + 80;
+  rejects.forEach(r => {
+    fillRect(rjX + 230, lgY - 6, 12, 12, r.c);
+    text(r.label, rjX + 250, lgY, 12, '#1e293b', 'left');
+    text(fmt(r.v) + ' kg', rjX + 330, lgY, 12, '#1e293b', 'right', true);
+    lgY += 24;
+  });
+
+  // 5. SECTION RINGKASAN REJECT (Kanan)
+  const smX = 410, smY = 430, smW = 350, smH = 350;
+  roundRect(smX, smY, smW, smH, 12, '#ffffff');
+  text('Ringkasan Reject & Rate', smX + 20, smY + 30, 16, '#2d5016', 'left', true);
+
+  const rkTotal = (item.rk_crack||0) + (item.rk_poli||0) + (item.rk_hpt||0);
+  const rpTotal = (item.rp_crack||0) + (item.rp_poli||0) + (item.rp_hpt||0) + (item.rp_bruise||0) + (item.rp_overripe||0) + (item.rp_kuning||0) + (item.rp_frozen||0);
+  const totalPanenAsli = sumP + rkTotal;
+  const rateReject = totalPanenAsli > 0 ? (totalReject / totalPanenAsli * 100) : 0;
+
+  // Card Reject Kebun
+  fillRect(smX + 20, smY + 70, smW - 40, 60, '#f0fdf4');
+  text('Reject Kebun', smX + 40, smY + 90, 12, '#166534');
+  text(fmt(rkTotal) + ' Kg', smX + 40, smY + 110, 18, '#166534', 'left', true);
+
+  // Card Reject Prosesing
+  fillRect(smX + 20, smY + 150, smW - 40, 60, '#fef2f2');
+  text('Reject Prosesing', smX + 40, smY + 170, 12, '#991b1b');
+  text(fmt(rpTotal) + ' Kg', smX + 40, smY + 190, 18, '#991b1b', 'left', true);
+
+  // Card Reject Rate
+  fillRect(smX + 20, smY + 230, smW - 40, 80, '#fff7ed');
+  text('Reject Rate', smX + 40, smY + 255, 12, '#9a3412');
+  text(rateReject.toFixed(2) + '%', smX + 40, smY + 285, 24, '#ea580c', 'left', true);
+
+  // 6. FOOTER
+  text(`Dibuat pada: ${new Date().toLocaleString('id-ID')}`, W / 2, H - 30, 12, '#94a3b8', 'center');
+
+  return cv.toDataURL('image/png');
+}
+
+// ========== SIMPAN DATA ==========
 function simpanDataPanen() {
   const tgl = document.getElementById('panen-tgl').value;
   if (!tgl) { showToast('Pilih tanggal panen!', 'error'); return; }
@@ -403,7 +608,6 @@ function saveEditPanen() {
     ...db[idx],
     tgl: gStr('edit-p-tgl'),
     gh: gh,
-    // Jika global, set data panen & kirim jadi 0
     p_hatsu: isGlobal ? 0 : g('edit-p-hatsu'),
     p_gradea: isGlobal ? 0 : g('edit-p-gradea'),
     p_gradeb: isGlobal ? 0 : g('edit-p-gradeb'),
@@ -423,7 +627,6 @@ function saveEditPanen() {
     m_hatsu: isGlobal ? 0 : gInt('edit-m-hatsu'),
     m_a11: isGlobal ? 0 : gInt('edit-m-a11'),
     m_a15: isGlobal ? 0 : gInt('edit-m-a15'),
-    // Field Global
     k_frozen: g('edit-k-frozen'),
     t_curah: g('edit-t-curah'),
     t_hatsu: gInt('edit-t-hatsu'),
