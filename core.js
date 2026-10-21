@@ -120,20 +120,28 @@ async function welcomeConnect() {
     btn.textContent = '⏳ Menyambungkan...';
   }
 
+  // Set flag welcommed (untuk background sync berikutnya)
   localStorage.setItem(WELCOMED_KEY, '1');
 
+  // Auto-set default URL
   if (DEFAULT_SCRIPT_URL && DEFAULT_SCRIPT_URL.indexOf('/exec') > 0) {
     scriptUrl = DEFAULT_SCRIPT_URL;
     isAuthenticated = true;
     localStorage.setItem('awb_sync_auth', '1');
   }
 
+  // Tampilkan app (dashboard)
   showAppScreen();
   updateSyncStatus('syncing');
 
+  // Aktifkan auto-sync (interval 5 menit & visibility change)
+  autoBootSync();
+
+  // Load data & sync
   setTimeout(async () => {
     try {
       if (isAuthenticated && currentScriptUrl()) {
+        // Kalau lokal kosong → pull dari Sheet
         const totalLocal =
           readArrayRaw(nativeStorage.getItem(PANEN_STORAGE_KEY)).length +
           readArrayRaw(nativeStorage.getItem(KEMASAN_STORAGE_KEY)).length +
@@ -149,6 +157,7 @@ async function welcomeConnect() {
           showToast('✓ Tersinkron');
         }
 
+        // Update status jadi "Tersinkron"
         const st = document.getElementById('sync-status');
         if (st) {
           const now = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
