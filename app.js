@@ -77,16 +77,15 @@ async function initApp() {
   checkVersion(false);
   startVersionCheckInterval();
 
-  // 5. Init back button handler (WAJIB untuk support tombol back browser/HP)
+  // 5. Init back button handler
   __initBackHandler();
 
-  // 6. Tentukan tampilan: welcome atau app
-  if (!isWelcomed()) {
-    console.log('[BOOT] Belum welcomed → tampil welcome screen');
-    showWelcomeScreen();
-  } else {
-    console.log('[BOOT] Sudah welcomed → tampil app');
-    showAppScreen();
+  // 6. SELALU TAMPILKAN WELCOME SCREEN SAAT DIBUKA
+  console.log('[BOOT] Menampilkan welcome screen');
+  showWelcomeScreen();
+  
+  // Jalankan auto sync di background jika user sudah pernah connect sebelumnya
+  if (isWelcomed()) {
     autoBootSync();
   }
 
