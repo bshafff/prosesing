@@ -7,6 +7,9 @@ const AKS_KONVERSI = {
   netfoam: 1800
 };
 
+// 1 mika Hatsu butuh 6 potong netfoam
+const NETFOAM_PER_MIKA = 6;
+
 function defaultAksState() {
   return {
     layer: { gudang: 0, proc: 0 },
@@ -16,50 +19,91 @@ function defaultAksState() {
   };
 }
 
-// Fungsi Auto-Fill dari Rekap Panen
+// ============================================================
+// AUTO-FILL DARI REKAP PANEN (kirim, tamu, keterangan tamu)
+// ============================================================
 function autoFillFromPanen() {
   const tgl = document.getElementById('kemasan-tgl').value;
   if (!tgl) return;
 
   const panenDb = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
   const filtered = panenDb.filter(x => x.tgl === tgl);
+  if (!filtered.length) return;
 
-  if (!filtered.length) return; // Tidak ada data di tanggal ini
-
-  let totalKirim = [0, 0, 0]; // 0: Hatsu, 1: Grade A (A11), 2: Grade B (A15)
-  let totalTamu = [0, 0, 0];
+  let totalKirim = [0, 0, 0];
+  let totalTamu  = [0, 0, 0];
+  const ketSet = new Set();
 
   filtered.forEach(item => {
     totalKirim[0] += (item.m_hatsu || 0);
-    totalKirim[1] += (item.m_a11 || 0);
-    totalKirim[2] += (item.m_a15 || 0);
-
-    totalTamu[0] += (item.t_hatsu || 0);
-    totalTamu[1] += (item.t_a11 || 0);
-    totalTamu[2] += (item.t_a15 || 0);
+    totalKirim[1] += (item.m_a11   || 0);
+    totalKirim[2] += (item.m_a15   || 0);
+    totalTamu[0]  += (item.t_hatsu || 0);
+    totalTamu[1]  += (item.t_a11   || 0);
+    totalTamu[2]  += (item.t_a15   || 0);
+    if (item.t_ket && String(item.t_ket).trim()) ketSet.add(String(item.t_ket).trim());
   });
+
+  const ketGabung = [...ketSet].join('; ');
 
   const setVal = (id, val) => {
     const el = document.getElementById(id);
-    if (el) {
-      el.value = val || '';
-      el.dispatchEvent(new Event('input')); // Trigger hitungKemasan
-    }
+    if (el) el.value = (val == null ? '' : val);
   };
 
+  // Kirim packing (pcs)
   setVal('kirim-0', totalKirim[0]);
   setVal('kirim-1', totalKirim[1]);
   setVal('kirim-2', totalKirim[2]);
 
+  // Tamu / sampel (pcs)
   setVal('tamu-0', totalTamu[0]);
   setVal('tamu-1', totalTamu[1]);
   setVal('tamu-2', totalTamu[2]);
 
+  // Keterangan tamu hanya diisi pada grade yang ada tamunya
+  [0, 1, 2].forEach(i => {
+    if (totalTamu[i] > 0 && ketGabung) setVal(`ket-tamu-${i}`, ketGabung);
+  });
+
+  // Hitung pemakaian penunjang otomatis + refresh semua display
+  recalcPakaiPenunjang();
+  [0, 1, 2].forEach(i => hitungKemasan(i));
+
   if (totalKirim.some(x => x > 0) || totalTamu.some(x => x > 0)) {
-    showToast('✅ Data Kirim & Tamu terisi otomatis dari Rekap Panen');
+    showToast('✅ Kirim, Tamu, Keterangan & Penunjang terisi dari Rekap Panen');
   }
 }
 
+// ============================================================
+// RECALC PAKAI PENUNJANG (dipanggil setiap kirim/tamu berubah)
+// ============================================================
+function recalcPakaiPenunjang() {
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  };
+
+  const kirim = [getValK('kirim-0'), getValK('kirim-1'), getValK('kirim-2')];
+  const tamu  = [getValK('tamu-0'),  getValK('tamu-1'),  getValK('tamu-2')];
+
+  // Netfoam: 1 mika Hatsu = 6 potong
+  setVal('netfoam-pakai', (kirim[0] + tamu[0]) * NETFOAM_PER_MIKA);
+
+  // Layer A11: 1 mika Grade A = 1 layer
+  setVal('layer-pakai', kirim[1] + tamu[1]);
+
+  // Sleeve A15: 1 mika Grade B = 1 sleeve
+  setVal('sleeve-pakai', kirim[2] + tamu[2]);
+
+  // Stiker: dipakai oleh semua mika (Hatsu + Grade A + Grade B, kirim + tamu)
+  const totalStiker = kirim[0] + kirim[1] + kirim[2] + tamu[0] + tamu[1] + tamu[2];
+  setVal('stiker-pakai', totalStiker);
+}
+
+// ============================================================
+// RECALCULATE STOCK KEMASAN (tidak berubah)
+// ============================================================
 function recalculateStockKemasan() {
   const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
   const accum = {};
@@ -156,16 +200,17 @@ function getValK(id) {
   return el ? (parseFloat(el.value) || 0) : 0;
 }
 
-// ========== HTML BUILDER: AKSESORIS ==========
+// ============================================================
+// HTML BUILDER: KARTU PENUNJANG (dipakai di panel Penunjang)
+// ============================================================
 function netfoamCardHtml() {
   const a = currentAksesoris.netfoam;
   return `
-    <div class="sub-title">🧽 6. Stok Netfoam Hatsuhana <span class="badge hatsu">1 Ball = ${AKS_KONVERSI.netfoam} Potong</span></div>
     <div class="info-box">Stok Ball: <b>${a.ball}</b> Ball | Stok Potong: <b>${a.proc}</b> Pcs</div>
 
     <div class="row-2">
-      <div class="input-group"><label>Netfoam Masuk (Ball)</label><input type="number" id="netfoam-masuk-ball" placeholder="0" oninput="hitungKemasan(0)"></div>
-      <div class="input-group"><label>Netfoam Dipotong (Ball)</label><input type="number" id="netfoam-potong-ball" placeholder="0" oninput="hitungKemasan(0)"></div>
+      <div class="input-group"><label>Netfoam Masuk (Ball)</label><input type="number" id="netfoam-masuk-ball" placeholder="0" oninput="hitungPenunjang()"></div>
+      <div class="input-group"><label>Netfoam Dipotong (Ball)</label><input type="number" id="netfoam-potong-ball" placeholder="0" oninput="hitungPenunjang()"></div>
     </div>
     <div class="row-2">
       <div class="input-group"><label>Stok Ball Awal</label><input readonly value="${a.ball}"></div>
@@ -174,18 +219,18 @@ function netfoamCardHtml() {
 
     <div class="row-2">
       <div class="input-group"><label>Standar Potong (Ball × ${AKS_KONVERSI.netfoam})</label><input readonly id="netfoam-standar-pcs"></div>
-      <div class="input-group"><label>Aktual Potong (Pcs)</label><input type="number" id="netfoam-aktual-pcs" placeholder="0 = pakai standar" oninput="hitungKemasan(0)"></div>
+      <div class="input-group"><label>Aktual Potong (Pcs)</label><input type="number" id="netfoam-aktual-pcs" placeholder="0 = pakai standar" oninput="hitungPenunjang()"></div>
     </div>
 
     <div class="row-2">
       <div class="input-group"><label>Potong Awal</label><input readonly value="${a.proc}"></div>
-      <div class="input-group"><label>Netfoam Terpakai (Pcs)</label><input type="number" id="netfoam-pakai" placeholder="0" oninput="hitungKemasan(0)"></div>
+      <div class="input-group"><label>Netfoam Terpakai (Pcs) — auto</label><input type="number" id="netfoam-pakai" placeholder="0" oninput="hitungPenunjang()"></div>
     </div>
     <div class="input-group"><label>Potong Akhir (Est.)</label><input readonly id="netfoam-proc-akhir"></div>
 
     <div class="input-group" style="background:#f0fdf4;padding:0.75rem;border-radius:8px;border-left:3px solid #16a34a;">
       <label style="color:#166534;font-weight:700;">🔧 Koreksi Stok Fisik Potong (Pcs)</label>
-      <input type="number" id="netfoam-opname" placeholder="Kosongkan kalau sesuai hitungan" oninput="hitungKemasan(0)">
+      <input type="number" id="netfoam-opname" placeholder="Kosongkan kalau sesuai hitungan" oninput="hitungPenunjang()">
     </div>
   `;
 }
@@ -193,12 +238,11 @@ function netfoamCardHtml() {
 function layerCardHtml() {
   const a = currentAksesoris.layer;
   return `
-    <div class="sub-title">📄 6. Stok Layer A11 <span class="badge gradea">1 Dus = ${AKS_KONVERSI.layer} Pcs</span></div>
     <div class="info-box">Stok Gudang: <b>${a.gudang}</b> Dus (${a.gudang * AKS_KONVERSI.layer} Pcs) | Stok Processing: <b>${a.proc}</b> Pcs</div>
 
     <div class="row-2">
-      <div class="input-group"><label>Layer Masuk (Dus)</label><input type="number" id="layer-masuk-dus" placeholder="0" oninput="hitungKemasan(1)"></div>
-      <div class="input-group"><label>Layer Dibongkar (Dus)</label><input type="number" id="layer-bongkar-dus" placeholder="0" oninput="hitungKemasan(1)"></div>
+      <div class="input-group"><label>Layer Masuk (Dus)</label><input type="number" id="layer-masuk-dus" placeholder="0" oninput="hitungPenunjang()"></div>
+      <div class="input-group"><label>Layer Dibongkar (Dus)</label><input type="number" id="layer-bongkar-dus" placeholder="0" oninput="hitungPenunjang()"></div>
     </div>
     <div class="row-2">
       <div class="input-group"><label>Stok Gudang Awal</label><input readonly value="${a.gudang}"></div>
@@ -207,18 +251,18 @@ function layerCardHtml() {
 
     <div class="row-2">
       <div class="input-group"><label>Standar Pcs (Dus × ${AKS_KONVERSI.layer})</label><input readonly id="layer-standar-pcs"></div>
-      <div class="input-group"><label>Pcs Aktual Bongkar</label><input type="number" id="layer-aktual-pcs" placeholder="0 = pakai standar" oninput="hitungKemasan(1)"></div>
+      <div class="input-group"><label>Pcs Aktual Bongkar</label><input type="number" id="layer-aktual-pcs" placeholder="0 = pakai standar" oninput="hitungPenunjang()"></div>
     </div>
 
     <div class="row-2">
       <div class="input-group"><label>Processing Awal</label><input readonly value="${a.proc}"></div>
-      <div class="input-group"><label>Layer Terpakai (Pcs)</label><input type="number" id="layer-pakai" placeholder="0" oninput="hitungKemasan(1)"></div>
+      <div class="input-group"><label>Layer Terpakai (Pcs) — auto</label><input type="number" id="layer-pakai" placeholder="0" oninput="hitungPenunjang()"></div>
     </div>
     <div class="input-group"><label>Processing Akhir (Est.)</label><input readonly id="layer-proc-akhir"></div>
 
     <div class="input-group" style="background:#f0fdf4;padding:0.75rem;border-radius:8px;border-left:3px solid #16a34a;">
       <label style="color:#166534;font-weight:700;">🔧 Koreksi Stok Fisik Processing (Pcs)</label>
-      <input type="number" id="layer-opname" placeholder="Kosongkan kalau sesuai hitungan" oninput="hitungKemasan(1)">
+      <input type="number" id="layer-opname" placeholder="Kosongkan kalau sesuai hitungan" oninput="hitungPenunjang()">
     </div>
   `;
 }
@@ -226,12 +270,11 @@ function layerCardHtml() {
 function sleeveCardHtml() {
   const a = currentAksesoris.sleeve;
   return `
-    <div class="sub-title">📄 6. Stok Sleeve Grade B <span class="badge gradeb">1 Dus = ${AKS_KONVERSI.sleeve} Pcs</span></div>
     <div class="info-box">Stok Gudang: <b>${a.gudang}</b> Dus (${a.gudang * AKS_KONVERSI.sleeve} Pcs) | Stok Processing: <b>${a.proc}</b> Pcs</div>
 
     <div class="row-2">
-      <div class="input-group"><label>Sleeve Masuk (Dus)</label><input type="number" id="sleeve-masuk-dus" placeholder="0" oninput="hitungKemasan(2)"></div>
-      <div class="input-group"><label>Sleeve Dibongkar (Dus)</label><input type="number" id="sleeve-bongkar-dus" placeholder="0" oninput="hitungKemasan(2)"></div>
+      <div class="input-group"><label>Sleeve Masuk (Dus)</label><input type="number" id="sleeve-masuk-dus" placeholder="0" oninput="hitungPenunjang()"></div>
+      <div class="input-group"><label>Sleeve Dibongkar (Dus)</label><input type="number" id="sleeve-bongkar-dus" placeholder="0" oninput="hitungPenunjang()"></div>
     </div>
     <div class="row-2">
       <div class="input-group"><label>Stok Gudang Awal</label><input readonly value="${a.gudang}"></div>
@@ -240,18 +283,18 @@ function sleeveCardHtml() {
 
     <div class="row-2">
       <div class="input-group"><label>Standar Pcs (Dus × ${AKS_KONVERSI.sleeve})</label><input readonly id="sleeve-standar-pcs"></div>
-      <div class="input-group"><label>Pcs Aktual Bongkar</label><input type="number" id="sleeve-aktual-pcs" placeholder="0 = pakai standar" oninput="hitungKemasan(2)"></div>
+      <div class="input-group"><label>Pcs Aktual Bongkar</label><input type="number" id="sleeve-aktual-pcs" placeholder="0 = pakai standar" oninput="hitungPenunjang()"></div>
     </div>
 
     <div class="row-2">
       <div class="input-group"><label>Processing Awal</label><input readonly value="${a.proc}"></div>
-      <div class="input-group"><label>Sleeve Terpakai (Pcs)</label><input type="number" id="sleeve-pakai" placeholder="0" oninput="hitungKemasan(2)"></div>
+      <div class="input-group"><label>Sleeve Terpakai (Pcs) — auto</label><input type="number" id="sleeve-pakai" placeholder="0" oninput="hitungPenunjang()"></div>
     </div>
     <div class="input-group"><label>Processing Akhir (Est.)</label><input readonly id="sleeve-proc-akhir"></div>
 
     <div class="input-group" style="background:#f0fdf4;padding:0.75rem;border-radius:8px;border-left:3px solid #16a34a;">
       <label style="color:#166534;font-weight:700;">🔧 Koreksi Stok Fisik Processing (Pcs)</label>
-      <input type="number" id="sleeve-opname" placeholder="Kosongkan kalau sesuai hitungan" oninput="hitungKemasan(2)">
+      <input type="number" id="sleeve-opname" placeholder="Kosongkan kalau sesuai hitungan" oninput="hitungPenunjang()">
     </div>
   `;
 }
@@ -259,53 +302,44 @@ function sleeveCardHtml() {
 function stikerCardHtml() {
   const a = currentAksesoris.stiker;
   return `
-    <div class="card">
-      <div class="card-title">🏷️ Stok Stiker <span class="badge info">1 Lembar = ${AKS_KONVERSI.stiker} Pcs</span></div>
-      <div class="info-box">Stok Gudang: <b>${a.gudang}</b> Lembar (${a.gudang * AKS_KONVERSI.stiker} Pcs) | Stok Processing: <b>${a.proc}</b> Pcs</div>
+    <div class="info-box">Stok Gudang: <b>${a.gudang}</b> Lembar (${a.gudang * AKS_KONVERSI.stiker} Pcs) | Stok Processing: <b>${a.proc}</b> Pcs</div>
 
-      <div class="sub-title">📦 1. Stok Gudang (Lembar Belum Dipakai)</div>
-      <div class="row-2">
-        <div class="input-group"><label>Stiker Masuk (Lembar)</label><input type="number" id="stiker-masuk-lembar" placeholder="0" oninput="hitungKemasan(0)"></div>
-        <div class="input-group"><label>Stiker Ditempel (Lembar)</label><input type="number" id="stiker-bongkar-lembar" placeholder="0" oninput="hitungKemasan(0)"></div>
-      </div>
-      <div class="row-2">
-        <div class="input-group"><label>Stok Gudang Awal</label><input readonly value="${a.gudang}"></div>
-        <div class="input-group"><label>Stok Gudang Akhir (Est.)</label><input readonly id="stiker-gudang-akhir"></div>
-      </div>
+    <div class="sub-title">📦 1. Stok Gudang (Lembar Belum Dipakai)</div>
+    <div class="row-2">
+      <div class="input-group"><label>Stiker Masuk (Lembar)</label><input type="number" id="stiker-masuk-lembar" placeholder="0" oninput="hitungPenunjang()"></div>
+      <div class="input-group"><label>Stiker Ditempel (Lembar)</label><input type="number" id="stiker-bongkar-lembar" placeholder="0" oninput="hitungPenunjang()"></div>
+    </div>
+    <div class="row-2">
+      <div class="input-group"><label>Stok Gudang Awal</label><input readonly value="${a.gudang}"></div>
+      <div class="input-group"><label>Stok Gudang Akhir (Est.)</label><input readonly id="stiker-gudang-akhir"></div>
+    </div>
 
-      <div class="sub-title">🔧 2. Bongkar Lembar ke Processing</div>
-      <div class="row-2">
-        <div class="input-group"><label>Standar Pcs (Lembar × ${AKS_KONVERSI.stiker})</label><input readonly id="stiker-standar-pcs"></div>
-        <div class="input-group"><label>Pcs Aktual</label><input type="number" id="stiker-aktual-pcs" placeholder="0 = pakai standar" oninput="hitungKemasan(0)"></div>
-      </div>
+    <div class="sub-title">🔧 2. Bongkar Lembar ke Processing</div>
+    <div class="row-2">
+      <div class="input-group"><label>Standar Pcs (Lembar × ${AKS_KONVERSI.stiker})</label><input readonly id="stiker-standar-pcs"></div>
+      <div class="input-group"><label>Pcs Aktual</label><input type="number" id="stiker-aktual-pcs" placeholder="0 = pakai standar" oninput="hitungPenunjang()"></div>
+    </div>
 
-      <div class="sub-title">🏭 3. Stok Processing (Pcs Siap Pakai)</div>
-      <div class="row-2">
-        <div class="input-group"><label>Processing Awal</label><input readonly value="${a.proc}"></div>
-        <div class="input-group"><label>Stiker Terpakai (Pcs)</label><input type="number" id="stiker-pakai" placeholder="0" oninput="hitungKemasan(0)"></div>
-      </div>
-      <div class="input-group"><label>Processing Akhir (Est.)</label><input readonly id="stiker-proc-akhir"></div>
+    <div class="sub-title">🏭 3. Stok Processing (Pcs Siap Pakai)</div>
+    <div class="row-2">
+      <div class="input-group"><label>Processing Awal</label><input readonly value="${a.proc}"></div>
+      <div class="input-group"><label>Stiker Terpakai (Pcs) — auto</label><input type="number" id="stiker-pakai" placeholder="0" oninput="hitungPenunjang()"></div>
+    </div>
+    <div class="input-group"><label>Processing Akhir (Est.)</label><input readonly id="stiker-proc-akhir"></div>
 
-      <div class="input-group" style="background:#f0fdf4;padding:0.75rem;border-radius:8px;border-left:3px solid #16a34a;">
-        <label style="color:#166534;font-weight:700;">🔧 Koreksi Stok Fisik Processing (Pcs)</label>
-        <input type="number" id="stiker-opname" placeholder="Kosongkan kalau sesuai hitungan" oninput="hitungKemasan(0)">
-      </div>
+    <div class="input-group" style="background:#f0fdf4;padding:0.75rem;border-radius:8px;border-left:3px solid #16a34a;">
+      <label style="color:#166534;font-weight:700;">🔧 Koreksi Stok Fisik Processing (Pcs)</label>
+      <input type="number" id="stiker-opname" placeholder="Kosongkan kalau sesuai hitungan" oninput="hitungPenunjang()">
     </div>
   `;
 }
 
-// ========== BUILD MIKA FORM ==========
+// ============================================================
+// FORM MIKA (Hatsu / Grade A / Grade B) — tanpa penunjang
+// ============================================================
 function buildMikaForm(item, i) {
   const gAwal = currentStockStateKemasan[item.name].gudang;
   const pAwal = currentStockStateKemasan[item.name].processing;
-  const isHatsu = item.name.includes('Hatsu');
-  const isGradeA = item.name.includes('Grade A') || item.name.includes('A11');
-  const isGradeB = item.name.includes('Grade B');
-
-  const extraForm = isHatsu ? netfoamCardHtml()
-                  : isGradeA ? layerCardHtml()
-                  : isGradeB ? sleeveCardHtml()
-                  : '';
 
   return `
     <div class="card">
@@ -342,34 +376,59 @@ function buildMikaForm(item, i) {
 
       <div class="sub-title">📤 4. Pengeluaran Hari Ini</div>
       <div class="row-2">
-        <div class="input-group"><label>Kirim Packing (PCS)</label><input type="number" id="kirim-${i}" placeholder="0" oninput="hitungKemasan(${i})"></div>
-        <div class="input-group"><label>Mika Tamu / Sample (PCS)</label><input type="number" id="tamu-${i}" placeholder="0" oninput="hitungKemasan(${i})"></div>
+        <div class="input-group"><label>Kirim Packing (PCS)</label><input type="number" id="kirim-${i}" placeholder="0" oninput="recalcPakaiPenunjang(); hitungKemasan(${i})"></div>
+        <div class="input-group"><label>Mika Tamu / Sample (PCS)</label><input type="number" id="tamu-${i}" placeholder="0" oninput="recalcPakaiPenunjang(); hitungKemasan(${i})"></div>
       </div>
       <div class="input-group"><label>Keterangan Tamu / Sample</label><input type="text" id="ket-tamu-${i}" placeholder="Contoh: Demo customer"></div>
 
       <div class="sub-title">❌ 5. Reject Mika Hari Ini</div>
       <div class="input-group"><label>Reject Mika (PCS)</label><input type="number" id="reject-${i}" placeholder="0" oninput="hitungKemasan(${i})"></div>
       <div class="input-group"><label>Keterangan Reject</label><input type="text" id="ket-reject-${i}" placeholder="Contoh: Sobek, pecah"></div>
-
-      ${extraForm}
     </div>
   `;
 }
 
+// ============================================================
+// PANEL PENUNJANG (netfoam + layer + sleeve + stiker)
+// ============================================================
+function renderPenunjangPanel() {
+  return `
+    <div class="card">
+      <div class="card-title">🧽 Netfoam Hatsuhana <span class="badge hatsu">1 Ball = ${AKS_KONVERSI.netfoam} Pcs · 1 Mika = ${NETFOAM_PER_MIKA} Pcs</span></div>
+      ${netfoamCardHtml()}
+    </div>
+    <div class="card">
+      <div class="card-title">📄 Layer A11 <span class="badge gradea">1 Dus = ${AKS_KONVERSI.layer} Pcs · 1 Mika = 1 Layer</span></div>
+      ${layerCardHtml()}
+    </div>
+    <div class="card">
+      <div class="card-title">📄 Sleeve A15 <span class="badge gradeb">1 Dus = ${AKS_KONVERSI.sleeve} Pcs · 1 Mika = 1 Sleeve</span></div>
+      ${sleeveCardHtml()}
+    </div>
+    <div class="card">
+      <div class="card-title">🏷️ Stiker <span class="badge info">1 Lembar = ${AKS_KONVERSI.stiker} Pcs · 1 Mika = 1 Stiker</span></div>
+      ${stikerCardHtml()}
+    </div>
+  `;
+}
+
+// ============================================================
+// RENDER FORM (mika + penunjang)
+// ============================================================
 function renderKemasanForms() {
-  const hatsuPanel = document.getElementById('input-panel-hatsu');
-  const gradeAPanel = document.getElementById('input-panel-gradea');
-  const gradeBPanel = document.getElementById('input-panel-gradeb');
-  const stikerPanel = document.getElementById('input-panel-stiker');
+  const hatsuPanel     = document.getElementById('input-panel-hatsu');
+  const gradeAPanel    = document.getElementById('input-panel-gradea');
+  const gradeBPanel    = document.getElementById('input-panel-gradeb');
+  const penunjangPanel = document.getElementById('input-panel-penunjang');
 
   if (!hatsuPanel) return;
 
-  hatsuPanel.innerHTML = buildMikaForm(masterJenisKemasan[0], 0);
-  gradeAPanel.innerHTML = buildMikaForm(masterJenisKemasan[1], 1);
-  gradeBPanel.innerHTML = buildMikaForm(masterJenisKemasan[2], 2);
-  stikerPanel.innerHTML = stikerCardHtml();
-  
-  // Setelah render, coba auto-fill
+  hatsuPanel.innerHTML     = buildMikaForm(masterJenisKemasan[0], 0);
+  gradeAPanel.innerHTML    = buildMikaForm(masterJenisKemasan[1], 1);
+  gradeBPanel.innerHTML    = buildMikaForm(masterJenisKemasan[2], 2);
+  penunjangPanel.innerHTML = renderPenunjangPanel();
+
+  // Auto-fill dari Rekap Panen
   setTimeout(autoFillFromPanen, 100);
 }
 
@@ -379,7 +438,7 @@ function showInputKemasanTab(tab, btn) {
     hatsu: 'input-panel-hatsu',
     gradea: 'input-panel-gradea',
     gradeb: 'input-panel-gradeb',
-    stiker: 'input-panel-stiker'
+    penunjang: 'input-panel-penunjang'
   };
   const panel = document.getElementById(map[tab]);
   if (panel) panel.style.display = 'block';
@@ -387,7 +446,9 @@ function showInputKemasanTab(tab, btn) {
   if (btn) btn.classList.add('active');
 }
 
-// ========== HITUNG ==========
+// ============================================================
+// HITUNG MIKA (per grade)
+// ============================================================
 function hitungKemasan(i) {
   const item = masterJenisKemasan[i];
   const gAwal = currentStockStateKemasan[item.name].gudang;
@@ -437,94 +498,92 @@ function hitungKemasan(i) {
   const procAkhirEl = document.getElementById(`processing-akhir-${i}`);
   if (procAkhirEl) procAkhirEl.value = Math.max(0, pAkhirFinal);
 
-  if (item.name === 'Hatsu') {
-    const nAwal = currentAksesoris.netfoam;
-    const nMasukBall = getValK('netfoam-masuk-ball');
-    const nPotongBall = getValK('netfoam-potong-ball');
-    const nBallAkhir = nAwal.ball + nMasukBall - nPotongBall;
-    const nBallEl = document.getElementById('netfoam-ball-akhir');
-    if (nBallEl) nBallEl.value = Math.max(0, nBallAkhir);
-
-    const nStd = nPotongBall * AKS_KONVERSI.netfoam;
-    const nStdEl = document.getElementById('netfoam-standar-pcs');
-    if (nStdEl) nStdEl.value = nStd;
-
-    const nAktualInput = getValK('netfoam-aktual-pcs');
-    const nAktualPcs = nAktualInput > 0 ? nAktualInput : nStd;
-    const nPakai = getValK('netfoam-pakai');
-    const nOpname = getOpname('netfoam-opname');
-    const nProcNormal = nAwal.proc + nAktualPcs - nPakai;
-    const nProcFinal = (nOpname !== null) ? nOpname : nProcNormal;
-    const nProcEl = document.getElementById('netfoam-proc-akhir');
-    if (nProcEl) nProcEl.value = Math.max(0, nProcFinal);
-
-    const sAwal = currentAksesoris.stiker;
-    const sMasukLembar = getValK('stiker-masuk-lembar');
-    const sDitempelLembar = getValK('stiker-bongkar-lembar');
-    const sGudangAkhir = sAwal.gudang + sMasukLembar - sDitempelLembar;
-    const sGudangEl = document.getElementById('stiker-gudang-akhir');
-    if (sGudangEl) sGudangEl.value = Math.max(0, sGudangAkhir);
-
-    const sStd = sDitempelLembar * AKS_KONVERSI.stiker;
-    const sStdEl = document.getElementById('stiker-standar-pcs');
-    if (sStdEl) sStdEl.value = sStd;
-
-    const sAktualInput = getValK('stiker-aktual-pcs');
-    const sAktualPcs = sAktualInput > 0 ? sAktualInput : sStd;
-    const sPakai = getValK('stiker-pakai');
-    const sOpname = getOpname('stiker-opname');
-    const sProcNormal = sAwal.proc + sAktualPcs - sPakai;
-    const sProcFinal = (sOpname !== null) ? sOpname : sProcNormal;
-    const sProcEl = document.getElementById('stiker-proc-akhir');
-    if (sProcEl) sProcEl.value = Math.max(0, sProcFinal);
-  }
-
-  if (item.name === 'Grade A') {
-    const lAwal = currentAksesoris.layer;
-    const lMasukDus = getValK('layer-masuk-dus');
-    const lBongkarDus = getValK('layer-bongkar-dus');
-    const lGudangAkhir = lAwal.gudang + lMasukDus - lBongkarDus;
-    const lGudangEl = document.getElementById('layer-gudang-akhir');
-    if (lGudangEl) lGudangEl.value = Math.max(0, lGudangAkhir);
-
-    const lStd = lBongkarDus * AKS_KONVERSI.layer;
-    const lStdEl = document.getElementById('layer-standar-pcs');
-    if (lStdEl) lStdEl.value = lStd;
-
-    const lAktualInput = getValK('layer-aktual-pcs');
-    const lAktualPcs = lAktualInput > 0 ? lAktualInput : lStd;
-    const lPakai = getValK('layer-pakai');
-    const lOpname = getOpname('layer-opname');
-    const lProcNormal = lAwal.proc + lAktualPcs - lPakai;
-    const lProcFinal = (lOpname !== null) ? lOpname : lProcNormal;
-    const lProcEl = document.getElementById('layer-proc-akhir');
-    if (lProcEl) lProcEl.value = Math.max(0, lProcFinal);
-  }
-
-  if (item.name === 'Grade B') {
-    const slAwal = currentAksesoris.sleeve;
-    const slMasukDus = getValK('sleeve-masuk-dus');
-    const slBongkarDus = getValK('sleeve-bongkar-dus');
-    const slGudangAkhir = slAwal.gudang + slMasukDus - slBongkarDus;
-    const slGudangEl = document.getElementById('sleeve-gudang-akhir');
-    if (slGudangEl) slGudangEl.value = Math.max(0, slGudangAkhir);
-
-    const slStd = slBongkarDus * AKS_KONVERSI.sleeve;
-    const slStdEl = document.getElementById('sleeve-standar-pcs');
-    if (slStdEl) slStdEl.value = slStd;
-
-    const slAktualInput = getValK('sleeve-aktual-pcs');
-    const slAktualPcs = slAktualInput > 0 ? slAktualInput : slStd;
-    const slPakai = getValK('sleeve-pakai');
-    const slOpname = getOpname('sleeve-opname');
-    const slProcNormal = slAwal.proc + slAktualPcs - slPakai;
-    const slProcFinal = (slOpname !== null) ? slOpname : slProcNormal;
-    const slProcEl = document.getElementById('sleeve-proc-akhir');
-    if (slProcEl) slProcEl.value = Math.max(0, slProcFinal);
-  }
+  // Refresh display penunjang (pakai nilai pakai yang sudah di-set)
+  hitungPenunjang();
 }
 
-// ========== SIMPAN ==========
+// ============================================================
+// HITUNG PENUNJANG (netfoam + layer + sleeve + stiker)
+// ============================================================
+function hitungPenunjang() {
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+
+  // ---------- Netfoam ----------
+  const nAwal = currentAksesoris.netfoam;
+  const nMasukBall = getValK('netfoam-masuk-ball');
+  const nPotongBall = getValK('netfoam-potong-ball');
+  const nBallAkhir = nAwal.ball + nMasukBall - nPotongBall;
+  setVal('netfoam-ball-akhir', Math.max(0, nBallAkhir));
+
+  const nStd = nPotongBall * AKS_KONVERSI.netfoam;
+  setVal('netfoam-standar-pcs', nStd);
+
+  const nAktualInput = getValK('netfoam-aktual-pcs');
+  const nAktualPcs = nAktualInput > 0 ? nAktualInput : nStd;
+  const nPakai = getValK('netfoam-pakai');
+  const nOpname = getOpname('netfoam-opname');
+  const nProcNormal = nAwal.proc + nAktualPcs - nPakai;
+  const nProcFinal = (nOpname !== null) ? nOpname : nProcNormal;
+  setVal('netfoam-proc-akhir', Math.max(0, nProcFinal));
+
+  // ---------- Layer ----------
+  const lAwal = currentAksesoris.layer;
+  const lMasukDus = getValK('layer-masuk-dus');
+  const lBongkarDus = getValK('layer-bongkar-dus');
+  const lGudangAkhir = lAwal.gudang + lMasukDus - lBongkarDus;
+  setVal('layer-gudang-akhir', Math.max(0, lGudangAkhir));
+
+  const lStd = lBongkarDus * AKS_KONVERSI.layer;
+  setVal('layer-standar-pcs', lStd);
+
+  const lAktualInput = getValK('layer-aktual-pcs');
+  const lAktualPcs = lAktualInput > 0 ? lAktualInput : lStd;
+  const lPakai = getValK('layer-pakai');
+  const lOpname = getOpname('layer-opname');
+  const lProcNormal = lAwal.proc + lAktualPcs - lPakai;
+  const lProcFinal = (lOpname !== null) ? lOpname : lProcNormal;
+  setVal('layer-proc-akhir', Math.max(0, lProcFinal));
+
+  // ---------- Sleeve ----------
+  const slAwal = currentAksesoris.sleeve;
+  const slMasukDus = getValK('sleeve-masuk-dus');
+  const slBongkarDus = getValK('sleeve-bongkar-dus');
+  const slGudangAkhir = slAwal.gudang + slMasukDus - slBongkarDus;
+  setVal('sleeve-gudang-akhir', Math.max(0, slGudangAkhir));
+
+  const slStd = slBongkarDus * AKS_KONVERSI.sleeve;
+  setVal('sleeve-standar-pcs', slStd);
+
+  const slAktualInput = getValK('sleeve-aktual-pcs');
+  const slAktualPcs = slAktualInput > 0 ? slAktualInput : slStd;
+  const slPakai = getValK('sleeve-pakai');
+  const slOpname = getOpname('sleeve-opname');
+  const slProcNormal = slAwal.proc + slAktualPcs - slPakai;
+  const slProcFinal = (slOpname !== null) ? slOpname : slProcNormal;
+  setVal('sleeve-proc-akhir', Math.max(0, slProcFinal));
+
+  // ---------- Stiker ----------
+  const sAwal = currentAksesoris.stiker;
+  const sMasukLembar = getValK('stiker-masuk-lembar');
+  const sDitempelLembar = getValK('stiker-bongkar-lembar');
+  const sGudangAkhir = sAwal.gudang + sMasukLembar - sDitempelLembar;
+  setVal('stiker-gudang-akhir', Math.max(0, sGudangAkhir));
+
+  const sStd = sDitempelLembar * AKS_KONVERSI.stiker;
+  setVal('stiker-standar-pcs', sStd);
+
+  const sAktualInput = getValK('stiker-aktual-pcs');
+  const sAktualPcs = sAktualInput > 0 ? sAktualInput : sStd;
+  const sPakai = getValK('stiker-pakai');
+  const sOpname = getOpname('stiker-opname');
+  const sProcNormal = sAwal.proc + sAktualPcs - sPakai;
+  const sProcFinal = (sOpname !== null) ? sOpname : sProcNormal;
+  setVal('stiker-proc-akhir', Math.max(0, sProcFinal));
+}
+
+// ============================================================
+// SIMPAN DATA KEMASAN
+// ============================================================
 function simpanDataKemasan() {
   const tgl = document.getElementById('kemasan-tgl').value;
   if (!tgl) { showToast('Pilih tanggal!', 'error'); return; }
@@ -609,7 +668,9 @@ function resetFormKemasan() {
   renderKemasanForms();
 }
 
-// ========== TABEL ==========
+// ============================================================
+// TABEL & HISTORY
+// ============================================================
 function renderKemasanTables() {
   const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
   const varBody = document.getElementById('tbl-variance-body');
@@ -687,7 +748,9 @@ function hapusSemuaHistoryKemasan() {
   updateDashboard();
 }
 
-// ========== EDIT MODAL ==========
+// ============================================================
+// EDIT MODAL (tidak berubah strukturnya)
+// ============================================================
 const AKS_EDIT_FIELDS = {
   'Hatsu': [
     ['netfoamMasukBall', 'Netfoam Masuk (Ball)'],
