@@ -326,3 +326,8 @@ tr:hover { background: #f9fafb; }
   table { font-size: 0.8125rem; }
   th, td { padding: 0.625rem; }
 }
+
+.badge.layer { background: #e0e7ff; color: #3730a3; }
+.badge.sleeve { background: #ffedd5; color: #9a3412; }
+.badge.stiker { background: #fce7f3; color: #9d174d; }
+.badge.netfoam { background: #f3e8ff; color: #6b21a8; }
