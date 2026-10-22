@@ -631,11 +631,22 @@ function renderMikaMonthlyUsage(period) {
   const running = {};
   masterJenisKemasan.forEach(m => { running[m.name] = { gudangDus: 0, processing: 0, rejTotal: 0 }; });
 
+  // Tambahan running state untuk penunjang
+  const aksRun = {
+    layer: { gudang: 0, processing: 0 },
+    sleeve: { gudang: 0, processing: 0 },
+    stiker: { gudang: 0, processing: 0 },
+    netfoam: { gudang: 0, processing: 0 }
+  };
+
   const rows = [];
+
   db.forEach(entry => {
     entry.items.forEach(it => {
       const r = running[it.name];
       if (!r) return;
+
+      // --- MIKA LOGIC ---
       const std = it.std || 200;
       const masukDus = it.masuk || 0;
       const bongkarDus = it.bongkarDus || 0;
@@ -670,6 +681,133 @@ function renderMikaMonthlyUsage(period) {
           keterangan: it.ketReject || it.ketTamu || ''
         });
       }
+
+      // --- PENUNJANG LOGIC ---
+      if (it.name === 'Hatsu') {
+        // Netfoam
+        const nMasuk = it.netfoamMasukBall || 0;
+        const nBongkar = it.netfoamPotongBall || 0;
+        const nAktual = (it.netfoamAktualPcs != null) ? it.netfoamAktualPcs : (it.netfoamPotong || 0);
+        const nPakai = (it.netfoamPakai != null) ? it.netfoamPakai : (it.netfoamTerpakai || 0);
+        const nOpname = (typeof it.netfoamOpname === 'number') ? it.netfoamOpname : null;
+        const nStd = AKS_KONVERSI.netfoam;
+
+        aksRun.netfoam.gudang += nMasuk - nBongkar;
+        const nProcSebelum = aksRun.netfoam.processing + nAktual;
+        if (nOpname !== null) aksRun.netfoam.processing = nOpname;
+        else aksRun.netfoam.processing += nAktual - nPakai;
+
+        if (entry.tgl >= period.from && entry.tgl <= period.to && (nMasuk || nBongkar || nAktual || nPakai || nOpname !== null)) {
+          rows.push({
+            tgl: entry.tgl, name: 'Netfoam', std: nStd,
+            masukDus: nMasuk, masukPcs: nMasuk * nStd,
+            gudangDus: aksRun.netfoam.gudang, gudangPcs: aksRun.netfoam.gudang * nStd,
+            bongkarDus: nBongkar, pcsBongkar: nAktual,
+            procPcs: nProcSebelum,
+            totalKeluar: nPakai,
+            kirim: 0, tamu: 0,
+            rejHari: 0, rejTotal: 0,
+            totalStokDus: Math.floor(Math.max(0, aksRun.netfoam.processing) / nStd),
+            totalStokPcs: Math.max(0, aksRun.netfoam.processing),
+            opname: nOpname,
+            keterangan: ''
+          });
+        }
+
+        // Stiker
+        const sMasuk = (it.stikerMasukLembar != null) ? it.stikerMasukLembar : (it.stikerMasuk || 0);
+        const sBongkar = it.stikerBongkarLembar || 0;
+        const sAktual = (it.stikerAktualPcs != null) ? it.stikerAktualPcs : (sBongkar * AKS_KONVERSI.stiker);
+        const sPakai = it.stikerPakai || 0;
+        const sOpname = (typeof it.stikerOpname === 'number') ? it.stikerOpname : null;
+        const sStd = AKS_KONVERSI.stiker;
+
+        aksRun.stiker.gudang += sMasuk - sBongkar;
+        const sProcSebelum = aksRun.stiker.processing + sAktual;
+        if (sOpname !== null) aksRun.stiker.processing = sOpname;
+        else aksRun.stiker.processing += sAktual - sPakai;
+
+        if (entry.tgl >= period.from && entry.tgl <= period.to && (sMasuk || sBongkar || sAktual || sPakai || sOpname !== null)) {
+          rows.push({
+            tgl: entry.tgl, name: 'Stiker', std: sStd,
+            masukDus: sMasuk, masukPcs: sMasuk * sStd,
+            gudangDus: aksRun.stiker.gudang, gudangPcs: aksRun.stiker.gudang * sStd,
+            bongkarDus: sBongkar, pcsBongkar: sAktual,
+            procPcs: sProcSebelum,
+            totalKeluar: sPakai,
+            kirim: 0, tamu: 0,
+            rejHari: 0, rejTotal: 0,
+            totalStokDus: Math.floor(Math.max(0, aksRun.stiker.processing) / sStd),
+            totalStokPcs: Math.max(0, aksRun.stiker.processing),
+            opname: sOpname,
+            keterangan: ''
+          });
+        }
+      }
+
+      if (it.name === 'Grade A') {
+        // Layer
+        const lMasuk = it.layerMasukDus || 0;
+        const lBongkar = it.layerBongkarDus || 0;
+        const lAktual = (it.layerAktualPcs != null) ? it.layerAktualPcs : (it.layerSiap || 0);
+        const lPakai = it.layerPakai || 0;
+        const lOpname = (typeof it.layerOpname === 'number') ? it.layerOpname : null;
+        const lStd = AKS_KONVERSI.layer;
+
+        aksRun.layer.gudang += lMasuk - lBongkar;
+        const lProcSebelum = aksRun.layer.processing + lAktual;
+        if (lOpname !== null) aksRun.layer.processing = lOpname;
+        else aksRun.layer.processing += lAktual - lPakai;
+
+        if (entry.tgl >= period.from && entry.tgl <= period.to && (lMasuk || lBongkar || lAktual || lPakai || lOpname !== null)) {
+          rows.push({
+            tgl: entry.tgl, name: 'Layer A11', std: lStd,
+            masukDus: lMasuk, masukPcs: lMasuk * lStd,
+            gudangDus: aksRun.layer.gudang, gudangPcs: aksRun.layer.gudang * lStd,
+            bongkarDus: lBongkar, pcsBongkar: lAktual,
+            procPcs: lProcSebelum,
+            totalKeluar: lPakai,
+            kirim: 0, tamu: 0,
+            rejHari: 0, rejTotal: 0,
+            totalStokDus: Math.floor(Math.max(0, aksRun.layer.processing) / lStd),
+            totalStokPcs: Math.max(0, aksRun.layer.processing),
+            opname: lOpname,
+            keterangan: ''
+          });
+        }
+      }
+
+      if (it.name === 'Grade B') {
+        // Sleeve
+        const slMasuk = it.sleeveMasukDus || 0;
+        const slBongkar = it.sleeveBongkarDus || 0;
+        const slAktual = (it.sleeveAktualPcs != null) ? it.sleeveAktualPcs : (it.sleeveSiap || 0);
+        const slPakai = it.sleevePakai || 0;
+        const slOpname = (typeof it.sleeveOpname === 'number') ? it.sleeveOpname : null;
+        const slStd = AKS_KONVERSI.sleeve;
+
+        aksRun.sleeve.gudang += slMasuk - slBongkar;
+        const slProcSebelum = aksRun.sleeve.processing + slAktual;
+        if (slOpname !== null) aksRun.sleeve.processing = slOpname;
+        else aksRun.sleeve.processing += slAktual - slPakai;
+
+        if (entry.tgl >= period.from && entry.tgl <= period.to && (slMasuk || slBongkar || slAktual || slPakai || slOpname !== null)) {
+          rows.push({
+            tgl: entry.tgl, name: 'Sleeve A15', std: slStd,
+            masukDus: slMasuk, masukPcs: slMasuk * slStd,
+            gudangDus: aksRun.sleeve.gudang, gudangPcs: aksRun.sleeve.gudang * slStd,
+            bongkarDus: slBongkar, pcsBongkar: slAktual,
+            procPcs: slProcSebelum,
+            totalKeluar: slPakai,
+            kirim: 0, tamu: 0,
+            rejHari: 0, rejTotal: 0,
+            totalStokDus: Math.floor(Math.max(0, aksRun.sleeve.processing) / slStd),
+            totalStokPcs: Math.max(0, aksRun.sleeve.processing),
+            opname: slOpname,
+            keterangan: ''
+          });
+        }
+      }
     });
   });
 
@@ -687,7 +825,18 @@ function renderMikaMonthlyUsage(period) {
   });
 
   const fmt = n => Number(n || 0).toLocaleString('id-ID');
-  const bCls = name => name === 'Hatsu' ? 'hatsu' : name === 'Grade A' ? 'gradea' : 'gradeb';
+  
+  // Tambahan class badge untuk penunjang
+  const bCls = name => {
+    if (name === 'Hatsu') return 'hatsu';
+    if (name === 'Grade A') return 'gradea';
+    if (name === 'Grade B') return 'gradeb';
+    if (name === 'Layer A11') return 'layer';
+    if (name === 'Sleeve A15') return 'sleeve';
+    if (name === 'Stiker') return 'stiker';
+    if (name === 'Netfoam') return 'netfoam';
+    return '';
+  };
 
   let html = '';
   byTgl.forEach((items, tgl) => {
@@ -697,6 +846,7 @@ function renderMikaMonthlyUsage(period) {
     items.forEach((r, idx) => {
       html += '<tr>';
       if (idx === 0) html += `<td class="tgl-col" rowspan="${rowspan}">${tglFmt}</td>`;
+      
       html += `<td><span class="badge ${bCls(r.name)}">${r.name}</span></td>`;
       html += `<td>${r.masukDus ? fmt(r.masukDus) : ''}</td>`;
       html += `<td>${r.masukPcs ? fmt(r.masukPcs) : ''}</td>`;
