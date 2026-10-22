@@ -331,3 +331,28 @@ tr:hover { background: #f9fafb; }
 .badge.sleeve { background: #ffedd5; color: #9a3412; }
 .badge.stiker { background: #fce7f3; color: #9d174d; }
 .badge.netfoam { background: #f3e8ff; color: #6b21a8; }
+
+/* ===== PEMISAH TANGGAL REKAP BULANAN ===== */
+
+/* Zebra Cross: Warna latar selang-seling per tanggal */
+.recap-table tbody tr.group-odd td {
+  background-color: #f8fafc !important;
+}
+.recap-table tbody tr.group-even td {
+  background-color: #ffffff !important;
+}
+
+/* Warna kolom Tanggal (dibuat lebih kontras) */
+.recap-table tbody td.tgl-col.group-odd {
+  background-color: #e2e8f0 !important;
+  color: #0f172a;
+}
+.recap-table tbody td.tgl-col.group-even {
+  background-color: #f1f5f9 !important;
+  color: #0f172a;
+}
+
+/* Garis Tebal Pembatas di baris terakhir setiap tanggal */
+.recap-table tbody tr.group-end td {
+  border-bottom: 2px solid #94a3b8 !important; 
+}
