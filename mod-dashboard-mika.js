@@ -631,7 +631,6 @@ function renderMikaMonthlyUsage(period) {
   const running = {};
   masterJenisKemasan.forEach(m => { running[m.name] = { gudangDus: 0, processing: 0, rejTotal: 0 }; });
 
-  // Tambahan running state untuk penunjang
   const aksRun = {
     layer: { gudang: 0, processing: 0 },
     sleeve: { gudang: 0, processing: 0 },
@@ -825,8 +824,6 @@ function renderMikaMonthlyUsage(period) {
   });
 
   const fmt = n => Number(n || 0).toLocaleString('id-ID');
-  
-  // Tambahan class badge untuk penunjang
   const bCls = name => {
     if (name === 'Hatsu') return 'hatsu';
     if (name === 'Grade A') return 'gradea';
@@ -838,11 +835,25 @@ function renderMikaMonthlyUsage(period) {
     return '';
   };
 
+  // ==========================================
+  // ATURAN URUTAN TAMPIL
+  // ==========================================
+  const URUTAN_TAMPIL = ['Hatsu', 'Grade A', 'Grade B', 'Layer A11', 'Sleeve A15', 'Stiker', 'Netfoam'];
+
   let html = '';
   byTgl.forEach((items, tgl) => {
+    // 1. URUTKAN DATA SEBELUM DICETAK
+    items.sort((a, b) => {
+      const idxA = URUTAN_TAMPIL.indexOf(a.name);
+      const idxB = URUTAN_TAMPIL.indexOf(b.name);
+      return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
+    });
+
     const [y, m, d] = tgl.split('-');
     const tglFmt = `${parseInt(d, 10)}/${parseInt(m, 10)}/${y}`;
     const rowspan = items.length;
+    
+    // 2. RENDER KE TABEL
     items.forEach((r, idx) => {
       html += '<tr>';
       if (idx === 0) html += `<td class="tgl-col" rowspan="${rowspan}">${tglFmt}</td>`;
@@ -868,7 +879,6 @@ function renderMikaMonthlyUsage(period) {
   });
   tbody.innerHTML = html;
 }
-
 function renderMikaMonthlySelisih(period) {
   const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
   const filtered = db.filter(e => e.tgl >= period.from && e.tgl <= period.to);
