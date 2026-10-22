@@ -13,21 +13,21 @@
     <div class="card">
       <div class="card-title">📅 Tanggal Input Kemasan</div>
       <input type="date" id="kemasan-tgl" onchange="autoFillFromPanen()">
-      <small style="color:#666;display:block;margin-top:0.5rem;">Tanggal diubah otomatis menarik data Kirim & Tamu dari Rekap Panen.</small>
+      <small style="color:#666;display:block;margin-top:0.5rem;">Tanggal diubah otomatis menarik data Kirim, Tamu, Keterangan &amp; Pemakaian Penunjang dari Rekap Panen.</small>
     </div>
 
     <div class="sub-tabs" id="input-kemasan-tabs">
-      <button class="sub-tab active" onclick="showInputKemasanTab('hatsu', this)">📦 Hatsu</button>
-      <button class="sub-tab" onclick="showInputKemasanTab('gradea', this)">📦 Grade A</button>
-      <button class="sub-tab" onclick="showInputKemasanTab('gradeb', this)">📦 Grade B</button>
-      <button class="sub-tab" onclick="showInputKemasanTab('stiker', this)">🏷️ Stiker</button>
+      <button class="sub-tab active" onclick="showInputKemasanTab('hatsu', this)">📦 Mika Hatsu</button>
+      <button class="sub-tab" onclick="showInputKemasanTab('gradea', this)">📦 Mika Grade A</button>
+      <button class="sub-tab" onclick="showInputKemasanTab('gradeb', this)">📦 Mika Grade B</button>
+      <button class="sub-tab" onclick="showInputKemasanTab('penunjang', this)">🧰 Penunjang</button>
     </div>
 
     <div id="forms-kemasan">
-      <div id="input-panel-hatsu" class="input-kemasan-panel" style="display:block;"></div>
-      <div id="input-panel-gradea" class="input-kemasan-panel" style="display:none;"></div>
-      <div id="input-panel-gradeb" class="input-kemasan-panel" style="display:none;"></div>
-      <div id="input-panel-stiker" class="input-kemasan-panel" style="display:none;"></div>
+      <div id="input-panel-hatsu"     class="input-kemasan-panel" style="display:block;"></div>
+      <div id="input-panel-gradea"    class="input-kemasan-panel" style="display:none;"></div>
+      <div id="input-panel-gradeb"    class="input-kemasan-panel" style="display:none;"></div>
+      <div id="input-panel-penunjang" class="input-kemasan-panel" style="display:none;"></div>
     </div>
 
     <div class="btn-group">
