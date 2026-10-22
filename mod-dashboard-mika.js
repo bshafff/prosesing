@@ -836,11 +836,14 @@ function renderMikaMonthlyUsage(period) {
   };
 
   // ==========================================
-  // ATURAN URUTAN TAMPIL
+   // ==========================================
+  // ATURAN URUTAN TAMPIL & ZEBRA STRIPES
   // ==========================================
   const URUTAN_TAMPIL = ['Hatsu', 'Grade A', 'Grade B', 'Layer A11', 'Sleeve A15', 'Stiker', 'Netfoam'];
 
   let html = '';
+  let groupIdx = 0; // <--- TAMBAH: Untuk penanda selang-seling warna per tanggal
+
   byTgl.forEach((items, tgl) => {
     // 1. URUTKAN DATA SEBELUM DICETAK
     items.sort((a, b) => {
@@ -853,10 +856,25 @@ function renderMikaMonthlyUsage(period) {
     const tglFmt = `${parseInt(d, 10)}/${parseInt(m, 10)}/${y}`;
     const rowspan = items.length;
     
+    // TAMBAH: Tentukan grup ini warna putih (even) atau abu-abu (odd)
+    const isEven = groupIdx % 2 === 0;
+
     // 2. RENDER KE TABEL
     items.forEach((r, idx) => {
-      html += '<tr>';
-      if (idx === 0) html += `<td class="tgl-col" rowspan="${rowspan}">${tglFmt}</td>`;
+      const isLastRow = (idx === items.length - 1); // <--- TAMBAH: Deteksi baris terakhir (Netfoam)
+      
+      // TAMBAH: Susun class untuk <tr>
+      const rowClass = [
+        isLastRow ? 'group-end' : '',
+        isEven ? 'group-even' : 'group-odd'
+      ].filter(Boolean).join(' ');
+
+      html += `<tr class="${rowClass}">`; // <--- UBAH: Masukkan class rowClass
+      
+      if (idx === 0) {
+        // TAMBAH: Kasih class warna juga ke kolom tanggal
+        html += `<td class="tgl-col ${isEven ? 'group-even' : 'group-odd'}" rowspan="${rowspan}">${tglFmt}</td>`;
+      }
       
       html += `<td><span class="badge ${bCls(r.name)}">${r.name}</span></td>`;
       html += `<td>${r.masukDus ? fmt(r.masukDus) : ''}</td>`;
@@ -876,9 +894,13 @@ function renderMikaMonthlyUsage(period) {
       html += `<td style="white-space:normal;max-width:180px;font-size:0.7rem;">${r.keterangan || ''}${r.opname !== null ? `<br><b style="color:#166534;">📝 Koreksi: ${fmt(r.opname)} pcs</b>` : ''}</td>`;
       html += '</tr>';
     });
+    
+    groupIdx++; // <--- TAMBAH: Naikkan penanda grup setiap ganti tanggal
   });
   tbody.innerHTML = html;
 }
+
+// Lanjut ke function renderMikaMonthlySelisih(period) { ... }
 function renderMikaMonthlySelisih(period) {
   const db = JSON.parse(localStorage.getItem(KEMASAN_STORAGE_KEY) || '[]');
   const filtered = db.filter(e => e.tgl >= period.from && e.tgl <= period.to);
