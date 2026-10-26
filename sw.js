@@ -1,4 +1,4 @@
-const CACHE_NAME = 'awb-processing-v38';
+const CACHE_NAME = 'awb-processing-v39';
 const ASSETS = [
   './',
   './index.html',
