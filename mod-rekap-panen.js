@@ -2,23 +2,52 @@
 let panenCurrentPage = 1;
 const PANEN_PER_PAGE = 10;
 
-// --- FUNGSI BARU UNTUK TAB GREENHOUSE ---
+// STATE UNTUK MENYIMPAN KETIKAN FORM PER GH
+let panenFormData = { 'GH 1': {}, 'GH 2': {}, 'GLOBAL': {} };
+
+function saveCurrentFormToState() {
+  const currentGh = document.getElementById('panen-gh').value;
+  const formData = {};
+  document.querySelectorAll('#panen input[type="number"], #panen input[type="text"]').forEach(input => {
+    if (input.id && input.id !== 'panen-tgl') {
+      formData[input.id] = input.value;
+    }
+  });
+  panenFormData[currentGh] = formData;
+}
+
+function loadFormFromState(gh) {
+  const formData = panenFormData[gh] || {};
+  document.querySelectorAll('#panen input[type="number"], #panen input[type="text"]').forEach(input => {
+    if (input.id && input.id !== 'panen-tgl') {
+      input.value = formData[input.id] || '';
+    }
+  });
+}
+
 function setPanenGh(gh, btn) {
+  // 1. Simpan ketikan dari tab yang sedang aktif
+  saveCurrentFormToState();
+
+  // 2. Ubah nilai hidden input
   const ghInput = document.getElementById('panen-gh');
   if (ghInput) ghInput.value = gh;
 
+  // 3. Ubah class tab active
   const tabs = document.querySelectorAll('#panen-gh-tabs .gh-tab');
   tabs.forEach(t => t.classList.remove('active'));
-  
   if (btn) {
     btn.classList.add('active');
   } else {
-    // Fallback jika tombol tidak dikirim (misal saat reset form)
     tabs.forEach(t => {
       if (t.textContent.includes(gh === 'GLOBAL' ? 'Global' : gh)) t.classList.add('active');
     });
   }
 
+  // 4. Munculkan ketikan dari tab yang dituju
+  loadFormFromState(gh);
+
+  // 5. Sesuaikan tampilan form & hitung ulang
   toggleFormPanen();
 }
 
@@ -363,7 +392,7 @@ function generateGraphicCanvas(item) {
   text(fmt(sumK), grX + 380, ryTotal + 20, 14, '#0f172a', 'right', true);
   text(sumM, grX + 560, ryTotal + 20, 14, '#0f172a', 'right', true);
 
-  // 4. SECTION REJECT (Diperbaiki)
+  // 4. SECTION REJECT
   const rjX = 40, rjY = 430, rjW = 350, rjH = 350;
   roundRect(rjX, rjY, rjW, rjH, 12, '#ffffff');
   text('Komposisi Reject', rjX + 20, rjY + 30, 16, '#2d5016', 'left', true);
@@ -380,7 +409,6 @@ function generateGraphicCanvas(item) {
   
   const totalReject = rejects.reduce((a, r) => a + r.v, 0);
 
-  // Pie Chart (Kiri - digeser dan dikecilkan sedikit)
   const pieCx = rjX + 90;
   const pieCy = rjY + 170;
   const pieR = 80;
@@ -391,7 +419,6 @@ function generateGraphicCanvas(item) {
   text(fmt(totalReject), pieCx, pieCy + 5, 16, '#dc2626', 'center', true);
   text('Kg', pieCx, pieCy + 22, 10, '#64748b', 'center');
 
-  // Legend (Kanan - digeser ke kanan, font disesuaikan)
   let lgY = rjY + 80;
   rejects.forEach(r => {
     fillRect(rjX + 190, lgY - 5, 10, 10, r.c);
@@ -400,7 +427,6 @@ function generateGraphicCanvas(item) {
     lgY += 22;
   });
 
-  // 5. SECTION RINGKASAN REJECT (Kanan)
   const smX = 410, smY = 430, smW = 350, smH = 350;
   roundRect(smX, smY, smW, smH, 12, '#ffffff');
   text('Ringkasan Reject & Rate', smX + 20, smY + 30, 16, '#2d5016', 'left', true);
@@ -429,42 +455,94 @@ function generateGraphicCanvas(item) {
 
 // ========== SIMPAN DATA ==========
 function simpanDataPanen() {
+  // Paksa simpan isi form yang sedang aktif ke state sebelum disave
+  saveCurrentFormToState();
+
   const tgl = document.getElementById('panen-tgl').value;
   if (!tgl) { showToast('Pilih tanggal panen!', 'error'); return; }
-  
-  const gh = document.getElementById('panen-gh').value;
-  const entry = {
-    id: generateId(), tgl: tgl, gh: gh,
-    p_hatsu: getValP('p-hatsu'), p_gradea: getValP('p-gradea'), p_gradeb: getValP('p-gradeb'),
-    rk_crack: getValP('rk-crack'), rk_poli: getValP('rk-poli'), rk_hpt: getValP('rk-hpt'),
-    rp_crack: getValP('rp-crack'), rp_poli: getValP('rp-poli'), rp_hpt: getValP('rp-hpt'),
-    rp_bruise: getValP('rp-bruise'), rp_overripe: getValP('rp-overripe'), rp_kuning: getValP('rp-kuning'), rp_frozen: getValP('rp-frozen'),
-    k_hatsu: getValP('k-hatsu'), k_a11: getValP('k-a11'), k_a15: getValP('k-a15'), k_frozen: getValP('k-frozen'),
-    m_hatsu: parseInt(document.getElementById('m-hatsu').value || 0),
-    m_a11: parseInt(document.getElementById('m-a11').value || 0),
-    m_a15: parseInt(document.getElementById('m-a15').value || 0),
-    t_curah: getValP('t-curah'),
-    t_hatsu: parseInt(document.getElementById('t-hatsu').value || 0),
-    t_a11: parseInt(document.getElementById('t-a11').value || 0),
-    t_a15: parseInt(document.getElementById('t-a15').value || 0),
-    t_ket: document.getElementById('t-ket').value || ''
-  };
+
   let db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
-  db.push(entry);
+  let savedCount = 0;
+
+  // Loop semua GH, simpan yang ada datanya
+  ['GH 1', 'GH 2', 'GLOBAL'].forEach(gh => {
+    const state = panenFormData[gh];
+    if (!state) return;
+
+    const getV = (id) => parseFloat(state[id]) || 0;
+    const getI = (id) => parseInt(state[id]) || 0;
+    const getS = (id) => state[id] || '';
+
+    // Cek apakah ada data yang diisi
+    let hasData = false;
+    if (gh === 'GLOBAL') {
+      hasData = getV('k-frozen') > 0 || getV('t-curah') > 0 || getI('t-hatsu') > 0 || getI('t-a11') > 0 || getI('t-a15') > 0 || getS('t-ket') !== '';
+    } else {
+      hasData = [
+        'p-hatsu', 'p-gradea', 'p-gradeb',
+        'rk-crack', 'rk-poli', 'rk-hpt',
+        'rp-crack', 'rp-poli', 'rp-hpt', 'rp-bruise', 'rp-overripe', 'rp-kuning', 'rp-frozen',
+        'k-hatsu', 'k-a11', 'k-a15',
+        'm-hatsu', 'm-a11', 'm-a15'
+      ].some(id => getV(id) > 0);
+    }
+
+    if (hasData) {
+      const entry = {
+        id: generateId(), tgl: tgl, gh: gh,
+        p_hatsu: gh === 'GLOBAL' ? 0 : getV('p-hatsu'),
+        p_gradea: gh === 'GLOBAL' ? 0 : getV('p-gradea'),
+        p_gradeb: gh === 'GLOBAL' ? 0 : getV('p-gradeb'),
+        rk_crack: gh === 'GLOBAL' ? 0 : getV('rk-crack'),
+        rk_poli: gh === 'GLOBAL' ? 0 : getV('rk-poli'),
+        rk_hpt: gh === 'GLOBAL' ? 0 : getV('rk-hpt'),
+        rp_crack: gh === 'GLOBAL' ? 0 : getV('rp-crack'),
+        rp_poli: gh === 'GLOBAL' ? 0 : getV('rp-poli'),
+        rp_hpt: gh === 'GLOBAL' ? 0 : getV('rp-hpt'),
+        rp_bruise: gh === 'GLOBAL' ? 0 : getV('rp-bruise'),
+        rp_overripe: gh === 'GLOBAL' ? 0 : getV('rp-overripe'),
+        rp_kuning: gh === 'GLOBAL' ? 0 : getV('rp-kuning'),
+        rp_frozen: gh === 'GLOBAL' ? 0 : getV('rp-frozen'),
+        k_hatsu: gh === 'GLOBAL' ? 0 : getV('k-hatsu'),
+        k_a11: gh === 'GLOBAL' ? 0 : getV('k-a11'),
+        k_a15: gh === 'GLOBAL' ? 0 : getV('k-a15'),
+        k_frozen: gh === 'GLOBAL' ? getV('k-frozen') : 0,
+        m_hatsu: gh === 'GLOBAL' ? 0 : getI('m-hatsu'),
+        m_a11: gh === 'GLOBAL' ? 0 : getI('m-a11'),
+        m_a15: gh === 'GLOBAL' ? 0 : getI('m-a15'),
+        t_curah: gh === 'GLOBAL' ? getV('t-curah') : 0,
+        t_hatsu: gh === 'GLOBAL' ? getI('t-hatsu') : 0,
+        t_a11: gh === 'GLOBAL' ? getI('t-a11') : 0,
+        t_a15: gh === 'GLOBAL' ? getI('t-a15') : 0,
+        t_ket: gh === 'GLOBAL' ? getS('t-ket') : ''
+      };
+      db.push(entry);
+      savedCount++;
+    }
+  });
+
+  if (savedCount === 0) {
+    showToast('Isi minimal 1 data panen!', 'error');
+    return;
+  }
+
   localStorage.setItem(PANEN_STORAGE_KEY, JSON.stringify(db));
-  showToast('✅ Data panen berhasil disimpan!');
+  showToast(`✅ ${savedCount} Data panen berhasil disimpan!`);
   resetFormPanen();
   renderTablePanen();
   updateDashboard();
 }
 
-// --- FUNGSI RESET YANG SUDAH DIPERBARUI ---
 function resetFormPanen() {
+  // Bersihkan ingatan sementara
+  panenFormData = { 'GH 1': {}, 'GH 2': {}, 'GLOBAL': {} };
+
+  // Bersihkan form di layar
   document.querySelectorAll('#panen input[type="number"]').forEach(i => i.value = '');
   document.querySelectorAll('#panen input[type="text"]').forEach(i => i.value = '');
   document.getElementById('panen-tgl').value = new Date().toISOString().split('T')[0];
   
-  // Kembalikan tab ke GH 1 secara default
+  // Kembalikan ke tab awal
   const defaultTab = document.querySelector('#panen-gh-tabs .gh-tab');
   setPanenGh('GH 1', defaultTab);
 }
