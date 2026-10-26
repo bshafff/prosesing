@@ -2,6 +2,26 @@
 let panenCurrentPage = 1;
 const PANEN_PER_PAGE = 10;
 
+// --- FUNGSI BARU UNTUK TAB GREENHOUSE ---
+function setPanenGh(gh, btn) {
+  const ghInput = document.getElementById('panen-gh');
+  if (ghInput) ghInput.value = gh;
+
+  const tabs = document.querySelectorAll('#panen-gh-tabs .gh-tab');
+  tabs.forEach(t => t.classList.remove('active'));
+  
+  if (btn) {
+    btn.classList.add('active');
+  } else {
+    // Fallback jika tombol tidak dikirim (misal saat reset form)
+    tabs.forEach(t => {
+      if (t.textContent.includes(gh === 'GLOBAL' ? 'Global' : gh)) t.classList.add('active');
+    });
+  }
+
+  toggleFormPanen();
+}
+
 function toggleFormPanen() {
   const gh = document.getElementById('panen-gh').value;
   const formGh = document.getElementById('form-khusus-gh');
@@ -438,11 +458,15 @@ function simpanDataPanen() {
   updateDashboard();
 }
 
+// --- FUNGSI RESET YANG SUDAH DIPERBARUI ---
 function resetFormPanen() {
   document.querySelectorAll('#panen input[type="number"]').forEach(i => i.value = '');
   document.querySelectorAll('#panen input[type="text"]').forEach(i => i.value = '');
   document.getElementById('panen-tgl').value = new Date().toISOString().split('T')[0];
-  toggleFormPanen();
+  
+  // Kembalikan tab ke GH 1 secara default
+  const defaultTab = document.querySelector('#panen-gh-tabs .gh-tab');
+  setPanenGh('GH 1', defaultTab);
 }
 
 function panenResetPage() { panenCurrentPage = 1; renderTablePanen(); }
