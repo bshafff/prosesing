@@ -5,16 +5,26 @@
     <button class="btn btn-sm" onclick="openImportModal('panen')" style="margin-left:auto;flex:none;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;">📥 Import</button>
   </div>
   
-  <div class="card">
+    <div class="card">
     <div class="card-title">📅 Tanggal Panen & Greenhouse</div>
-    <div class="row-2">
-      <div class="input-group" style="margin-bottom:0;"><label>Tanggal</label><input type="date" id="panen-tgl"></div>
-      <div class="input-group" style="margin-bottom:0;"><label class="required">Greenhouse</label>
-        <select id="panen-gh" onchange="toggleFormPanen()">
-          <option value="GH 1">GH 1</option>
-          <option value="GH 2">GH 2</option>
-          <option value="GLOBAL">🌐 GLOBAL (Frozen & Tamu)</option>
-        </select>
+    <div class="row-2" style="align-items: flex-end;">
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Tanggal</label>
+        <input type="date" id="panen-tgl">
+      </div>
+      
+      <!-- UBAH DROPDOWN JADI TABS -->
+      <div class="input-group" style="margin-bottom:0;">
+        <label class="required">Greenhouse</label>
+        
+        <!-- Input hidden ini PENTING agar JS lama tetap jalan -->
+        <input type="hidden" id="panen-gh" value="GH 1">
+        
+        <div class="gh-tabs" id="panen-gh-tabs">
+          <button type="button" class="gh-tab active" onclick="setPanenGh('GH 1', this)">🌾 GH 1</button>
+          <button type="button" class="gh-tab" onclick="setPanenGh('GH 2', this)">🌾 GH 2</button>
+          <button type="button" class="gh-tab" onclick="setPanenGh('GLOBAL', this)">🌐 Global</button>
+        </div>
       </div>
     </div>
   </div>
