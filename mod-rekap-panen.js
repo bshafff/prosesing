@@ -474,8 +474,8 @@ function generateGraphicCanvas(item) {
 
 // ========== SIMPAN DATA ==========
 // ========== SIMPAN DATA ==========
+// ========== SIMPAN DATA ==========
 function simpanDataPanen() {
-  // Paksa simpan isi form yang sedang aktif ke state sebelum disave
   saveCurrentFormToState();
 
   const tgl = document.getElementById('panen-tgl').value;
@@ -483,11 +483,8 @@ function simpanDataPanen() {
 
   let db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
   let savedCount = 0;
+  let newEntries = []; // Tampung data baru
 
-  // Log data yang ada di memori untuk ngecek
-  console.log("=== ISI MEMORI FORM PANEN ===", panenFormData);
-
-  // Loop semua GH, simpan yang ada datanya
   ['GH 1', 'GH 2', 'GLOBAL'].forEach(gh => {
     const state = panenFormData[gh];
     if (!state) return;
@@ -496,7 +493,6 @@ function simpanDataPanen() {
     const getI = (id) => parseInt(state[id]) || 0;
     const getS = (id) => state[id] || '';
 
-    // Cek apakah ada data yang diisi
     let hasData = false;
     if (gh === 'GLOBAL') {
       hasData = getV('k-frozen') > 0 || getV('t-curah') > 0 || getI('t-hatsu') > 0 || getI('t-a11') > 0 || getI('t-a15') > 0 || getS('t-ket') !== '';
@@ -511,8 +507,6 @@ function simpanDataPanen() {
     }
 
     if (hasData) {
-      console.log(`✅ Menyimpan data untuk: ${gh}`);
-      
       const entry = {
         id: generateId(), tgl: tgl, gh: gh,
         p_hatsu: gh === 'GLOBAL' ? 0 : getV('p-hatsu'),
@@ -542,6 +536,7 @@ function simpanDataPanen() {
         t_ket: gh === 'GLOBAL' ? getS('t-ket') : ''
       };
       db.push(entry);
+      newEntries.push(entry);
       savedCount++;
     }
   });
@@ -551,8 +546,18 @@ function simpanDataPanen() {
     return;
   }
 
+  // 1. Simpan ke LocalStorage
   localStorage.setItem(PANEN_STORAGE_KEY, JSON.stringify(db));
-  showToast(`✅ ${savedCount} Data panen berhasil disimpan!`);
+  
+  // 2. Paksa kirim ke Google Sheet SAAT ITU JUGA
+  if (isAuthenticated && currentScriptUrl()) {
+    syncQueue(true).then(() => {
+      showToast(`✅ ${savedCount} Data panen berhasil disimpan & disinkronkan!`);
+    });
+  } else {
+    showToast(`✅ ${savedCount} Data panen berhasil disimpan!`);
+  }
+
   resetFormPanen();
   renderTablePanen();
   updateDashboard();
