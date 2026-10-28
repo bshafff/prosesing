@@ -492,10 +492,10 @@ function autoBootSync() {
     return;
   }
 
-  if (getSyncQueue().length > 0 && navigator.onLine) {
+   if (getSyncQueue().length > 0 && navigator.onLine) {
     console.log('[AUTO] Queue pending, sync otomatis...');
     syncQueue();
-    return;
+    return; // <--- Tambahkan RETURN agar tidak lanjut ke pullFromSheet
   }
 
   if (getSyncQueue().length === 0 && navigator.onLine) {
