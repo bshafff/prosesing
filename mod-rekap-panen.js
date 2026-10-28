@@ -69,29 +69,48 @@ function toggleFormPanen() {
 function getValP(id) { return parseFloat(document.getElementById(id).value) || 0; }
 
 function hitungAllPanen() {
-  const totRkBun = getValP('rk-crack') + getValP('rk-poli') + getValP('rk-hpt');
-  document.getElementById('calc-total-rk').textContent = totRkBun.toFixed(2) + ' Kg';
+  // 1. Helper untuk update teks dengan aman (anti-crash jika ID tidak ada)
+  const setTxt = (id, text) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  };
 
-  const totRPros = getValP('rp-crack') + getValP('rp-poli') + getValP('rp-hpt') + getValP('rp-bruise') + getValP('rp-overripe') + getValP('rp-kuning') + getValP('rp-frozen');
-  document.getElementById('calc-total-rp').textContent = totRPros.toFixed(2) + ' Kg';
+  // 2. Helper untuk ambil nilai angka dengan aman
+  const getV = (id) => {
+    const el = document.getElementById(id);
+    return el ? parseFloat(el.value) || 0 : 0;
+  };
 
+  // --- PERHITUNGAN REJECT KEBUN ---
+  const totRkBun = getV('rk-crack') + getV('rk-poli') + getV('rk-hpt');
+  setTxt('calc-total-rk', totRkBun.toFixed(2) + ' Kg');
+
+  // --- PERHITUNGAN REJECT PROCESSING ---
+  const totRPros = getV('rp-crack') + getV('rp-poli') + getV('rp-hpt') + getV('rp-bruise') + getV('rp-overripe') + getV('rp-kuning') + getV('rp-frozen');
+  setTxt('calc-total-rp', totRPros.toFixed(2) + ' Kg');
+
+  // --- PERHITUNGAN TOTAL PANEN ---
   const grandTotalReject = totRkBun + totRPros;
-  const totalPanen = getValP('p-hatsu') + getValP('p-gradea') + getValP('p-gradeb') + totRkBun;
-  document.getElementById('calc-total-panen').textContent = totalPanen.toFixed(2) + ' Kg';
+  const totalPanen = getV('p-hatsu') + getV('p-gradea') + getV('p-gradeb') + totRkBun;
+  setTxt('calc-total-panen', totalPanen.toFixed(2) + ' Kg');
 
+  // --- PERHITUNGAN REJECT RATE ---
   const rejectRate = totalPanen > 0 ? (grandTotalReject / totalPanen * 100) : 0;
-  document.getElementById('calc-grand-total-r').textContent = grandTotalReject.toFixed(2) + ' Kg';
-  document.getElementById('calc-reject-rate').textContent = rejectRate.toFixed(2) + '%';
+  setTxt('calc-grand-total-r', grandTotalReject.toFixed(2) + ' Kg');
+  setTxt('calc-reject-rate', rejectRate.toFixed(2) + '%');
 
-  const totalKirim = getValP('k-hatsu') + getValP('k-a11') + getValP('k-a15');
+  // --- PERHITUNGAN PENGIRIMAN (KIRIM) ---
+  const totalKirim = getV('k-hatsu') + getV('k-a11') + getV('k-a15');
   const rateKirim = totalPanen > 0 ? (totalKirim / totalPanen * 100) : 0;
-  document.getElementById('calc-total-kirim').textContent = totalKirim.toFixed(2) + ' Kg';
-  document.getElementById('calc-rate-kirim').textContent = rateKirim.toFixed(2) + '%';
+  setTxt('calc-total-kirim', totalKirim.toFixed(2) + ' Kg');
+  setTxt('calc-rate-kirim', rateKirim.toFixed(2) + '%');
 
-  const totalMika = parseInt(document.getElementById('m-hatsu').value || 0) + parseInt(document.getElementById('m-a11').value || 0) + parseInt(document.getElementById('m-a15').value || 0);
-  document.getElementById('calc-total-mika').textContent = totalMika + ' Pcs';
+  // --- PERHITUNGAN MIKA ---
+  const totalMika = getV('m-hatsu') + getV('m-a11') + getV('m-a15');
+  setTxt('calc-total-mika', totalMika + ' Pcs');
 
-  document.getElementById('calc-total-frozen-global').textContent = getValP('k-frozen').toFixed(2) + ' Kg';
+  // --- PERHITUNGAN FROZEN GLOBAL ---
+  setTxt('calc-total-frozen-global', getV('k-frozen').toFixed(2) + ' Kg');
 }
 
 // ========== FORMAT WA ==========
