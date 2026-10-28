@@ -454,6 +454,7 @@ function generateGraphicCanvas(item) {
 }
 
 // ========== SIMPAN DATA ==========
+// ========== SIMPAN DATA ==========
 function simpanDataPanen() {
   // Paksa simpan isi form yang sedang aktif ke state sebelum disave
   saveCurrentFormToState();
@@ -463,6 +464,9 @@ function simpanDataPanen() {
 
   let db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
   let savedCount = 0;
+
+  // Log data yang ada di memori untuk ngecek
+  console.log("=== ISI MEMORI FORM PANEN ===", panenFormData);
 
   // Loop semua GH, simpan yang ada datanya
   ['GH 1', 'GH 2', 'GLOBAL'].forEach(gh => {
@@ -488,6 +492,8 @@ function simpanDataPanen() {
     }
 
     if (hasData) {
+      console.log(`✅ Menyimpan data untuk: ${gh}`);
+      
       const entry = {
         id: generateId(), tgl: tgl, gh: gh,
         p_hatsu: gh === 'GLOBAL' ? 0 : getV('p-hatsu'),
