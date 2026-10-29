@@ -13,7 +13,7 @@ function hitungAllPanen() {
     if (el) el.textContent = text;
   };
 
-  // Total Panen GH1 + GH2
+  // Total Reject Kebun GH1 + GH2
   const totRkBun = getValP('rk-crack-gh1') + getValP('rk-poli-gh1') + getValP('rk-hpt-gh1') + 
                    getValP('rk-crack-gh2') + getValP('rk-poli-gh2') + getValP('rk-hpt-gh2');
   setTxt('calc-total-rk', totRkBun.toFixed(2) + ' Kg');
@@ -139,7 +139,7 @@ function resetFormPanen() {
 function panenResetPage() { panenCurrentPage = 1; renderTablePanen(); }
 function panenGoToPage(p) { panenCurrentPage = p; renderTablePanen(); }
 
-// ========== RENDER TABEL ==========
+// ========== RENDER TABEL & PAGINASI ==========
 function renderTablePanen() {
   const histEl = document.getElementById('panen-hist-gh');
   const tbody = document.getElementById('tabel-panen-body');
@@ -187,7 +187,7 @@ function renderTablePanen() {
         <td class="text-right">${isGlobal ? '-' : (item.p_gradea || 0).toFixed(2)}</td>
         <td class="text-right">${isGlobal ? '-' : (item.p_gradeb || 0).toFixed(2)}</td>
         <td class="text-right"><strong>${isGlobal ? '-' : totPanen.toFixed(2)}</strong></td>
-        <td class="text-right"><strong>${isGlobal ? item.k_frozen.toFixed(2) + ' (Frozen)' : totKirim.toFixed(2)}</strong></td>
+        <td class="text-right"><strong>${isGlobal ? (item.k_frozen || 0).toFixed(2) + ' (Frozen)' : totKirim.toFixed(2)}</strong></td>
         <td class="text-right">${isGlobal ? '-' : grandReject.toFixed(2)}</td>
         <td class="text-right">${isGlobal ? '-' : rejRate.toFixed(2) + '%'}</td>
         <td class="text-right"><strong>${isGlobal ? '-' : totMika}</strong></td>
@@ -195,13 +195,12 @@ function renderTablePanen() {
     `;
   }).join('');
 
-  // LOGIKA PAGINASI BARU (1 2 ... 10 11 12 ... 22)
+  // Paginasi pintar
   if (paginationEl) {
     const from = startIdx + 1;
     const to = Math.min(startIdx + PANEN_PER_PAGE, db.length);
     let pageBtns = '';
 
-    // Tombol Prev
     pageBtns += `<button class="btn btn-sm ${panenCurrentPage === 1 ? 'btn-secondary' : 'btn-primary'}" onclick="panenGoToPage(${panenCurrentPage - 1})" ${panenCurrentPage === 1 ? 'disabled' : ''} style="min-width:36px;">&lt;</button>`;
 
     let startPage = Math.max(1, panenCurrentPage - 2);
@@ -221,7 +220,6 @@ function renderTablePanen() {
       pageBtns += `<button class="btn btn-sm btn-secondary" onclick="panenGoToPage(${totalPages})" style="min-width:36px;">${totalPages}</button>`;
     }
 
-    // Tombol Next
     pageBtns += `<button class="btn btn-sm ${panenCurrentPage === totalPages ? 'btn-secondary' : 'btn-primary'}" onclick="panenGoToPage(${panenCurrentPage + 1})" ${panenCurrentPage === totalPages ? 'disabled' : ''} style="min-width:36px;">&gt;</button>`;
 
     paginationEl.innerHTML = `
@@ -231,7 +229,353 @@ function renderTablePanen() {
   }
 }
 
-// ========== EDIT MODAL ==========
+// ========== FORMAT WA & GRAFIK ==========
+function formatTanggalPanjang(ymd) {
+  if (!ymd) return '-';
+  const bulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const parts = ymd.split('-');
+  if (parts.length !== 3) return ymd;
+  return `${parseInt(parts[2], 10)} ${bulan[parseInt(parts[1], 10) - 1]} ${parts[0]}`;
+}
+
+function fmtKg(n) { return (parseFloat(n) || 0).toFixed(2).replace('.', ','); }
+function fmtInt(n) { return String(parseInt(n, 10) || 0); }
+
+function generateWATextFromItem(item) {
+  const tglFmt = formatTanggalPanjang(item.tgl);
+  const ghLabel = item.gh === 'GLOBAL' ? ' (Global)' : ' (' + item.gh + ')';
+
+  const p_hatsu = parseFloat(item.p_hatsu) || 0;
+  const p_gradea = parseFloat(item.p_gradea) || 0;
+  const p_gradeb = parseFloat(item.p_gradeb) || 0;
+  const totalGradePanen = p_hatsu + p_gradea + p_gradeb;
+  const rkTotal = (parseFloat(item.rk_crack) || 0) + (parseFloat(item.rk_poli) || 0) + (parseFloat(item.rk_hpt) || 0);
+  const totalPanen = totalGradePanen + rkTotal;
+
+  const k_hatsu = parseFloat(item.k_hatsu) || 0;
+  const k_a11 = parseFloat(item.k_a11) || 0;
+  const k_a15 = parseFloat(item.k_a15) || 0;
+  const k_frozen = parseFloat(item.k_frozen) || 0;
+  const totalGradeKirim = k_hatsu + k_a11 + k_a15;
+
+  const m_hatsu = parseInt(item.m_hatsu) || 0;
+  const m_a11 = parseInt(item.m_a11) || 0;
+  const m_a15 = parseInt(item.m_a15) || 0;
+  const totalPack = m_hatsu + m_a11 + m_a15;
+
+  const rp_crack = parseFloat(item.rp_crack) || 0;
+  const rp_poli = parseFloat(item.rp_poli) || 0;
+  const rp_hpt = parseFloat(item.rp_hpt) || 0;
+  const rp_bruise = parseFloat(item.rp_bruise) || 0;
+  const rp_overripe = parseFloat(item.rp_overripe) || 0;
+  const rp_kuning = parseFloat(item.rp_kuning) || 0;
+  const rp_frozen = parseFloat(item.rp_frozen) || 0;
+  const rpTotal = rp_crack + rp_poli + rp_hpt + rp_bruise + rp_overripe + rp_kuning + rp_frozen;
+
+  let t = '';
+  
+  if (item.gh === 'GLOBAL') {
+    t += `*Data Global (Frozen & Tamu)*\n*${tglFmt}*\n\n`;
+    t += `Total Frozen : ${fmtKg(k_frozen)} kg\n\n`;
+    t += `Tamu Curah : ${fmtKg(item.t_curah)} kg\n`;
+    t += `Tamu Hatsu : ${fmtInt(item.t_hatsu)} pcs\n`;
+    t += `Tamu A11 : ${fmtInt(item.t_a11)} pcs\n`;
+    t += `Tamu A15 : ${fmtInt(item.t_a15)} pcs\n`;
+    if (item.t_ket) t += `Ket: ${item.t_ket}\n`;
+    return t;
+  }
+
+  t += `*Data Panen${ghLabel}*\n*${tglFmt}*\n\n`;
+  t += `Hatsuhana : ${fmtKg(p_hatsu)} kg\n`;
+  t += `Grade A : ${fmtKg(p_gradea)} kg\n`;
+  t += `Grade B : ${fmtKg(p_gradeb)} kg\n`;
+  t += `*Total Grade* : ${fmtKg(totalGradePanen)} kg\n\n`;
+  t += `Reject : ${fmtKg(rkTotal)} kg\n`;
+  t += `*Total Panen* : ${fmtKg(totalPanen)} kg\n\n`;
+
+  t += `*Data Pengiriman${ghLabel}*\n*${tglFmt}*\n\n`;
+  t += `*Berat*\n`;
+  t += `Hatsuhana : ${fmtKg(k_hatsu)} kg\n`;
+  t += `Grade A : ${fmtKg(k_a11)} kg\n`;
+  t += `Grade B : ${fmtKg(k_a15)} kg\n`;
+  t += `*Total Grade* : ${fmtKg(totalGradeKirim)} kg\n\n`;
+
+  t += `*Pack*\n`;
+  t += `Hatsuhana : ${fmtInt(m_hatsu)}\n`;
+  t += `Grade A : ${fmtInt(m_a11)}\n`;
+  t += `Grade B : ${fmtInt(m_a15)}\n`;
+  t += `*Total Pack*: ${fmtInt(totalPack)}\n\n`;
+
+  t += `*Data Reject Harian${ghLabel}*\n*${tglFmt}*\n\n`;
+  t += `Cracking : ${fmtKg(rp_crack)} kg\n`;
+  t += `Polinasi : ${fmtKg(rp_poli)} kg\n`;
+  t += `HPT : ${fmtKg(rp_hpt)} kg\n`;
+  t += `Bruise : ${fmtKg(rp_bruise)} kg\n`;
+  t += `Overripe : ${fmtKg(rp_overripe)} kg\n`;
+  t += `Buah Kuning (<80%) : ${fmtKg(rp_kuning)} kg\n`;
+  t += `Frozen (<11 gr) : ${fmtKg(rp_frozen)} kg\n\n`;
+  t += `*Total Reject* : ${fmtKg(rpTotal)} kg`;
+
+  return t;
+}
+
+function generateWAText() {
+  const tgl = document.getElementById('panen-tgl').value;
+  if (!tgl) return '';
+
+  let text = '';
+  ['gh1', 'gh2'].forEach(ghStr => {
+    const isFilled = ['p-hatsu', 'p-gradea', 'p-gradeb', 'k-hatsu', 'k-a11', 'k-a15', 'm-hatsu', 'm-a11', 'm-a15'].some(id => getValP(`${id}-${ghStr}`) > 0) ||
+                     ['rk-crack', 'rk-poli', 'rk-hpt', 'rp-crack', 'rp-poli', 'rp-hpt'].some(id => getValP(`${id}-${ghStr}`) > 0);
+
+    if (isFilled) {
+      const item = {
+        tgl: tgl, gh: ghStr === 'gh1' ? 'GH 1' : 'GH 2',
+        p_hatsu: getValP(`p-hatsu-${ghStr}`), p_gradea: getValP(`p-gradea-${ghStr}`), p_gradeb: getValP(`p-gradeb-${ghStr}`),
+        rk_crack: getValP(`rk-crack-${ghStr}`), rk_poli: getValP(`rk-poli-${ghStr}`), rk_hpt: getValP(`rk-hpt-${ghStr}`),
+        rp_crack: getValP(`rp-crack-${ghStr}`), rp_poli: getValP(`rp-poli-${ghStr}`), rp_hpt: getValP(`rp-hpt-${ghStr}`),
+        rp_bruise: getValP(`rp-bruise-${ghStr}`), rp_overripe: getValP(`rp-overripe-${ghStr}`), rp_kuning: getValP(`rp-kuning-${ghStr}`), rp_frozen: getValP(`rp-frozen-${ghStr}`),
+        k_hatsu: getValP(`k-hatsu-${ghStr}`), k_a11: getValP(`k-a11-${ghStr}`), k_a15: getValP(`k-a15-${ghStr}`), k_frozen: 0,
+        m_hatsu: getValP(`m-hatsu-${ghStr}`), m_a11: getValP(`m-a11-${ghStr}`), m_a15: getValP(`m-a15-${ghStr}`)
+      };
+      text += generateWATextFromItem(item) + '\n\n----------------------------------------\n\n';
+    }
+  });
+
+  const isGlobalFilled = getValP('k-frozen') > 0 || getValP('t-curah') > 0 || getValP('t-hatsu') > 0 || getValP('t-a11') > 0 || getValP('t-a15') > 0 || document.getElementById('t-ket').value !== '';
+  if (isGlobalFilled) {
+    const itemGlobal = {
+      tgl: tgl, gh: 'GLOBAL',
+      k_frozen: getValP('k-frozen'), t_curah: getValP('t-curah'), t_hatsu: getValP('t-hatsu'), t_a11: getValP('t-a11'), t_a15: getValP('t-a15'), t_ket: document.getElementById('t-ket').value
+    };
+    text += generateWATextFromItem(itemGlobal);
+  }
+
+  return text.trim();
+}
+
+function openWAModal() {
+  const tgl = document.getElementById('panen-tgl').value;
+  if (!tgl) { showToast('Isi tanggal panen dulu!', 'error'); return; }
+  const text = generateWAText();
+  if (!text) { showToast('Belum ada data yang diisi!', 'error'); return; }
+  document.getElementById('wa-text-preview').value = text;
+  document.getElementById('modal-wa').classList.add('show');
+}
+
+function openWAModalFromHistory(id) {
+  const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+  const item = db.find(x => String(x.id) === String(id));
+  if (!item) { showToast('Data tidak ditemukan', 'error'); return; }
+  const text = generateWATextFromItem(item);
+  document.getElementById('wa-text-preview').value = text;
+  document.getElementById('modal-wa').classList.add('show');
+}
+
+function closeWAModal() { document.getElementById('modal-wa').classList.remove('show'); }
+
+async function copyWAText() {
+  const ta = document.getElementById('wa-text-preview');
+  try {
+    await navigator.clipboard.writeText(ta.value);
+    showToast('✅ Tersalin! Buka WA & paste.');
+  } catch (err) {
+    ta.select(); document.execCommand('copy');
+    showToast('✅ Tersalin!');
+  }
+}
+
+// ========== GRAFIK CANVAS ==========
+let generatedGraphicBlob = null;
+
+function openGraphicModal() {
+  const tgl = document.getElementById('panen-tgl').value;
+  if (!tgl) { showToast('Isi tanggal panen dulu!', 'error'); return; }
+  
+  const isGh1Filled = getValP('p-hatsu-gh1') > 0 || getValP('p-gradea-gh1') > 0 || getValP('k-hatsu-gh1') > 0;
+  const isGh2Filled = getValP('p-hatsu-gh2') > 0 || getValP('p-gradea-gh2') > 0 || getValP('k-hatsu-gh2') > 0;
+
+  if (!isGh1Filled && !isGh2Filled) { showToast('Isi data panen GH 1 / GH 2 dulu!', 'error'); return; }
+  
+  // Tampilkan grafik GH 1 dulu, kalau kosong baru GH 2
+  const ghStr = isGh1Filled ? 'gh1' : 'gh2';
+  const item = {
+    tgl: tgl, gh: ghStr === 'gh1' ? 'GH 1' : 'GH 2',
+    p_hatsu: getValP(`p-hatsu-${ghStr}`), p_gradea: getValP(`p-gradea-${ghStr}`), p_gradeb: getValP(`p-gradeb-${ghStr}`),
+    rk_crack: getValP(`rk-crack-${ghStr}`), rk_poli: getValP(`rk-poli-${ghStr}`), rk_hpt: getValP(`rk-hpt-${ghStr}`),
+    rp_crack: getValP(`rp-crack-${ghStr}`), rp_poli: getValP(`rp-poli-${ghStr}`), rp_hpt: getValP(`rp-hpt-${ghStr}`),
+    rp_bruise: getValP(`rp-bruise-${ghStr}`), rp_overripe: getValP(`rp-overripe-${ghStr}`), rp_kuning: getValP(`rp-kuning-${ghStr}`), rp_frozen: getValP(`rp-frozen-${ghStr}`),
+    k_hatsu: getValP(`k-hatsu-${ghStr}`), k_a11: getValP(`k-a11-${ghStr}`), k_a15: getValP(`k-a15-${ghStr}`),
+    m_hatsu: getValP(`m-hatsu-${ghStr}`), m_a11: getValP(`m-a11-${ghStr}`), m_a15: getValP(`m-a15-${ghStr}`)
+  };
+
+  const dataURL = generateGraphicCanvas(item);
+  document.getElementById('grafik-preview-img').src = dataURL;
+  fetch(dataURL).then(res => res.blob()).then(blob => { generatedGraphicBlob = blob; });
+  document.getElementById('modal-grafik').classList.add('show');
+}
+
+function openGraphicModalFromHistory(id) {
+  const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+  const item = db.find(x => String(x.id) === String(id));
+  if (!item) { showToast('Data tidak ditemukan', 'error'); return; }
+  if (item.gh === 'GLOBAL') { showToast('Format Grafik hanya untuk GH 1 & GH 2', 'error'); return; }
+
+  const dataURL = generateGraphicCanvas(item);
+  document.getElementById('grafik-preview-img').src = dataURL;
+  fetch(dataURL).then(res => res.blob()).then(blob => { generatedGraphicBlob = blob; });
+  document.getElementById('modal-grafik').classList.add('show');
+}
+
+function closeGraphicModal() {
+  document.getElementById('modal-grafik').classList.remove('show');
+  generatedGraphicBlob = null;
+}
+
+function downloadGraphic() {
+  if (!generatedGraphicBlob) return;
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(generatedGraphicBlob);
+  link.download = `Laporan_Panen_${new Date().getTime()}.png`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(link.href), 4000);
+  showToast('📸 Gambar berhasil disimpan');
+}
+
+function generateGraphicCanvas(item) {
+  const W = 800; const H = 880; const sc = 2;
+  const cv = document.createElement('canvas');
+  cv.width = W * sc; cv.height = H * sc;
+  const ctx = cv.getContext('2d');
+  ctx.scale(sc, sc);
+
+  const fillRect = (x, y, w, h, color) => { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); };
+  const text = (t, x, y, size, color, align, bold) => {
+    ctx.font = `${bold ? '700' : '400'} ${size}px system-ui, sans-serif`;
+    ctx.fillStyle = color; ctx.textAlign = align || 'left'; ctx.textBaseline = 'middle'; ctx.fillText(String(t), x, y);
+  };
+  const roundRect = (x, y, w, h, r, color) => {
+    ctx.fillStyle = color; ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.fill();
+  };
+  const drawPie = (cx, cy, r, parts) => {
+    let start = -Math.PI / 2;
+    const total = parts.reduce((a, p) => a + p.v, 0);
+    if (total <= 0) { ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fillStyle = '#e5e7eb'; ctx.fill(); return; }
+    parts.forEach(p => {
+      if (p.v <= 0) return;
+      const angle = (p.v / total) * Math.PI * 2;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, r, start, start + angle);
+      ctx.fillStyle = p.c; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+      start += angle;
+    });
+  };
+
+  const fmt = n => (parseFloat(n) || 0).toFixed(2).replace('.', ',');
+  const tglFmt = formatTanggalPanjang(item.tgl);
+
+  fillRect(0, 0, W, H, '#f8fafc');
+  fillRect(0, 0, W, 100, '#2d5016');
+  text('Laporan Harian Panen & Pengiriman', 40, 40, 24, '#ffffff', 'left', true);
+  text(`${item.gh} • ${tglFmt}`, 40, 70, 16, '#bbf7d0', 'left');
+  text('PT. Agri Wangi Berry', W - 40, 55, 14, '#86efac', 'right', true);
+
+  const grX = 40, grY = 130, grW = 720, grH = 280;
+  roundRect(grX, grY, grW, grH, 12, '#ffffff');
+  text('Rincian Panen, Pengiriman & Pack', grX + 20, grY + 30, 16, '#2d5016', 'left', true);
+  
+  fillRect(grX + 20, grY + 60, grW - 40, 40, '#f1f5f9');
+  text('Grade', grX + 40, grY + 80, 14, '#475569', 'left', true);
+  text('Panen (Kg)', grX + 200, grY + 80, 14, '#475569', 'right', true);
+  text('Kirim (Kg)', grX + 380, grY + 80, 14, '#475569', 'right', true);
+  text('Pack (Pcs)', grX + 560, grY + 80, 14, '#475569', 'right', true);
+
+  const rows = [
+    { name: 'Hatsuhana', p: item.p_hatsu, k: item.k_hatsu, m: item.m_hatsu, color: '#1e40af' },
+    { name: 'Grade A', p: item.p_gradea, k: item.k_a11, m: item.m_a11, color: '#15803d' },
+    { name: 'Grade B', p: item.p_gradeb, k: item.k_a15, m: item.m_a15, color: '#b45309' }
+  ];
+
+  rows.forEach((row, i) => {
+    const ry = grY + 100 + (i * 45);
+    text(row.name, grX + 40, ry + 20, 14, row.color, 'left', true);
+    text(fmt(row.p), grX + 200, ry + 20, 14, '#1e293b', 'right');
+    text(fmt(row.k), grX + 380, ry + 20, 14, '#1e293b', 'right');
+    text(row.m, grX + 560, ry + 20, 14, '#1e293b', 'right');
+    ctx.beginPath(); ctx.moveTo(grX+20, ry+40); ctx.lineTo(grX+grW-20, ry+40); ctx.strokeStyle='#f1f5f9'; ctx.stroke();
+  });
+
+  const sumP = item.p_hatsu + item.p_gradea + item.p_gradeb;
+  const sumK = item.k_hatsu + item.k_a11 + item.k_a15;
+  const sumM = item.m_hatsu + item.m_a11 + item.m_a15;
+  const ryTotal = grY + 100 + (3 * 45);
+  text('TOTAL', grX + 40, ryTotal + 20, 14, '#0f172a', 'left', true);
+  text(fmt(sumP), grX + 200, ryTotal + 20, 14, '#0f172a', 'right', true);
+  text(fmt(sumK), grX + 380, ryTotal + 20, 14, '#0f172a', 'right', true);
+  text(sumM, grX + 560, ryTotal + 20, 14, '#0f172a', 'right', true);
+
+  const rjX = 40, rjY = 430, rjW = 350, rjH = 350;
+  roundRect(rjX, rjY, rjW, rjH, 12, '#ffffff');
+  text('Komposisi Reject', rjX + 20, rjY + 30, 16, '#2d5016', 'left', true);
+
+  const rejects = [
+    { label: 'Cracking', v: (item.rk_crack || 0) + (item.rp_crack||0), c: '#dc2626' },
+    { label: 'Polinasi', v: (item.rk_poli || 0) + (item.rp_poli||0), c: '#ea580c' },
+    { label: 'HPT', v: (item.rk_hpt || 0) + (item.rp_hpt||0), c: '#f59e0b' },
+    { label: 'Bruise', v: item.rp_bruise||0, c: '#84cc16' },
+    { label: 'Overripe', v: item.rp_overripe||0, c: '#0891b2' },
+    { label: 'Buah Kuning', v: item.rp_kuning||0, c: '#eab308' },
+    { label: 'Frozen', v: item.rp_frozen||0, c: '#7c3aed' }
+  ].filter(r => r.v > 0);
+  
+  const totalReject = rejects.reduce((a, r) => a + r.v, 0);
+
+  const pieCx = rjX + 90; const pieCy = rjY + 170; const pieR = 80;
+  drawPie(pieCx, pieCy, pieR, rejects);
+  
+  ctx.beginPath(); ctx.arc(pieCx, pieCy, 45, 0, Math.PI*2); ctx.fillStyle = '#ffffff'; ctx.fill();
+  text('TOTAL', pieCx, pieCy - 15, 11, '#64748b', 'center', true);
+  text(fmt(totalReject), pieCx, pieCy + 5, 16, '#dc2626', 'center', true);
+  text('Kg', pieCx, pieCy + 22, 10, '#64748b', 'center');
+
+  let lgY = rjY + 80;
+  rejects.forEach(r => {
+    fillRect(rjX + 190, lgY - 5, 10, 10, r.c);
+    text(r.label, rjX + 210, lgY, 11, '#1e293b', 'left');
+    text(fmt(r.v) + ' kg', rjX + 330, lgY, 11, '#1e293b', 'right', true);
+    lgY += 22;
+  });
+
+  const smX = 410, smY = 430, smW = 350, smH = 350;
+  roundRect(smX, smY, smW, smH, 12, '#ffffff');
+  text('Ringkasan Reject & Rate', smX + 20, smY + 30, 16, '#2d5016', 'left', true);
+
+  const rkTotal = (item.rk_crack||0) + (item.rk_poli||0) + (item.rk_hpt||0);
+  const rpTotal = (item.rp_crack||0) + (item.rp_poli||0) + (item.rp_hpt||0) + (item.rp_bruise||0) + (item.rp_overripe||0) + (item.rp_kuning||0) + (item.rp_frozen||0);
+  const totalPanenAsli = sumP + rkTotal;
+  const rateReject = totalPanenAsli > 0 ? (totalReject / totalPanenAsli * 100) : 0;
+
+  fillRect(smX + 20, smY + 70, smW - 40, 60, '#f0fdf4');
+  text('Reject Kebun', smX + 40, smY + 90, 12, '#166534');
+  text(fmt(rkTotal) + ' Kg', smX + 40, smY + 110, 18, '#166534', 'left', true);
+
+  fillRect(smX + 20, smY + 150, smW - 40, 60, '#fef2f2');
+  text('Reject Prosesing', smX + 40, smY + 170, 12, '#991b1b');
+  text(fmt(rpTotal) + ' Kg', smX + 40, smY + 190, 18, '#991b1b', 'left', true);
+
+  fillRect(smX + 20, smY + 230, smW - 40, 80, '#fff7ed');
+  text('Reject Rate', smX + 40, smY + 255, 12, '#9a3412');
+  text(rateReject.toFixed(2) + '%', smX + 40, smY + 285, 24, '#ea580c', 'left', true);
+
+  text(`Dibuat pada: ${new Date().toLocaleString('id-ID')}`, W / 2, H - 30, 12, '#94a3b8', 'center');
+
+  return cv.toDataURL('image/png');
+}
+
+// ========== EDIT & HAPUS ==========
 function editDataPanen(id) {
   const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
   const item = db.find(x => String(x.id) === String(id));
@@ -371,6 +715,3 @@ function hapusDataPanen(id) {
   renderTablePanen();
   updateDashboard();
 }
-
-// ========== FORMAT WA & GRAFIK ==========
-// (Fungsi generateWAText, openWAModal, openGraphicModal, dll tetap ada di file kamu)
