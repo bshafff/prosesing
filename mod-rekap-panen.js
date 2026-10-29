@@ -397,8 +397,15 @@ function openGraphicModal() {
 
   if (!isGh1Filled && !isGh2Filled) { showToast('Isi data panen GH 1 / GH 2 dulu!', 'error'); return; }
   
-  // Tampilkan grafik GH 1 dulu, kalau kosong baru GH 2
-  const ghStr = isGh1Filled ? 'gh1' : 'gh2';
+  // Pilih GH mana yang mau ditampilkan grafiknya
+  let ghStr = 'gh1';
+  if (isGh1Filled && isGh2Filled) {
+    const pilihGh2 = confirm("Data GH 1 dan GH 2 sama-sama terisi.\n\nKlik [OK] untuk Grafik GH 1.\nKlik [Batal] untuk Grafik GH 2.");
+    ghStr = pilihGh2 ? 'gh1' : 'gh2';
+  } else if (isGh2Filled) {
+    ghStr = 'gh2';
+  }
+
   const item = {
     tgl: tgl, gh: ghStr === 'gh1' ? 'GH 1' : 'GH 2',
     p_hatsu: getValP(`p-hatsu-${ghStr}`), p_gradea: getValP(`p-gradea-${ghStr}`), p_gradeb: getValP(`p-gradeb-${ghStr}`),
