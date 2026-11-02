@@ -1072,7 +1072,8 @@ function downloadMikaMonthlyImage() {
 
 async function captureMikaTable() {
   const card = document.getElementById('mika-monthly-usage-card');
-  const tbody = document.getElementById('mika-monthly-usage-body');
+  const table = card.querySelector('.recap-table');
+  const tbody = table.querySelector('tbody');
   const rows = Array.from(tbody.children);
   
   if (!rows.length || (rows[0].cells[0] && rows[0].cells[0].innerText.includes('Belum ada data'))) {
@@ -1088,92 +1089,92 @@ async function captureMikaTable() {
   btn.disabled = true;
   btnContainer.style.display = 'none';
 
-  const tableWrap = card.querySelector('.recap-wrap');
-  const originalOverflow = tableWrap.style.overflow;
-  const originalWidth = tableWrap.style.width;
-  const originalCardWidth = card.style.width;
+  // Ambil Header dan Footer tabel asli
+  const theadHtml = table.querySelector('thead').outerHTML;
+  const tfootHtml = table.querySelector('tfoot') ? table.querySelector('tfoot').outerHTML : '';
 
-  // Paksa tabel melebar penuh (semua kolom terlihat)
-  tableWrap.style.overflow = 'visible';
-  tableWrap.style.width = 'max-content';
-  card.style.width = 'max-content';
-
-  // Bagi baris menjadi beberapa bagian (7 tanggal per gambar)
+  // 1. Bagi baris menjadi beberapa bagian (maksimal 7 tanggal per gambar)
   const chunks = [];
   let currentChunk = [];
   let dateCount = 0;
-  
+
   rows.forEach(row => {
-    const isNewDate = row.cells[0] && row.cells[0].classList.contains('tgl-col');
-    if (isNewDate) {
-      dateCount++;
-      // Jika sudah 7 tanggal, potong dan mulai gambar baru
-      if (dateCount > 7 && currentChunk.length > 0) {
+    const tglCell = row.querySelector('.tgl-col');
+    if (tglCell) {
+      if (dateCount >= 7 && currentChunk.length > 0) {
         chunks.push(currentChunk);
         currentChunk = [];
-        dateCount = 1;
+        dateCount = 0;
       }
+      dateCount++;
     }
-    currentChunk.push(row);
+    // Simpan CLONE dari baris (bukan elemen aslinya)
+    currentChunk.push(row.cloneNode(true));
   });
   if (currentChunk.length > 0) chunks.push(currentChunk);
 
-  // Proses ambil gambar per bagian
+  // 2. Proses ambil gambar per bagian
   for (let i = 0; i < chunks.length; i++) {
-    const chunk = chunks[i];
-    
-    // Sembunyikan semua baris, lalu munculkan hanya baris di bagian ini
-    rows.forEach(r => r.style.display = 'none');
-    chunk.forEach(r => r.style.display = '');
-    
-    // Perbaiki rowspan agar tidak error saat baris lain disembunyikan
-    let dateGroups = [];
-    let currGroup = [];
-    chunk.forEach(row => {
-      if (row.cells[0] && row.cells[0].classList.contains('tgl-col')) {
-        if (currGroup.length > 0) dateGroups.push(currGroup);
-        currGroup = [row];
-      } else {
-        currGroup.push(row);
-      }
-    });
-    if (currGroup.length > 0) dateGroups.push(currGroup);
-    
-    dateGroups.forEach(group => {
-      const firstCell = group[0].cells[0];
-      if (firstCell && firstCell.classList.contains('tgl-col')) {
-         firstCell.rowSpan = group.length; // Sesuaikan rowspan dengan jumlah baris yang terlihat
-      }
-    });
+    // Buat bungkusan sementara di luar layar (tersembunyi)
+    const wrapper = document.createElement('div');
+    wrapper.style.position = 'absolute';
+    wrapper.style.left = '-9999px';
+    wrapper.style.top = '0';
+    wrapper.style.background = '#ffffff';
+    wrapper.style.padding = '1.5rem';
+    wrapper.style.width = 'max-content';
+    wrapper.style.fontFamily = 'system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
 
-    // Ambil gambar
+    // Susun tabel baru dengan baris yang sudah dikloning
+    wrapper.innerHTML = `
+      <div style="font-size: 0.875rem; font-weight: 800; color: #2d5016; text-transform: uppercase; margin-bottom: 1rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.75rem;">
+        📊 REKAP PENGGUNAAN BULANAN (STOCK OPNAME) — Bagian ${i+1}
+      </div>
+      <div class="recap-wrap" style="overflow: visible; border: none;">
+        <table class="recap-table" style="min-width: 1400px; width: max-content;">
+          ${theadHtml}
+          <tbody></tbody>
+          ${tfootHtml}
+        </table>
+      </div>
+    `;
+
+    // Masukkan baris-baris yang sudah dikloning ke tabel baru
+    const newTbody = wrapper.querySelector('tbody');
+    chunks[i].forEach(r => newTbody.appendChild(r));
+
+    document.body.appendChild(wrapper);
+
+    // Beri waktu 100ms agar browser selesai menghitung lebar kolom (rowspan dll)
+    await new Promise(r => setTimeout(r, 100));
+
     try {
-      const canvas = await html2canvas(card, { 
+      const canvas = await html2canvas(wrapper, { 
         scale: 2, 
         backgroundColor: '#ffffff',
         useCORS: true,
-        windowWidth: document.documentElement.offsetWidth
+        scrollX: 0,
+        scrollY: 0
       });
       
       const link = document.createElement('a');
-      link.download = `Rekap_Stock_Mika_Part${i+1}.png`;
+      link.download = `Rekap_Stock_Mika_Bagian_${i+1}.png`;
       link.href = canvas.toDataURL('image/png');
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       
-      // Jeda sebentar agar browser tidak memblokir download berikutnya
+      // Jeda agar browser bisa memproses download berikutnya
       await new Promise(r => setTimeout(r, 1500));
     } catch (err) {
       console.error("Gagal capture part " + (i+1), err);
+    } finally {
+      // Hapus bungkusan sementara
+      document.body.removeChild(wrapper);
     }
   }
 
-  // Kembalikan kondisi tabel seperti semula
-  rows.forEach(r => r.style.display = '');
-  tableWrap.style.overflow = originalOverflow;
-  tableWrap.style.width = originalWidth;
-  card.style.width = originalCardWidth;
+  // Kembalikan tombol ke semula
   btn.innerHTML = originalText;
   btn.disabled = false;
   btnContainer.style.display = '';
