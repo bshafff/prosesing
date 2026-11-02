@@ -1050,3 +1050,72 @@ function exportMikaCSV() {
   setTimeout(() => URL.revokeObjectURL(link.href), 3000);
   showToast(`📥 Download (${rows.length} baris)`);
 }
+
+// ========== SCREENSHOT REKAP BULANAN ==========
+function downloadMikaMonthlyImage() {
+  // 1. Cek apakah library html2canvas sudah dimuat, jika belum, muat secara otomatis
+  if (typeof html2canvas === 'undefined') {
+    const btn = document.querySelector('button[onclick="downloadMikaMonthlyImage()"]');
+    if (btn) btn.textContent = '⏳ Memuat...';
+    
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    script.onload = () => captureMikaTable();
+    script.onerror = () => {
+      showToast('Gagal memuat library screenshot. Cek koneksi internet.', 'error');
+      if (btn) btn.textContent = '📸 Screenshot';
+    };
+    document.head.appendChild(script);
+  } else {
+    captureMikaTable();
+  }
+}
+
+function captureMikaTable() {
+  const card = document.getElementById('mika-monthly-usage-card');
+  const btn = card.querySelector('button[onclick="downloadMikaMonthlyImage()"]');
+  const originalText = btn.innerHTML;
+  
+  btn.innerHTML = '⏳ Memproses...';
+  btn.disabled = true;
+
+  // Simpan style asli sementara
+  const tableWrap = card.querySelector('.recap-wrap');
+  const originalOverflow = tableWrap.style.overflow;
+  const originalWidth = tableWrap.style.width;
+
+  // Paksa tabel agar melebar semua (tidak terpotong scroll)
+  tableWrap.style.overflow = 'visible';
+  tableWrap.style.width = 'max-content';
+
+  html2canvas(card, { 
+    scale: 2, // Resolusi tinggi
+    backgroundColor: '#ffffff',
+    useCORS: true,
+    scrollX: 0,
+    scrollY: 0,
+    windowWidth: document.documentElement.offsetWidth
+  }).then(canvas => {
+    // Kembalikan style seperti semula
+    tableWrap.style.overflow = originalOverflow;
+    tableWrap.style.width = originalWidth;
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+
+    // Download gambar
+    const link = document.createElement('a');
+    link.download = `Rekap_Stock_Opname_Mika_${new Date().getTime()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('📸 Screenshot berhasil disimpan!');
+  }).catch(err => {
+    console.error(err);
+    tableWrap.style.overflow = originalOverflow;
+    tableWrap.style.width = originalWidth;
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+    showToast('Gagal membuat screenshot.', 'error');
+  });
+}
