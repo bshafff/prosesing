@@ -1053,16 +1053,23 @@ function exportMikaCSV() {
 
 // ========== SCREENSHOT REKAP BULANAN (MULTI-PART) ==========
 function downloadMikaMonthlyImage() {
+  const btn = document.querySelector('button[onclick="downloadMikaMonthlyImage()"]');
+
+  // Simpan label asli tombol SEBELUM diubah (supaya tidak nyangkut "Memuat...")
+  if (btn && !btn.dataset.label) btn.dataset.label = btn.innerHTML;
+
   if (typeof html2canvas === 'undefined') {
-    const btn = document.querySelector('button[onclick="downloadMikaMonthlyImage()"]');
-    if (btn) btn.textContent = '⏳ Memuat...';
-    
+    if (btn) btn.innerHTML = '⏳ Memuat...';
+
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-    script.onload = () => captureMikaTable();
+    script.onload = () => {
+      if (btn) btn.innerHTML = btn.dataset.label;
+      captureMikaTable();
+    };
     script.onerror = () => {
       showToast('Gagal memuat library screenshot. Cek koneksi internet.', 'error');
-      if (btn) btn.textContent = '📸 Screenshot';
+      if (btn) btn.innerHTML = btn.dataset.label || '📸 Screenshot';
     };
     document.head.appendChild(script);
   } else {
@@ -1075,7 +1082,7 @@ async function captureMikaTable() {
   const table = card.querySelector('.recap-table');
   const tbody = table.querySelector('tbody');
   const rows = Array.from(tbody.children);
-  
+
   if (!rows.length || (rows[0].cells[0] && rows[0].cells[0].innerText.includes('Belum ada data'))) {
     showToast('Tidak ada data untuk di-screenshot', 'error');
     return;
@@ -1083,8 +1090,8 @@ async function captureMikaTable() {
 
   const btn = card.querySelector('button[onclick="downloadMikaMonthlyImage()"]');
   const btnContainer = btn.parentElement;
-  const originalText = btn.innerHTML;
-  
+  const originalText = btn.dataset.label || '📸 Screenshot';
+
   btn.innerHTML = '⏳ Memproses...';
   btn.disabled = true;
   btnContainer.style.display = 'none';
@@ -1115,7 +1122,7 @@ async function captureMikaTable() {
 
   // 2. Proses ambil gambar per bagian
   for (let i = 0; i < chunks.length; i++) {
-    // Buat bungkusan sementara di luar layar (tersembunyi)
+    // Bungkusan sementara di luar layar
     const wrapper = document.createElement('div');
     wrapper.style.position = 'absolute';
     wrapper.style.left = '-9999px';
@@ -1125,10 +1132,9 @@ async function captureMikaTable() {
     wrapper.style.width = 'max-content';
     wrapper.style.fontFamily = 'system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
 
-    // Susun tabel baru dengan baris yang sudah dikloning
     wrapper.innerHTML = `
       <div style="font-size: 0.875rem; font-weight: 800; color: #2d5016; text-transform: uppercase; margin-bottom: 1rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.75rem;">
-        📊 REKAP PENGGUNAAN BULANAN (STOCK OPNAME) — Bagian ${i+1}
+        📊 REKAP PENGGUNAAN BULANAN (STOCK OPNAME) — Bagian ${i + 1}
       </div>
       <div class="recap-wrap" style="overflow: visible; border: none;">
         <table class="recap-table" style="min-width: 1400px; width: max-content;">
@@ -1139,37 +1145,61 @@ async function captureMikaTable() {
       </div>
     `;
 
-    // Masukkan baris-baris yang sudah dikloning ke tabel baru
+    // Masukkan baris-baris clone ke tabel baru
     const newTbody = wrapper.querySelector('tbody');
     chunks[i].forEach(r => newTbody.appendChild(r));
 
+    // === FIX: paksa style inline agar html2canvas tidak bergantung CSS (sticky / nth-child) ===
+    newTbody.querySelectorAll('tr').forEach(tr => {
+      const even = tr.classList.contains('group-even');
+      const rowBg = even ? '#ffffff' : '#f8fafc';
+      const tglBg = even ? '#f1f5f9' : '#e2e8f0';
+
+      tr.querySelectorAll('td').forEach(td => {
+        td.style.setProperty('position', 'static', 'important');
+
+        if (td.classList.contains('tgl-col')) {
+          td.style.setProperty('background', tglBg, 'important');
+          td.style.setProperty('color', '#1e293b', 'important');
+          td.style.setProperty('vertical-align', 'middle', 'important');
+          td.style.setProperty('text-align', 'center', 'important');
+          td.style.setProperty('font-weight', '700', 'important');
+        } else if (!td.classList.contains('col-total')) {
+          td.style.setProperty('background', rowBg, 'important');
+        }
+      });
+    });
+    wrapper.querySelectorAll('th').forEach(th => {
+      th.style.setProperty('position', 'static', 'important');
+    });
+    // === END FIX ===
+
     document.body.appendChild(wrapper);
 
-    // Beri waktu 100ms agar browser selesai menghitung lebar kolom (rowspan dll)
-    await new Promise(r => setTimeout(r, 100));
+    // Beri waktu agar browser selesai menghitung lebar kolom (rowspan dll)
+    await new Promise(r => setTimeout(r, 150));
 
     try {
-      const canvas = await html2canvas(wrapper, { 
-        scale: 2, 
+      const canvas = await html2canvas(wrapper, {
+        scale: 2,
         backgroundColor: '#ffffff',
         useCORS: true,
         scrollX: 0,
         scrollY: 0
       });
-      
+
       const link = document.createElement('a');
-      link.download = `Rekap_Stock_Mika_Bagian_${i+1}.png`;
+      link.download = `Rekap_Stock_Mika_Bagian_${i + 1}.png`;
       link.href = canvas.toDataURL('image/png');
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       // Jeda agar browser bisa memproses download berikutnya
       await new Promise(r => setTimeout(r, 1500));
     } catch (err) {
-      console.error("Gagal capture part " + (i+1), err);
+      console.error('Gagal capture part ' + (i + 1), err);
     } finally {
-      // Hapus bungkusan sementara
       document.body.removeChild(wrapper);
     }
   }
@@ -1178,6 +1208,6 @@ async function captureMikaTable() {
   btn.innerHTML = originalText;
   btn.disabled = false;
   btnContainer.style.display = '';
-  
+
   showToast(`✅ ${chunks.length} Gambar berhasil disimpan!`);
 }
