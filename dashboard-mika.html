@@ -171,12 +171,15 @@
     <div class="info-box" style="margin-bottom:0.75rem;">
       Semua data di bawah mengikuti <b>Filter Periode</b> di atas.
     </div>
-    <div class="row-2" style="align-items:flex-end;">
+        <div class="row-2" style="align-items:flex-end;">
       <div class="input-group" style="margin-bottom:0;">
         <label>Periode Aktif</label>
         <input readonly id="mika-monthly-periode-label" value="-">
       </div>
-      <button class="btn btn-success" onclick="exportMikaCSV()">📥 Export CSV</button>
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <button class="btn btn-secondary" onclick="exportMikaCSV()" style="flex:1;">📥 Export CSV</button>
+        <button class="btn btn-success" onclick="exportMikaExcel()" style="flex:1;">📥 Export Excel (Warna)</button>
+      </div>
     </div>
   </div>
 
