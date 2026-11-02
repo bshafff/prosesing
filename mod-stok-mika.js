@@ -22,7 +22,7 @@ function defaultAksState() {
 // ============================================================
 // AUTO-FILL DARI REKAP PANEN (kirim, tamu, keterangan tamu)
 // ============================================================
-function autoFillFromPanen() {
+function autoFillFromPanen(force = false) {
   const tgl = document.getElementById('kemasan-tgl').value;
   if (!tgl) return;
 
@@ -46,33 +46,52 @@ function autoFillFromPanen() {
 
   const ketGabung = [...ketSet].join('; ');
 
-  const setVal = (id, val) => {
+  const setVal = (id, val, isForceable = true) => {
     const el = document.getElementById(id);
-    if (el) el.value = (val == null ? '' : val);
+    if (!el) return;
+    
+    // PENGAMAN: Jika force = false DAN input sudah ada isinya (bukan 0), jangan timpa!
+    if (!force && isForceable) {
+      const currentVal = parseFloat(el.value);
+      if (currentVal > 0) return;
+    }
+    el.value = (val == null ? '' : val);
   };
 
-  // Kirim packing (pcs)
   setVal('kirim-0', totalKirim[0]);
   setVal('kirim-1', totalKirim[1]);
   setVal('kirim-2', totalKirim[2]);
-
-  // Tamu / sampel (pcs)
   setVal('tamu-0', totalTamu[0]);
   setVal('tamu-1', totalTamu[1]);
   setVal('tamu-2', totalTamu[2]);
 
-  // Keterangan tamu hanya diisi pada grade yang ada tamunya
   [0, 1, 2].forEach(i => {
     if (totalTamu[i] > 0 && ketGabung) setVal(`ket-tamu-${i}`, ketGabung);
   });
 
-  // Hitung pemakaian penunjang otomatis + refresh semua display
   recalcPakaiPenunjang();
   [0, 1, 2].forEach(i => hitungKemasan(i));
 
   if (totalKirim.some(x => x > 0) || totalTamu.some(x => x > 0)) {
     showToast('✅ Kirim, Tamu, Keterangan & Penunjang terisi dari Rekap Panen');
   }
+}
+
+function renderKemasanForms() {
+  const hatsuPanel     = document.getElementById('input-panel-hatsu');
+  const gradeAPanel    = document.getElementById('input-panel-gradea');
+  const gradeBPanel    = document.getElementById('input-panel-gradeb');
+  const penunjangPanel = document.getElementById('input-panel-penunjang');
+
+  if (!hatsuPanel) return;
+
+  hatsuPanel.innerHTML     = buildMikaForm(masterJenisKemasan[0], 0);
+  gradeAPanel.innerHTML    = buildMikaForm(masterJenisKemasan[1], 1);
+  gradeBPanel.innerHTML    = buildMikaForm(masterJenisKemasan[2], 2);
+  penunjangPanel.innerHTML = renderPenunjangPanel();
+
+  // HAPUS setTimeout(autoFillFromPanen, 100) DARI SINI
+  // Biarkan form kosong, auto-fill akan dipanggil oleh app.js atau saat ganti tanggal
 }
 
 // ============================================================
