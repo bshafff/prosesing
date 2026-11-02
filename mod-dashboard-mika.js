@@ -1051,9 +1051,8 @@ function exportMikaCSV() {
   showToast(`📥 Download (${rows.length} baris)`);
 }
 
-// ========== SCREENSHOT REKAP BULANAN ==========
+// ========== SCREENSHOT REKAP BULANAN (MULTI-PART) ==========
 function downloadMikaMonthlyImage() {
-  // 1. Cek apakah library html2canvas sudah dimuat, jika belum, muat secara otomatis
   if (typeof html2canvas === 'undefined') {
     const btn = document.querySelector('button[onclick="downloadMikaMonthlyImage()"]');
     if (btn) btn.textContent = '⏳ Memuat...';
@@ -1071,51 +1070,113 @@ function downloadMikaMonthlyImage() {
   }
 }
 
-function captureMikaTable() {
+async function captureMikaTable() {
   const card = document.getElementById('mika-monthly-usage-card');
+  const tbody = document.getElementById('mika-monthly-usage-body');
+  const rows = Array.from(tbody.children);
+  
+  if (!rows.length || (rows[0].cells[0] && rows[0].cells[0].innerText.includes('Belum ada data'))) {
+    showToast('Tidak ada data untuk di-screenshot', 'error');
+    return;
+  }
+
   const btn = card.querySelector('button[onclick="downloadMikaMonthlyImage()"]');
+  const btnContainer = btn.parentElement;
   const originalText = btn.innerHTML;
   
   btn.innerHTML = '⏳ Memproses...';
   btn.disabled = true;
+  btnContainer.style.display = 'none';
 
-  // Simpan style asli sementara
   const tableWrap = card.querySelector('.recap-wrap');
   const originalOverflow = tableWrap.style.overflow;
   const originalWidth = tableWrap.style.width;
+  const originalCardWidth = card.style.width;
 
-  // Paksa tabel agar melebar semua (tidak terpotong scroll)
+  // Paksa tabel melebar penuh (semua kolom terlihat)
   tableWrap.style.overflow = 'visible';
   tableWrap.style.width = 'max-content';
+  card.style.width = 'max-content';
 
-  html2canvas(card, { 
-    scale: 2, // Resolusi tinggi
-    backgroundColor: '#ffffff',
-    useCORS: true,
-    scrollX: 0,
-    scrollY: 0,
-    windowWidth: document.documentElement.offsetWidth
-  }).then(canvas => {
-    // Kembalikan style seperti semula
-    tableWrap.style.overflow = originalOverflow;
-    tableWrap.style.width = originalWidth;
-    btn.innerHTML = originalText;
-    btn.disabled = false;
-
-    // Download gambar
-    const link = document.createElement('a');
-    link.download = `Rekap_Stock_Opname_Mika_${new Date().getTime()}.png`;
-    link.href = canvas.toDataURL('image/png');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast('📸 Screenshot berhasil disimpan!');
-  }).catch(err => {
-    console.error(err);
-    tableWrap.style.overflow = originalOverflow;
-    tableWrap.style.width = originalWidth;
-    btn.innerHTML = originalText;
-    btn.disabled = false;
-    showToast('Gagal membuat screenshot.', 'error');
+  // Bagi baris menjadi beberapa bagian (7 tanggal per gambar)
+  const chunks = [];
+  let currentChunk = [];
+  let dateCount = 0;
+  
+  rows.forEach(row => {
+    const isNewDate = row.cells[0] && row.cells[0].classList.contains('tgl-col');
+    if (isNewDate) {
+      dateCount++;
+      // Jika sudah 7 tanggal, potong dan mulai gambar baru
+      if (dateCount > 7 && currentChunk.length > 0) {
+        chunks.push(currentChunk);
+        currentChunk = [];
+        dateCount = 1;
+      }
+    }
+    currentChunk.push(row);
   });
+  if (currentChunk.length > 0) chunks.push(currentChunk);
+
+  // Proses ambil gambar per bagian
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    
+    // Sembunyikan semua baris, lalu munculkan hanya baris di bagian ini
+    rows.forEach(r => r.style.display = 'none');
+    chunk.forEach(r => r.style.display = '');
+    
+    // Perbaiki rowspan agar tidak error saat baris lain disembunyikan
+    let dateGroups = [];
+    let currGroup = [];
+    chunk.forEach(row => {
+      if (row.cells[0] && row.cells[0].classList.contains('tgl-col')) {
+        if (currGroup.length > 0) dateGroups.push(currGroup);
+        currGroup = [row];
+      } else {
+        currGroup.push(row);
+      }
+    });
+    if (currGroup.length > 0) dateGroups.push(currGroup);
+    
+    dateGroups.forEach(group => {
+      const firstCell = group[0].cells[0];
+      if (firstCell && firstCell.classList.contains('tgl-col')) {
+         firstCell.rowSpan = group.length; // Sesuaikan rowspan dengan jumlah baris yang terlihat
+      }
+    });
+
+    // Ambil gambar
+    try {
+      const canvas = await html2canvas(card, { 
+        scale: 2, 
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        windowWidth: document.documentElement.offsetWidth
+      });
+      
+      const link = document.createElement('a');
+      link.download = `Rekap_Stock_Mika_Part${i+1}.png`;
+      link.href = canvas.toDataURL('image/png');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Jeda sebentar agar browser tidak memblokir download berikutnya
+      await new Promise(r => setTimeout(r, 1500));
+    } catch (err) {
+      console.error("Gagal capture part " + (i+1), err);
+    }
+  }
+
+  // Kembalikan kondisi tabel seperti semula
+  rows.forEach(r => r.style.display = '');
+  tableWrap.style.overflow = originalOverflow;
+  tableWrap.style.width = originalWidth;
+  card.style.width = originalCardWidth;
+  btn.innerHTML = originalText;
+  btn.disabled = false;
+  btnContainer.style.display = '';
+  
+  showToast(`✅ ${chunks.length} Gambar berhasil disimpan!`);
 }
