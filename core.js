@@ -341,16 +341,21 @@ async function syncQueue(manual) {
     if (manual) showToast('✓ Semua data tersinkron');
     return;
   }
+  
   syncBusy = true;
   updateSyncStatus('syncing');
   const BATCH_SIZE = 5, MAX_RETRY = 3;
   let totalProcessed = 0;
+  
   try {
     while (true) {
       const current = getSyncQueue();
       if (!current.length) break;
+      
       const batch = current.slice(0, BATCH_SIZE);
-      const remaining = current.slice(BATCH_SIZE);
+      // Kumpulkan ID dari data yang sedang dikirim
+      const batchIds = new Set(batch.map(x => String(x.id)));
+      
       let success = false, lastErr = null;
       for (let attempt = 1; attempt <= MAX_RETRY; attempt++) {
         try {
@@ -363,8 +368,14 @@ async function syncQueue(manual) {
         }
       }
       if (!success) throw lastErr || new Error('Batch gagal.');
+      
       totalProcessed += batch.length;
-      saveSyncQueue(remaining);
+      
+      // FIX BUG: Ambil antrean terbaru, dan hanya buang yang ID-nya sudah terkirim
+      const latestQueue = getSyncQueue();
+      const newQueue = latestQueue.filter(x => !batchIds.has(String(x.id)));
+      saveSyncQueue(newQueue);
+
       nativeStorage.setItem(SYNC_LAST_KEY, new Date().toISOString());
       await new Promise(r => setTimeout(r, 1000));
     }
@@ -374,7 +385,9 @@ async function syncQueue(manual) {
     console.error(err);
     updateSyncStatus('error', err.message);
     if (manual) showToast('Sync gagal: ' + err.message, 'error');
-  } finally { syncBusy = false; }
+  } finally { 
+    syncBusy = false; 
+  }
 }
 
 async function pullFromSheet(silent) {
