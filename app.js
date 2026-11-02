@@ -68,6 +68,10 @@ async function initApp() {
   try { renderTablePanen(); } catch (e) { console.warn('renderTablePanen:', e); }
   try { recalculateStockKemasan(); } catch (e) { console.warn('recalculateStockKemasan:', e); }
   try { renderKemasanForms(); } catch (e) { console.warn('renderKemasanForms:', e); }
+  
+  // TAMBAHKAN INI: Agar saat pertama buka, data dari rekap panen langsung ditarik
+  try { autoFillFromPanen(true); } catch (e) { console.warn('autoFillFromPanen:', e); }
+  
   try { renderKemasanTables(); } catch (e) { console.warn('renderKemasanTables:', e); }
   try { updateDashboard(); } catch (e) { console.warn('updateDashboard:', e); }
 
