@@ -378,14 +378,7 @@ async function syncQueue(manual) {
 }
 
 async function pullFromSheet(silent) {
-  if (!isAuthenticated || !currentScriptUrl()) {
-    if (!silent) showToast('Belum terhubung.', 'error');
-    return;
-  }
-  if (!navigator.onLine) {
-    if (!silent) showToast('Sedang offline.', 'error');
-    return;
-  }
+  if (!isAuthenticated || !currentScriptUrl() || !navigator.onLine) return;
   if (!silent && !confirm('Muat dari Google Sheet akan MENIMPA data lokal. Lanjutkan?')) return;
   if (getSyncQueue().length) await syncQueue();
   if (getSyncQueue().length) return;
@@ -401,10 +394,22 @@ async function pullFromSheet(silent) {
     suppressSync = false;
     nativeStorage.setItem(SYNC_MIGRATION_KEY, '1');
     nativeStorage.setItem('awb_last_pull_v1', String(Date.now()));
-    renderTableLks(); renderTablePanen();
-    recalculateStockKemasan(); renderKemasanForms(); renderKemasanTables(); updateDashboard();
+    
+    renderTableLks(); 
+    renderTablePanen();
+    recalculateStockKemasan(); 
+    
+    // --- PENGAMAN: Jangan render ulang form kemasan jika user sedang di halaman kemasan ---
+    const viewKemasan = document.getElementById('kemasan');
+    if (viewKemasan && viewKemasan.classList.contains('active')) {
+      renderKemasanTables(); // Cuma update tabelnya aja
+    } else {
+      renderKemasanForms();  // Update form kalau user lagi ga di halaman kemasan
+      renderKemasanTables();
+    }
+    
+    updateDashboard();
     updateSyncStatus();
-    if (!silent) showToast('✓ Data dimuat dari Sheet');
   } catch (err) {
     suppressSync = false;
     console.error(err);
