@@ -1096,7 +1096,6 @@ async function captureMikaTable() {
   btn.disabled = true;
   btnContainer.style.display = 'none';
 
-  // Ambil Header dan Footer tabel asli
   const theadHtml = table.querySelector('thead').outerHTML;
   const tfootHtml = table.querySelector('tfoot') ? table.querySelector('tfoot').outerHTML : '';
 
@@ -1115,14 +1114,12 @@ async function captureMikaTable() {
       }
       dateCount++;
     }
-    // Simpan CLONE dari baris (bukan elemen aslinya)
     currentChunk.push(row.cloneNode(true));
   });
   if (currentChunk.length > 0) chunks.push(currentChunk);
 
   // 2. Proses ambil gambar per bagian
   for (let i = 0; i < chunks.length; i++) {
-    // Bungkusan sementara di luar layar
     const wrapper = document.createElement('div');
     wrapper.style.position = 'absolute';
     wrapper.style.left = '-9999px';
@@ -1145,27 +1142,33 @@ async function captureMikaTable() {
       </div>
     `;
 
-    // Masukkan baris-baris clone ke tabel baru
     const newTbody = wrapper.querySelector('tbody');
     chunks[i].forEach(r => newTbody.appendChild(r));
 
-    // === FIX: paksa style inline agar html2canvas tidak bergantung CSS (sticky / nth-child) ===
+    // === FIX: background hanya di <td>, <tr> dibuat transparan ===
+    // (html2canvas menimpa sel rowspan dengan background <tr> baris di bawahnya)
     newTbody.querySelectorAll('tr').forEach(tr => {
       const even = tr.classList.contains('group-even');
       const rowBg = even ? '#ffffff' : '#f8fafc';
       const tglBg = even ? '#f1f5f9' : '#e2e8f0';
 
+      tr.style.setProperty('background', 'transparent', 'important');
+      tr.style.setProperty('background-color', 'transparent', 'important');
+
       tr.querySelectorAll('td').forEach(td => {
         td.style.setProperty('position', 'static', 'important');
 
         if (td.classList.contains('tgl-col')) {
-          td.style.setProperty('background', tglBg, 'important');
+          td.style.setProperty('background-color', tglBg, 'important');
           td.style.setProperty('color', '#1e293b', 'important');
           td.style.setProperty('vertical-align', 'middle', 'important');
           td.style.setProperty('text-align', 'center', 'important');
           td.style.setProperty('font-weight', '700', 'important');
         } else if (!td.classList.contains('col-total')) {
-          td.style.setProperty('background', rowBg, 'important');
+          td.style.setProperty('background-color', rowBg, 'important');
+        } else {
+          // col-total: pakai warna grup juga supaya tidak transparan
+          td.style.setProperty('background-color', rowBg, 'important');
         }
       });
     });
@@ -1175,8 +1178,6 @@ async function captureMikaTable() {
     // === END FIX ===
 
     document.body.appendChild(wrapper);
-
-    // Beri waktu agar browser selesai menghitung lebar kolom (rowspan dll)
     await new Promise(r => setTimeout(r, 150));
 
     try {
@@ -1195,7 +1196,6 @@ async function captureMikaTable() {
       link.click();
       document.body.removeChild(link);
 
-      // Jeda agar browser bisa memproses download berikutnya
       await new Promise(r => setTimeout(r, 1500));
     } catch (err) {
       console.error('Gagal capture part ' + (i + 1), err);
@@ -1204,7 +1204,6 @@ async function captureMikaTable() {
     }
   }
 
-  // Kembalikan tombol ke semula
   btn.innerHTML = originalText;
   btn.disabled = false;
   btnContainer.style.display = '';
