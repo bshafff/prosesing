@@ -28,7 +28,7 @@ function updateDashboard() {
   const frozenDb = allPanenDb.filter(x => x.tgl && x.tgl.startsWith(selectedMonth) && x.gh === 'GLOBAL');
   const frozenPerTgl = {};
   frozenDb.forEach(x => {
-    frozenPerTgl[x.tgl] = (frozenPerTgl[x.tgl] || 0) + (x.k_frozen || 0);
+    frozenPerTgl[x.tgl] = (frozenPerTgl[x.tgl] || 0) + (gKirimOf(x) || 0);
   });
 
   // 2. Hitung Total Kirim Grade (Hatsu+A11+A15) per tanggal untuk alokasi proporsional
@@ -45,7 +45,7 @@ function updateDashboard() {
 
   // Helper untuk alokasi Frozen proporsional
   const getFrozenAlokasi = (item) => {
-    if (item.gh === 'GLOBAL') return 0;
+    if (item.gh === 'GLOBAL' || dashGh() === 'all') return 0; // tampilan 'Semua GH' pakai nilai global langsung (hindari hitung dobel)
     const tgl = item.tgl;
     const totalFrozenHariItu = frozenPerTgl[tgl] || 0;
     if (totalFrozenHariItu === 0) return 0;
@@ -104,8 +104,8 @@ function updateDashboard() {
 
     // Data Global
     if (item.gh === 'GLOBAL') {
-      T.k_frozen += item.k_frozen || 0; // Untuk filter GLOBAL, langsung ambil aslinya
-      T.kirim_total += item.k_frozen || 0;
+      T.k_frozen += gKirimOf(item) || 0; // Untuk filter GLOBAL, langsung ambil aslinya
+      T.kirim_total += gKirimOf(item) || 0;
       T.t_curah += item.t_curah || 0;
       T.t_hatsu += item.t_hatsu || 0;
       T.t_a11 += item.t_a11 || 0;
@@ -186,7 +186,7 @@ function updateDashboard() {
       const rejRate = panenTotal > 0 ? (totalRej / panenTotal * 100) : 0;
       
       const alokasiFrozen = getFrozenAlokasi(item);
-      const kirimTotal = (item.k_hatsu || 0) + (item.k_a11 || 0) + (item.k_a15 || 0) + alokasiFrozen + (isGlobal ? (item.k_frozen||0) : 0);
+      const kirimTotal = (item.k_hatsu || 0) + (item.k_a11 || 0) + (item.k_a15 || 0) + alokasiFrozen + (isGlobal ? (gKirimOf(item)||0) : 0);
       const rKirim = panenTotal > 0 ? (kirimTotal / panenTotal * 100) : 0;
       const mikaTotal = (item.m_hatsu || 0) + (item.m_a11 || 0) + (item.m_a15 || 0);
       const tglFmt = item.tgl.split('-').reverse().join('/');
@@ -210,7 +210,7 @@ function updateDashboard() {
         <td>${(item.k_hatsu || 0).toFixed(2)}</td>
         <td>${(item.k_a11 || 0).toFixed(2)}</td>
         <td>${(item.k_a15 || 0).toFixed(2)}</td>
-        <td>${(isGlobal ? (item.k_frozen||0) : alokasiFrozen).toFixed(2)}</td>
+        <td>${(isGlobal ? (gKirimOf(item)||0) : alokasiFrozen).toFixed(2)}</td>
         <td><strong>${kirimTotal.toFixed(2)}</strong></td>
         <td class="rate-kirim">${rKirim.toFixed(2)}%</td>
         <td>${item.m_hatsu || 0}</td>
@@ -349,8 +349,8 @@ function renderMonthlyComparison() {
     m.k_hatsu += item.k_hatsu || 0;
     m.k_a11 += item.k_a11 || 0;
     m.k_a15 += item.k_a15 || 0;
-    m.k_frozen += item.k_frozen || 0;
-    m.kirim_total += (item.k_hatsu || 0) + (item.k_a11 || 0) + (item.k_a15 || 0) + (item.k_frozen || 0);
+    m.k_frozen += gKirimOf(item) || 0;
+    m.kirim_total += (item.k_hatsu || 0) + (item.k_a11 || 0) + (item.k_a15 || 0) + (gKirimOf(item) || 0);
     m.rej_total += rk + rp;
     m.m_hatsu += item.m_hatsu || 0;
     m.m_a11 += item.m_a11 || 0;
@@ -999,7 +999,7 @@ function downloadRecapHarianImage() {
     const rpTotal = (it.rp_crack || 0) + (it.rp_poli || 0) + (it.rp_hpt || 0) + (it.rp_bruise || 0) + (it.rp_overripe || 0) + (it.rp_kuning || 0) + (it.rp_frozen || 0);
     const panenTotal = (it.p_hatsu || 0) + (it.p_gradea || 0) + (it.p_gradeb || 0) + rk;
     const rejTotal = rk + rpTotal;
-    const kirimTotal = (it.k_hatsu || 0) + (it.k_a11 || 0) + (it.k_a15 || 0) + (it.k_frozen || 0);
+    const kirimTotal = (it.k_hatsu || 0) + (it.k_a11 || 0) + (it.k_a15 || 0) + (gKirimOf(it) || 0);
     const mikaTotal = (it.m_hatsu || 0) + (it.m_a11 || 0) + (it.m_a15 || 0);
     return {
       ...it, rk_total: rk, panen_total: panenTotal, rej_total: rejTotal,

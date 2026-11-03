@@ -1,138 +1,227 @@
 // ========== REKAP PANEN MODULE ==========
 let panenCurrentPage = 1;
 const PANEN_PER_PAGE = 10;
+let panenActiveTab = 'panen';
 
 function getValP(id) { 
   const el = document.getElementById(id);
   return el ? (parseFloat(el.value) || 0) : 0;
 }
 
+// ========== DEFINISI FIELD PER TAB ==========
+// Tiap tab hanya menulis field miliknya ke record (tgl + GH) yang sama.
+const PN_FIELDS = {
+  panen: ['p_hatsu', 'p_gradea', 'p_gradeb', 'rk_crack', 'rk_poli', 'rk_hpt'],
+  proc:  ['rp_crack', 'rp_poli', 'rp_hpt', 'rp_bruise', 'rp_overripe', 'rp_kuning', 'rp_frozen',
+          'k_hatsu', 'k_a11', 'k_a15', 'm_hatsu', 'm_a11', 'm_a15'],
+  procGlobal: ['k_frozen', 'k_rfresh'],
+  tamu:  ['t_curah', 't_hatsu', 't_a11', 't_a15']
+};
+const PN_ALL_NUM = [].concat(PN_FIELDS.panen, PN_FIELDS.proc, PN_FIELDS.procGlobal, PN_FIELDS.tamu);
+
+// 'p_hatsu' + 'gh1' -> 'p-hatsu-gh1' ; global: 'k_frozen' -> 'k-frozen'
+function pnId(key, ghStr) { return key.replace('_', '-') + (ghStr ? '-' + ghStr : ''); }
+
+function pnBlankRecord(tgl, gh) {
+  const rec = { id: generateId(), tgl: tgl, gh: gh, t_ket: '' };
+  PN_ALL_NUM.forEach(k => rec[k] = 0);
+  return rec;
+}
+
+// Cari record (tgl + gh). Kalau belum ada, buat baru. Hanya field yang dikirim yang ditimpa.
+function pnUpsert(db, tgl, gh, fields, createIfAllZero) {
+  let idx = db.findIndex(x => x.tgl === tgl && ghOf(x) === gh);
+  const hasValue = Object.keys(fields).some(k => k === 't_ket' ? String(fields[k]).trim() !== '' : fields[k] > 0);
+  if (idx === -1) {
+    if (!hasValue && !createIfAllZero) return false;
+    db.push(pnBlankRecord(tgl, gh));
+    idx = db.length - 1;
+  }
+  db[idx] = { ...db[idx], ...fields };
+  return true;
+}
+
+function pnReadFields(keys, ghStr) {
+  const out = {};
+  keys.forEach(k => { out[k] = getValP(pnId(k, ghStr)); });
+  return out;
+}
+
+// ========== TAB ==========
+function showPanenTab(name, btn) {
+  panenActiveTab = name;
+  document.querySelectorAll('#panen .pn-panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById('pn-panel-' + name);
+  if (panel) panel.classList.add('active');
+  document.querySelectorAll('#panen-tabs .sub-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  hitungAllPanen();
+}
+
+function pnSetStatus(tab, saved) {
+  const el = document.getElementById('pn-status-' + tab);
+  if (!el) return;
+  el.textContent = saved ? '✅' : '';
+  el.className = 'pn-status ' + (saved ? 'ok' : 'empty');
+}
+
+// ========== HITUNG ==========
 function hitungAllPanen() {
   const setTxt = (id, text) => {
     const el = document.getElementById(id);
     if (el) el.textContent = text;
   };
+  const kg = n => n.toFixed(2) + ' Kg';
 
-  // Total Reject Kebun GH1 + GH2
-  const totRkBun = getValP('rk-crack-gh1') + getValP('rk-poli-gh1') + getValP('rk-hpt-gh1') + 
-                   getValP('rk-crack-gh2') + getValP('rk-poli-gh2') + getValP('rk-hpt-gh2');
-  setTxt('calc-total-rk', totRkBun.toFixed(2) + ' Kg');
+  const sumKeys = (keys, gh) => keys.reduce((a, k) => a + getValP(k + '-' + gh), 0);
 
-  // Total Reject Processing GH1 + GH2
-  let totRPros = 0;
-  ['rp-crack', 'rp-poli', 'rp-hpt', 'rp-bruise', 'rp-overripe', 'rp-kuning', 'rp-frozen'].forEach(key => {
-    totRPros += getValP(key + '-gh1') + getValP(key + '-gh2');
-  });
-  setTxt('calc-total-rp', totRPros.toFixed(2) + ' Kg');
+  // --- TAB 1: Panen & Reject Kebun (per GH + gabungan) ---
+  const rkKeys = ['rk-crack', 'rk-poli', 'rk-hpt'];
+  const pKeys = ['p-hatsu', 'p-gradea', 'p-gradeb'];
+  const rk1 = sumKeys(rkKeys, 'gh1'), rk2 = sumKeys(rkKeys, 'gh2');
+  const panen1 = sumKeys(pKeys, 'gh1') + rk1;
+  const panen2 = sumKeys(pKeys, 'gh2') + rk2;
+  const totRkBun = rk1 + rk2;
+  const totalPanen = panen1 + panen2;
 
-  // Grand Total Reject
+  setTxt('sum-rk-gh1', kg(rk1));
+  setTxt('sum-rk-gh2', kg(rk2));
+  setTxt('calc-total-rk', kg(totRkBun));
+  setTxt('sum-panen-gh1', kg(panen1));
+  setTxt('sum-panen-gh2', kg(panen2));
+  setTxt('calc-total-panen', kg(totalPanen));
+
+  // --- TAB 2: Reject Processing (fresh vs frozen) ---
+  const freshKeys = ['rp-crack', 'rp-poli', 'rp-hpt', 'rp-bruise', 'rp-overripe', 'rp-kuning'];
+  const rpFresh = sumKeys(freshKeys, 'gh1') + sumKeys(freshKeys, 'gh2');
+  const rpFrozen = getValP('rp-frozen-gh1') + getValP('rp-frozen-gh2');
+  const totRPros = rpFresh + rpFrozen;
+  setTxt('calc-rp-fresh', kg(rpFresh));
+  setTxt('calc-rp-frozen', kg(rpFrozen));
+  setTxt('calc-total-rp', kg(totRPros));
+
   const grandTotalReject = totRkBun + totRPros;
-  setTxt('calc-grand-total-r', grandTotalReject.toFixed(2) + ' Kg');
-
-  // Total Panen Keseluruhan
-  const totalPanen = getValP('p-hatsu-gh1') + getValP('p-gradea-gh1') + getValP('p-gradeb-gh1') +
-                     getValP('p-hatsu-gh2') + getValP('p-gradea-gh2') + getValP('p-gradeb-gh2') + totRkBun;
-  setTxt('calc-total-panen', totalPanen.toFixed(2) + ' Kg');
-
-  // Reject Rate
+  setTxt('calc-grand-total-r', kg(grandTotalReject));
   const rejectRate = totalPanen > 0 ? (grandTotalReject / totalPanen * 100) : 0;
   setTxt('calc-reject-rate', rejectRate.toFixed(2) + '%');
 
-  // Total Pengiriman GH1 + GH2
+  // Pengiriman: grade + reject dikirim (frozen & fresh) -> masuk persentase kirim
   const totalKirim = getValP('k-hatsu-gh1') + getValP('k-a11-gh1') + getValP('k-a15-gh1') +
                      getValP('k-hatsu-gh2') + getValP('k-a11-gh2') + getValP('k-a15-gh2');
-  const rateKirim = totalPanen > 0 ? (totalKirim / totalPanen * 100) : 0;
-  setTxt('calc-total-kirim', totalKirim.toFixed(2) + ' Kg');
+  const kirimReject = getValP('k-frozen') + getValP('k-rfresh');
+  const kirimAll = totalKirim + kirimReject;
+  const rateKirim = totalPanen > 0 ? (kirimAll / totalPanen * 100) : 0;
+  setTxt('calc-total-kirim', kg(totalKirim));
+  setTxt('calc-kirim-reject', kg(kirimReject));
+  setTxt('calc-total-kirim-all', kg(kirimAll));
   setTxt('calc-rate-kirim', rateKirim.toFixed(2) + '%');
 
-  // Total Mika GH1 + GH2
   const totalMika = getValP('m-hatsu-gh1') + getValP('m-a11-gh1') + getValP('m-a15-gh1') +
                     getValP('m-hatsu-gh2') + getValP('m-a11-gh2') + getValP('m-a15-gh2');
   setTxt('calc-total-mika', totalMika + ' Pcs');
 }
 
-// ========== SIMPAN DATA ==========
-function simpanDataPanen() {
-  const tgl = document.getElementById('panen-tgl').value;
-  if (!tgl) { showToast('Pilih tanggal panen!', 'error'); return; }
+// ========== ISI FORM DARI DATA TERSIMPAN (per tanggal) ==========
+function loadPanenForDate() {
+  const tglEl = document.getElementById('panen-tgl');
+  if (!tglEl || !tglEl.value) return;
+  const tgl = tglEl.value;
+  const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
 
-  let db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
-  let savedCount = 0;
+  // kosongkan semua input dulu
+  document.querySelectorAll('#panen .pn-panel input').forEach(i => i.value = '');
 
-  // --- PROSES GH 1 ---
-  const gh1Data = {
-    p_hatsu: getValP('p-hatsu-gh1'), p_gradea: getValP('p-gradea-gh1'), p_gradeb: getValP('p-gradeb-gh1'),
-    rk_crack: getValP('rk-crack-gh1'), rk_poli: getValP('rk-poli-gh1'), rk_hpt: getValP('rk-hpt-gh1'),
-    rp_crack: getValP('rp-crack-gh1'), rp_poli: getValP('rp-poli-gh1'), rp_hpt: getValP('rp-hpt-gh1'),
-    rp_bruise: getValP('rp-bruise-gh1'), rp_overripe: getValP('rp-overripe-gh1'), rp_kuning: getValP('rp-kuning-gh1'), rp_frozen: getValP('rp-frozen-gh1'),
-    k_hatsu: getValP('k-hatsu-gh1'), k_a11: getValP('k-a11-gh1'), k_a15: getValP('k-a15-gh1'),
-    m_hatsu: getValP('m-hatsu-gh1'), m_a11: getValP('m-a11-gh1'), m_a15: getValP('m-a15-gh1')
-  };
-  
-  if (Object.values(gh1Data).some(v => v > 0)) {
-    db.push({
-      id: generateId(), tgl: tgl, gh: 'GH 1', ...gh1Data,
-      k_frozen: 0, t_curah: 0, t_hatsu: 0, t_a11: 0, t_a15: 0, t_ket: ''
-    });
-    savedCount++;
-  }
-
-  // --- PROSES GH 2 ---
-  const gh2Data = {
-    p_hatsu: getValP('p-hatsu-gh2'), p_gradea: getValP('p-gradea-gh2'), p_gradeb: getValP('p-gradeb-gh2'),
-    rk_crack: getValP('rk-crack-gh2'), rk_poli: getValP('rk-poli-gh2'), rk_hpt: getValP('rk-hpt-gh2'),
-    rp_crack: getValP('rp-crack-gh2'), rp_poli: getValP('rp-poli-gh2'), rp_hpt: getValP('rp-hpt-gh2'),
-    rp_bruise: getValP('rp-bruise-gh2'), rp_overripe: getValP('rp-overripe-gh2'), rp_kuning: getValP('rp-kuning-gh2'), rp_frozen: getValP('rp-frozen-gh2'),
-    k_hatsu: getValP('k-hatsu-gh2'), k_a11: getValP('k-a11-gh2'), k_a15: getValP('k-a15-gh2'),
-    m_hatsu: getValP('m-hatsu-gh2'), m_a11: getValP('m-a11-gh2'), m_a15: getValP('m-a15-gh2')
+  const setIn = (id, v) => {
+    const el = document.getElementById(id);
+    if (el) el.value = (v && v !== 0) ? v : '';
   };
 
-  if (Object.values(gh2Data).some(v => v > 0)) {
-    db.push({
-      id: generateId(), tgl: tgl, gh: 'GH 2', ...gh2Data,
-      k_frozen: 0, t_curah: 0, t_hatsu: 0, t_a11: 0, t_a15: 0, t_ket: ''
-    });
-    savedCount++;
+  let savedPanen = false, savedProc = false, savedTamu = false;
+
+  ['gh1', 'gh2'].forEach(ghStr => {
+    const gh = ghStr === 'gh1' ? 'GH 1' : 'GH 2';
+    const rec = db.find(x => x.tgl === tgl && ghOf(x) === gh);
+    if (!rec) return;
+    PN_FIELDS.panen.forEach(k => setIn(pnId(k, ghStr), rec[k]));
+    PN_FIELDS.proc.forEach(k => setIn(pnId(k, ghStr), rec[k]));
+    if (PN_FIELDS.panen.some(k => (rec[k] || 0) > 0)) savedPanen = true;
+    if (PN_FIELDS.proc.some(k => (rec[k] || 0) > 0)) savedProc = true;
+  });
+
+  const g = db.find(x => x.tgl === tgl && x.gh === 'GLOBAL');
+  if (g) {
+    PN_FIELDS.procGlobal.forEach(k => setIn(pnId(k), g[k]));
+    PN_FIELDS.tamu.forEach(k => setIn(pnId(k), g[k]));
+    const ket = document.getElementById('t-ket');
+    if (ket) ket.value = g.t_ket || '';
+    if (PN_FIELDS.procGlobal.some(k => (g[k] || 0) > 0)) savedProc = true;
+    if (PN_FIELDS.tamu.some(k => (g[k] || 0) > 0) || String(g.t_ket || '').trim()) savedTamu = true;
   }
 
-  // --- PROSES GLOBAL ---
-  const globalData = {
-    k_frozen: getValP('k-frozen'),
-    t_curah: getValP('t-curah'), t_hatsu: getValP('t-hatsu'), t_a11: getValP('t-a11'), t_a15: getValP('t-a15'), t_ket: document.getElementById('t-ket').value
-  };
-
-  if (Object.entries(globalData).some(([k, v]) => k === 't_ket' ? v !== '' : v > 0)) {
-    db.push({
-      id: generateId(), tgl: tgl, gh: 'GLOBAL',
-      p_hatsu: 0, p_gradea: 0, p_gradeb: 0, rk_crack: 0, rk_poli: 0, rk_hpt: 0,
-      rp_crack: 0, rp_poli: 0, rp_hpt: 0, rp_bruise: 0, rp_overripe: 0, rp_kuning: 0, rp_frozen: 0,
-      k_hatsu: 0, k_a11: 0, k_a15: 0, m_hatsu: 0, m_a11: 0, m_a15: 0,
-      ...globalData
-    });
-    savedCount++;
-  }
-
-  if (savedCount === 0) {
-    showToast('Isi minimal 1 data panen!', 'error');
-    return;
-  }
-
-  localStorage.setItem(PANEN_STORAGE_KEY, JSON.stringify(db));
-  
-  if (isAuthenticated && currentScriptUrl()) {
-    syncQueue(true);
-  }
-
-  showToast(`✅ ${savedCount} Data panen berhasil disimpan!`);
-  resetFormPanen();
-  renderTablePanen();
-  updateDashboard();
+  pnSetStatus('panen', savedPanen);
+  pnSetStatus('proc', savedProc);
+  pnSetStatus('tamu', savedTamu);
+  hitungAllPanen();
 }
 
+// ========== SIMPAN PER TAB ==========
+function pnFinishSave(msg) {
+  localStorage.setItem(PANEN_STORAGE_KEY, JSON.stringify(window.__pnDb));
+  if (isAuthenticated && currentScriptUrl()) syncQueue(true);
+  showToast(msg);
+  renderTablePanen();
+  updateDashboard();
+  loadPanenForDate(); // refresh status ✅ + pastikan form = data tersimpan
+}
+
+function pnGetTgl() {
+  const tgl = document.getElementById('panen-tgl').value;
+  if (!tgl) showToast('Pilih tanggal panen!', 'error');
+  return tgl;
+}
+
+function simpanTabPanen() {
+  const tgl = pnGetTgl(); if (!tgl) return;
+  const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+  let n = 0;
+  ['gh1', 'gh2'].forEach(ghStr => {
+    const gh = ghStr === 'gh1' ? 'GH 1' : 'GH 2';
+    if (pnUpsert(db, tgl, gh, pnReadFields(PN_FIELDS.panen, ghStr), false)) n++;
+  });
+  if (n === 0) { showToast('Isi minimal 1 data panen / reject kebun!', 'error'); return; }
+  window.__pnDb = db;
+  pnFinishSave('✅ Panen & Reject Kebun tersimpan!');
+}
+
+function simpanTabProcessing() {
+  const tgl = pnGetTgl(); if (!tgl) return;
+  const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+  let n = 0;
+  ['gh1', 'gh2'].forEach(ghStr => {
+    const gh = ghStr === 'gh1' ? 'GH 1' : 'GH 2';
+    if (pnUpsert(db, tgl, gh, pnReadFields(PN_FIELDS.proc, ghStr), false)) n++;
+  });
+  // Reject dikirim (frozen & fresh) = record GLOBAL tanggal tsb
+  if (pnUpsert(db, tgl, 'GLOBAL', pnReadFields(PN_FIELDS.procGlobal), false)) n++;
+  if (n === 0) { showToast('Isi minimal 1 data reject / pengiriman!', 'error'); return; }
+  window.__pnDb = db;
+  pnFinishSave('✅ Reject & Pengiriman tersimpan!');
+}
+
+function simpanTabTamu() {
+  const tgl = pnGetTgl(); if (!tgl) return;
+  const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+  const fields = pnReadFields(PN_FIELDS.tamu);
+  fields.t_ket = document.getElementById('t-ket').value;
+  if (!pnUpsert(db, tgl, 'GLOBAL', fields, false)) { showToast('Isi minimal 1 data tamu / sampel!', 'error'); return; }
+  window.__pnDb = db;
+  pnFinishSave('✅ Tamu / Sampel tersimpan!');
+}
+
+// Reset hanya tab yang sedang aktif (form saja; data tersimpan tidak dihapus)
 function resetFormPanen() {
-  document.querySelectorAll('#panen input[type="number"]').forEach(i => i.value = '');
-  document.querySelectorAll('#panen input[type="text"]').forEach(i => i.value = '');
-  document.getElementById('panen-tgl').value = new Date().toISOString().split('T')[0];
+  const panel = document.getElementById('pn-panel-' + panenActiveTab);
+  if (panel) panel.querySelectorAll('input').forEach(i => i.value = '');
   hitungAllPanen();
 }
 
@@ -187,7 +276,7 @@ function renderTablePanen() {
         <td class="text-right">${isGlobal ? '-' : (item.p_gradea || 0).toFixed(2)}</td>
         <td class="text-right">${isGlobal ? '-' : (item.p_gradeb || 0).toFixed(2)}</td>
         <td class="text-right"><strong>${isGlobal ? '-' : totPanen.toFixed(2)}</strong></td>
-        <td class="text-right"><strong>${isGlobal ? (item.k_frozen || 0).toFixed(2) + ' (Frozen)' : totKirim.toFixed(2)}</strong></td>
+        <td class="text-right"><strong>${isGlobal ? gKirimOf(item).toFixed(2) + ' (Reject Dikirim)' : totKirim.toFixed(2)}</strong></td>
         <td class="text-right">${isGlobal ? '-' : grandReject.toFixed(2)}</td>
         <td class="text-right">${isGlobal ? '-' : rejRate.toFixed(2) + '%'}</td>
         <td class="text-right"><strong>${isGlobal ? '-' : totMika}</strong></td>
@@ -275,8 +364,9 @@ function generateWATextFromItem(item) {
   let t = '';
   
   if (item.gh === 'GLOBAL') {
-    t += `*Data Global (Frozen & Tamu)*\n*${tglFmt}*\n\n`;
-    t += `Total Frozen : ${fmtKg(k_frozen)} kg\n\n`;
+    t += `*Data Global (Reject Dikirim & Tamu)*\n*${tglFmt}*\n\n`;
+    t += `Reject Frozen Dikirim : ${fmtKg(k_frozen)} kg\n`;
+    t += `Reject Fresh Dikirim : ${fmtKg(item.k_rfresh)} kg\n\n`;
     t += `Tamu Curah : ${fmtKg(item.t_curah)} kg\n`;
     t += `Tamu Hatsu : ${fmtInt(item.t_hatsu)} pcs\n`;
     t += `Tamu A11 : ${fmtInt(item.t_a11)} pcs\n`;
@@ -342,11 +432,11 @@ function generateWAText() {
     }
   });
 
-  const isGlobalFilled = getValP('k-frozen') > 0 || getValP('t-curah') > 0 || getValP('t-hatsu') > 0 || getValP('t-a11') > 0 || getValP('t-a15') > 0 || document.getElementById('t-ket').value !== '';
+  const isGlobalFilled = getValP('k-frozen') > 0 || getValP('k-rfresh') > 0 || getValP('t-curah') > 0 || getValP('t-hatsu') > 0 || getValP('t-a11') > 0 || getValP('t-a15') > 0 || document.getElementById('t-ket').value !== '';
   if (isGlobalFilled) {
     const itemGlobal = {
       tgl: tgl, gh: 'GLOBAL',
-      k_frozen: getValP('k-frozen'), t_curah: getValP('t-curah'), t_hatsu: getValP('t-hatsu'), t_a11: getValP('t-a11'), t_a15: getValP('t-a15'), t_ket: document.getElementById('t-ket').value
+      k_frozen: getValP('k-frozen'), k_rfresh: getValP('k-rfresh'), t_curah: getValP('t-curah'), t_hatsu: getValP('t-hatsu'), t_a11: getValP('t-a11'), t_a15: getValP('t-a15'), t_ket: document.getElementById('t-ket').value
     };
     text += generateWATextFromItem(itemGlobal);
   }
@@ -597,7 +687,7 @@ function editDataPanen(id) {
 
   let html = `
     <div class="input-group"><label>Tanggal</label><input type="date" id="edit-p-tgl" value="${item.tgl}"></div>
-    <div class="input-group"><label>Greenhouse</label><select id="edit-p-gh"><option value="GH 1" ${item.gh === 'GH 1' ? 'selected' : ''}>GH 1</option><option value="GH 2" ${item.gh === 'GH 2' ? 'selected' : ''}>GH 2</option><option value="GLOBAL" ${isGlobal ? 'selected' : ''}>🌐 GLOBAL (Frozen & Tamu)</option></select></div>
+    <div class="input-group"><label>Greenhouse</label><select id="edit-p-gh"><option value="GH 1" ${item.gh === 'GH 1' ? 'selected' : ''}>GH 1</option><option value="GH 2" ${item.gh === 'GH 2' ? 'selected' : ''}>GH 2</option><option value="GLOBAL" ${isGlobal ? 'selected' : ''}>🌐 GLOBAL (Reject Dikirim & Tamu)</option></select></div>
   `;
 
   if (!isGlobal) {
@@ -639,8 +729,9 @@ function editDataPanen(id) {
   } else {
     html += `
       <hr style="border:0;border-top:2px solid #e5e7eb;margin:1rem 0;">
-      <div style="font-size:0.75rem;font-weight:800;color:#2d5016;text-transform:uppercase;margin-bottom:0.75rem;">❄️ Frozen & Tamu (Global)</div>
-      <div class="input-group"><label>Total Frozen (Kg)</label><input type="number" step="0.01" id="edit-k-frozen" value="${item.k_frozen || 0}"></div>
+      <div style="font-size:0.75rem;font-weight:800;color:#2d5016;text-transform:uppercase;margin-bottom:0.75rem;">❄️ Reject Dikirim & Tamu (Global)</div>
+      <div class="input-group"><label>Reject Frozen Dikirim (Kg)</label><input type="number" step="0.01" id="edit-k-frozen" value="${item.k_frozen || 0}"></div>
+      <div class="input-group"><label>Reject Fresh Dikirim (Kg)</label><input type="number" step="0.01" id="edit-k-rfresh" value="${item.k_rfresh || 0}"></div>
       
       <hr style="border:0;border-top:2px solid #e5e7eb;margin:1rem 0;">
       <div class="input-group"><label>Tamu Curah (Kg)</label><input type="number" step="0.01" id="edit-t-curah" value="${item.t_curah || 0}"></div>
@@ -699,6 +790,7 @@ function saveEditPanen() {
     m_a11: isGlobal ? 0 : gInt('edit-m-a11'),
     m_a15: isGlobal ? 0 : gInt('edit-m-a15'),
     k_frozen: g('edit-k-frozen'),
+    k_rfresh: g('edit-k-rfresh'),
     t_curah: g('edit-t-curah'),
     t_hatsu: gInt('edit-t-hatsu'),
     t_a11: gInt('edit-t-a11'),

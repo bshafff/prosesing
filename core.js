@@ -34,6 +34,8 @@ function ensureValidId(rec, usedIds) {
 }
 
 // ========== HELPERS ==========
+// Total reject yang dikirim global (frozen + fresh)
+function gKirimOf(x) { return ((x && x.k_frozen) || 0) + ((x && x.k_rfresh) || 0); }
 function ghOf(item) { return item && item.gh ? item.gh : 'GH 1'; }
 function filterGh(arr, gh) { return (!gh || gh === 'all') ? arr : arr.filter(x => ghOf(x) === gh); }
 function dashGh() { const el = document.getElementById('dashboard-gh'); return el ? el.value : 'all'; }
@@ -843,7 +845,7 @@ function buildPanenRecord(r) {
     rk_crack: num(r.rk_crack), rk_poli: num(r.rk_poli), rk_hpt: num(r.rk_hpt),
     rp_crack: num(r.rp_crack), rp_poli: num(r.rp_poli), rp_hpt: num(r.rp_hpt),
     rp_bruise: num(r.rp_bruise), rp_overripe: num(r.rp_overripe), rp_kuning: num(r.rp_kuning), rp_frozen: num(r.rp_frozen),
-    k_hatsu: num(r.k_hatsu), k_a11: num(r.k_a11), k_a15: num(r.k_a15), k_frozen: num(r.k_frozen),
+    k_hatsu: num(r.k_hatsu), k_a11: num(r.k_a11), k_a15: num(r.k_a15), k_frozen: num(r.k_frozen), k_rfresh: num(r.k_rfresh),
     m_hatsu: num(r.m_hatsu), m_a11: num(r.m_a11), m_a15: num(r.m_a15),
     t_curah: num(r.t_curah), t_hatsu: num(r.t_hatsu), t_a11: num(r.t_a11), t_a15: num(r.t_a15),
     t_ket: r.t_ket || ''

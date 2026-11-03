@@ -66,6 +66,7 @@ async function initApp() {
   // 3. Init render data
   try { renderTableLks(); } catch (e) { console.warn('renderTableLks:', e); }
   try { renderTablePanen(); } catch (e) { console.warn('renderTablePanen:', e); }
+  try { loadPanenForDate(); } catch (e) { console.warn('loadPanenForDate:', e); }
   try { recalculateStockKemasan(); } catch (e) { console.warn('recalculateStockKemasan:', e); }
   try { renderKemasanForms(); } catch (e) { console.warn('renderKemasanForms:', e); }
   

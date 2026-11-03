@@ -9,12 +9,37 @@
     <div class="card-title">📅 Tanggal Panen</div>
     <div class="input-group">
       <label>Tanggal</label>
-      <input type="date" id="panen-tgl">
+      <input type="date" id="panen-tgl" onchange="loadPanenForDate()">
+      <small style="color:#666;display:block;margin-top:0.5rem;">Data yang sudah tersimpan di tanggal ini otomatis muncul. Tiap tab disimpan sendiri &amp; hanya memperbarui bagiannya.</small>
     </div>
   </div>
 
-  <!-- ================= FORM UTAMA (GH 1 & GH 2) ================= -->
-  <div id="form-khusus-gh">
+  <style>
+    .pn-panel { display: none; }
+    .pn-panel.active { display: block; }
+    .pn-status { font-size: 0.75rem; font-weight: 700; margin-left: 0.35rem; }
+    .pn-status.ok { color: #16a34a; }
+    .pn-status.empty { color: #9ca3af; }
+    .pn-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 1rem; }
+    .pn-sum > div { border-radius: 8px; padding: 0.75rem; text-align: center; }
+    .pn-sum small { display: block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; opacity: 0.8; }
+    .pn-sum b { font-size: 1.15rem; }
+    .pn-sum .gh1 { background: #eff6ff; color: #1e40af; }
+    .pn-sum .gh2 { background: #fff7ed; color: #b45309; }
+    .pn-sum .all { background: #f0fdf4; color: #166534; border: 1.5px solid #16a34a; }
+    .pn-sum.rk .all { background: #fef2f2; color: #991b1b; border-color: #dc2626; }
+    .pn-note { font-size: 0.8rem; color: #666; margin-top: 0.5rem; }
+    @media (max-width: 600px) { .pn-sum { grid-template-columns: 1fr; } }
+  </style>
+
+  <div class="sub-tabs" id="panen-tabs">
+    <button class="sub-tab active" onclick="showPanenTab('panen', this)">🌾 Panen &amp; Reject Kebun <span class="pn-status empty" id="pn-status-panen"></span></button>
+    <button class="sub-tab" onclick="showPanenTab('proc', this)">🏭 Reject &amp; Pengiriman <span class="pn-status empty" id="pn-status-proc"></span></button>
+    <button class="sub-tab" onclick="showPanenTab('tamu', this)">🎁 Tamu / Sampel <span class="pn-status empty" id="pn-status-tamu"></span></button>
+  </div>
+
+  <!-- ================= TAB 1: PANEN & REJECT KEBUN ================= -->
+  <div id="pn-panel-panen" class="pn-panel active">
     <div class="card">
       <div class="card-title">🌾 1. Panen (Kg)</div>
       <div class="sub-title" style="color:#1e40af;">GH 1</div>
@@ -23,15 +48,18 @@
         <div class="input-group"><label>Grade A</label><input type="number" step="0.01" id="p-gradea-gh1" placeholder="0.00" oninput="hitungAllPanen()"></div>
         <div class="input-group"><label>Grade B</label><input type="number" step="0.01" id="p-gradeb-gh1" placeholder="0.00" oninput="hitungAllPanen()"></div>
       </div>
-      
+
       <div class="sub-title" style="color:#b45309; margin-top:1rem;">GH 2</div>
       <div class="row-3">
         <div class="input-group"><label>Hatsuhana</label><input type="number" step="0.01" id="p-hatsu-gh2" placeholder="0.00" oninput="hitungAllPanen()"></div>
         <div class="input-group"><label>Grade A</label><input type="number" step="0.01" id="p-gradea-gh2" placeholder="0.00" oninput="hitungAllPanen()"></div>
         <div class="input-group"><label>Grade B</label><input type="number" step="0.01" id="p-gradeb-gh2" placeholder="0.00" oninput="hitungAllPanen()"></div>
       </div>
-      <div style="background: #fff7e6; border-left: 4px solid #ea580c; padding: 1rem; border-radius: 6px; margin-top: 1rem;">
-        <strong>Total Panen (Termasuk Reject Kebun):</strong> <span id="calc-total-panen" style="font-size: 1.25rem; font-weight: 800;">0.00 Kg</span>
+      <div style="background: #fff7e6; border-left: 4px solid #ea580c; padding: 0.75rem 1rem; border-radius: 6px; margin-top: 1rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase;">Total Panen (Termasuk Reject Kebun)</div>
+      <div class="pn-sum">
+        <div class="gh1"><small>GH 1</small><b id="sum-panen-gh1">0.00 Kg</b></div>
+        <div class="gh2"><small>GH 2</small><b id="sum-panen-gh2">0.00 Kg</b></div>
+        <div class="all"><small>Gabungan</small><b id="calc-total-panen">0.00 Kg</b></div>
       </div>
     </div>
 
@@ -43,18 +71,28 @@
         <div class="input-group"><label>Polinasi</label><input type="number" step="0.01" id="rk-poli-gh1" placeholder="0.00" oninput="hitungAllPanen()"></div>
         <div class="input-group"><label>HPT</label><input type="number" step="0.01" id="rk-hpt-gh1" placeholder="0.00" oninput="hitungAllPanen()"></div>
       </div>
-      
+
       <div class="sub-title" style="color:#b45309; margin-top:1rem;">GH 2</div>
       <div class="row-3">
         <div class="input-group"><label>Cracking</label><input type="number" step="0.01" id="rk-crack-gh2" placeholder="0.00" oninput="hitungAllPanen()"></div>
         <div class="input-group"><label>Polinasi</label><input type="number" step="0.01" id="rk-poli-gh2" placeholder="0.00" oninput="hitungAllPanen()"></div>
         <div class="input-group"><label>HPT</label><input type="number" step="0.01" id="rk-hpt-gh2" placeholder="0.00" oninput="hitungAllPanen()"></div>
       </div>
-      <div style="background: #f0fdf4; border-left: 4px solid #16a34a; padding: 1rem; border-radius: 6px; margin-top: 1rem;">
-        <strong>Total Reject Kebun:</strong> <span id="calc-total-rk" style="font-size: 1.25rem; font-weight: 800;">0.00 Kg</span>
+      <div style="background: #f0fdf4; border-left: 4px solid #16a34a; padding: 0.75rem 1rem; border-radius: 6px; margin-top: 1rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase;">Total Reject Kebun</div>
+      <div class="pn-sum rk">
+        <div class="gh1"><small>GH 1</small><b id="sum-rk-gh1">0.00 Kg</b></div>
+        <div class="gh2"><small>GH 2</small><b id="sum-rk-gh2">0.00 Kg</b></div>
+        <div class="all"><small>Gabungan</small><b id="calc-total-rk">0.00 Kg</b></div>
       </div>
     </div>
 
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="simpanTabPanen()">💾 Simpan Panen &amp; Reject Kebun</button>
+    </div>
+  </div>
+
+  <!-- ================= TAB 2: REJECT PROCESSING & PENGIRIMAN ================= -->
+  <div id="pn-panel-proc" class="pn-panel">
     <div class="card">
       <div class="card-title">🏭 3. Reject Processing (Kg)</div>
       <div class="sub-title" style="color:#1e40af;">GH 1</div>
@@ -65,9 +103,9 @@
         <div class="input-group"><label>Bruise</label><input type="number" step="0.01" id="rp-bruise-gh1" placeholder="0.00" oninput="hitungAllPanen()"></div>
         <div class="input-group"><label>Overripe</label><input type="number" step="0.01" id="rp-overripe-gh1" placeholder="0.00" oninput="hitungAllPanen()"></div>
         <div class="input-group"><label>Buah Kuning</label><input type="number" step="0.01" id="rp-kuning-gh1" placeholder="0.00" oninput="hitungAllPanen()"></div>
-        <div class="input-group"><label>Frozen (&lt;11 gr)</label><input type="number" step="0.01" id="rp-frozen-gh1" placeholder="0.00" oninput="hitungAllPanen()"></div>
+              <div class="input-group"><label>Frozen (&lt;11 gr)</label><input type="number" step="0.01" id="rp-frozen-gh1" placeholder="0.00" oninput="hitungAllPanen()"></div>
       </div>
-      
+
       <div class="sub-title" style="color:#b45309; margin-top:1rem;">GH 2</div>
       <div class="row-6">
         <div class="input-group"><label>Cracking</label><input type="number" step="0.01" id="rp-crack-gh2" placeholder="0.00" oninput="hitungAllPanen()"></div>
@@ -76,13 +114,14 @@
         <div class="input-group"><label>Bruise</label><input type="number" step="0.01" id="rp-bruise-gh2" placeholder="0.00" oninput="hitungAllPanen()"></div>
         <div class="input-group"><label>Overripe</label><input type="number" step="0.01" id="rp-overripe-gh2" placeholder="0.00" oninput="hitungAllPanen()"></div>
         <div class="input-group"><label>Buah Kuning</label><input type="number" step="0.01" id="rp-kuning-gh2" placeholder="0.00" oninput="hitungAllPanen()"></div>
-        <div class="input-group"><label>Frozen (&lt;11 gr)</label><input type="number" step="0.01" id="rp-frozen-gh2" placeholder="0.00" oninput="hitungAllPanen()"></div>
+              <div class="input-group"><label>Frozen (&lt;11 gr)</label><input type="number" step="0.01" id="rp-frozen-gh2" placeholder="0.00" oninput="hitungAllPanen()"></div>
       </div>
-      <div style="background: #fee2e2; border-left: 4px solid #dc2626; padding: 1rem; border-radius: 6px; margin-top: 1rem;">
-        <strong>Total Reject Processing:</strong> <span id="calc-total-rp" style="font-size: 1.25rem; font-weight: 800;">0.00 Kg</span> | 
-        <strong>Grand Total Reject:</strong> <span id="calc-grand-total-r" style="color: #dc2626; font-size: 1.25rem;">0.00 Kg</span> | 
+      <div style="background: #fee2e2; border-left: 4px solid #dc2626; padding: 1rem; border-radius: 6px; margin-top: 1rem; line-height: 1.8;">
+        <strong>Total Reject Processing:</strong> <span id="calc-total-rp" style="font-size: 1.25rem; font-weight: 800;">0.00 Kg</span><br>
+        <strong>Grand Total Reject (+ Kebun):</strong> <span id="calc-grand-total-r" style="color: #dc2626; font-size: 1.25rem;">0.00 Kg</span> |
         <strong>Reject Rate:</strong> <span id="calc-reject-rate" style="color: #dc2626; font-size: 1.25rem;">0.00%</span>
       </div>
+      <div class="pn-note">Reject Rate memakai Total Panen dari tab Panen &amp; Reject Kebun (tanggal yang sama).</div>
     </div>
 
     <div class="card">
@@ -93,16 +132,12 @@
         <div class="input-group"><label>A11</label><input type="number" step="0.01" id="k-a11-gh1" placeholder="0.00" oninput="hitungAllPanen()"></div>
         <div class="input-group"><label>A15</label><input type="number" step="0.01" id="k-a15-gh1" placeholder="0.00" oninput="hitungAllPanen()"></div>
       </div>
-      
+
       <div class="sub-title" style="color:#b45309; margin-top:1rem;">GH 2</div>
       <div class="row-3">
         <div class="input-group"><label>Hatsuhana</label><input type="number" step="0.01" id="k-hatsu-gh2" placeholder="0.00" oninput="hitungAllPanen()"></div>
         <div class="input-group"><label>A11</label><input type="number" step="0.01" id="k-a11-gh2" placeholder="0.00" oninput="hitungAllPanen()"></div>
         <div class="input-group"><label>A15</label><input type="number" step="0.01" id="k-a15-gh2" placeholder="0.00" oninput="hitungAllPanen()"></div>
-      </div>
-      <div style="background: #e8f5e9; border-left: 4px solid #16a34a; padding: 1rem; border-radius: 6px; margin-top: 1rem;">
-        <strong>Total Pengiriman Grade:</strong> <span id="calc-total-kirim" style="font-size: 1.25rem; font-weight: 800;">0.00 Kg</span> | 
-        <strong>Rate Kirim:</strong> <span id="calc-rate-kirim" style="color: #16a34a; font-size: 1.25rem;">0.00%</span>
       </div>
     </div>
 
@@ -114,7 +149,7 @@
         <div class="input-group"><label>A11</label><input type="number" id="m-a11-gh1" placeholder="0" oninput="hitungAllPanen()"></div>
         <div class="input-group"><label>A15</label><input type="number" id="m-a15-gh1" placeholder="0" oninput="hitungAllPanen()"></div>
       </div>
-      
+
       <div class="sub-title" style="color:#b45309; margin-top:1rem;">GH 2</div>
       <div class="row-3">
         <div class="input-group"><label>Hatsuhana</label><input type="number" id="m-hatsu-gh2" placeholder="0" oninput="hitungAllPanen()"></div>
@@ -125,20 +160,31 @@
         <strong>Total Pengiriman Mika:</strong> <span id="calc-total-mika" style="font-size: 1.25rem; font-weight: 800;">0 Pcs</span>
       </div>
     </div>
-  </div>
 
-  <!-- ================= FORM GLOBAL ================= -->
-  <div id="form-global">
     <div class="card">
-      <div class="card-title">❄️ 6. Frozen (Global Pabrik)</div>
-      <div class="input-group">
-        <label>Total Frozen (Kg)</label>
-        <input type="number" step="0.01" id="k-frozen" placeholder="0.00" oninput="hitungAllPanen()">
+      <div class="card-title">❄️ 6. Reject Dikirim (Global Pabrik)</div>
+      <div class="row-2">
+        <div class="input-group"><label>Reject Frozen Dikirim (Kg) · dari Freezer</label><input type="number" step="0.01" id="k-frozen" placeholder="0.00" oninput="hitungAllPanen()"></div>
+        <div class="input-group"><label>Reject Fresh Dikirim (Kg) · dari Chiller</label><input type="number" step="0.01" id="k-rfresh" placeholder="0.00" oninput="hitungAllPanen()"></div>
       </div>
+      <div style="background: #e8f5e9; border-left: 4px solid #16a34a; padding: 1rem; border-radius: 6px; margin-top: 1rem; line-height: 1.8;">
+        <strong>Pengiriman Grade:</strong> <span id="calc-total-kirim" style="font-weight: 800;">0.00 Kg</span> |
+        <strong>Reject Dikirim:</strong> <span id="calc-kirim-reject" style="font-weight: 800;">0.00 Kg</span><br>
+        <strong>Total Pengiriman:</strong> <span id="calc-total-kirim-all" style="font-size: 1.25rem; font-weight: 800;">0.00 Kg</span> |
+        <strong>Rate Kirim:</strong> <span id="calc-rate-kirim" style="color: #16a34a; font-size: 1.25rem;">0.00%</span>
+      </div>
+      <div class="pn-note">Isi sesuai yang benar-benar dikirim hari ini (termasuk stok freezer/chiller hari sebelumnya). Otomatis masuk total &amp; persentase pengiriman, jadi Rate Kirim bisa lebih dari 100%.</div>
     </div>
 
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="simpanTabProcessing()">💾 Simpan Reject &amp; Pengiriman</button>
+    </div>
+  </div>
+
+  <!-- ================= TAB 3: TAMU / SAMPEL ================= -->
+  <div id="pn-panel-tamu" class="pn-panel">
     <div class="card">
-      <div class="card-title">🎁 7. Untuk Tamu & Sampel (Global Pabrik)</div>
+      <div class="card-title">🎁 7. Untuk Tamu &amp; Sampel (Global Pabrik)</div>
       <div class="row-4">
         <div class="input-group"><label>Curah (Kg)</label><input type="number" step="0.01" id="t-curah" placeholder="0.00"></div>
         <div class="input-group"><label>Mika Hatsuhana</label><input type="number" id="t-hatsu" placeholder="0"></div>
@@ -146,17 +192,20 @@
         <div class="input-group"><label>Mika A15</label><input type="number" id="t-a15" placeholder="0"></div>
       </div>
       <div class="input-group" style="margin-top: 0.75rem;">
-        <label>Keterangan Tamu & Sampel</label>
+        <label>Keterangan Tamu &amp; Sampel</label>
         <input type="text" id="t-ket" placeholder="Opsional / Catatan">
       </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="simpanTabTamu()">💾 Simpan Tamu / Sampel</button>
     </div>
   </div>
 
   <div class="btn-group">
-    <button class="btn btn-primary" onclick="simpanDataPanen()">💾 Simpan Data Hari Ini</button>
     <button class="btn btn-success" onclick="openWAModal()">📋 Format WA</button>
     <button class="btn btn-info" onclick="openGraphicModal()" style="background:#0284c7;color:white;">📊 Format Grafik</button>
-    <button class="btn btn-secondary" onclick="resetFormPanen()">🔄 Reset Form</button>
+    <button class="btn btn-secondary" onclick="resetFormPanen()">🔄 Reset Tab Ini</button>
   </div>
 
   <div class="card" style="margin-top: 1.5rem;">
