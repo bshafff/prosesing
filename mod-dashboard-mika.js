@@ -660,6 +660,8 @@ function renderMikaMonthlyUsage(period) {
         ? it.processingOpname : null;
       if (opnameVal !== null) r.processing = opnameVal;
       else r.processing += pcsBongkar - kirim - tamu - rejHari;
+      const _bln = entry.tgl.substring(0, 7);
+      if (r.rejBulan !== _bln) { r.rejBulan = _bln; r.rejTotal = 0; } // reject total reset tiap bulan
       r.rejTotal += rejHari;
 
       if (entry.tgl >= period.from && entry.tgl <= period.to) {
@@ -983,6 +985,8 @@ function exportMikaCSV() {
         ? it.processingOpname : null;
       if (opnameVal !== null) r.processing = opnameVal;
       else r.processing += pcsBongkar - kirim - tamu - rejHari;
+      const _bln = entry.tgl.substring(0, 7);
+      if (r.rejBulan !== _bln) { r.rejBulan = _bln; r.rejTotal = 0; } // reject total reset tiap bulan
       r.rejTotal += rejHari;
 
       if (entry.tgl >= period.from && entry.tgl <= period.to) {
@@ -1211,74 +1215,110 @@ async function captureMikaTable() {
   showToast(`✅ ${chunks.length} Gambar berhasil disimpan!`);
 }
 
-// ========== EXPORT EXCEL DENGAN FORMAT WARNA ==========
-function exportMikaExcel() {
+// ========== EXPORT EXCEL (.xlsx ASLI, DENGAN WARNA) ==========
+function loadExcelJS() {
+  if (window.ExcelJS) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+    sc.onload = resolve;
+    sc.onerror = () => reject(new Error('Gagal memuat library Excel (cek internet)'));
+    document.head.appendChild(sc);
+  });
+}
+
+async function exportMikaExcel() {
   const table = document.querySelector('#mika-monthly-usage-card .recap-table');
   if (!table) return;
-  
   const tbody = table.querySelector('tbody');
   if (!tbody || tbody.innerText.includes('Belum ada data')) {
     showToast('Tidak ada data untuk di-export', 'error');
     return;
   }
 
-  const clone = table.cloneNode(true);
+  try { await loadExcelJS(); } catch (e) { showToast(e.message, 'error'); return; }
 
-  let excelCss = `
-    <style>
-      table { border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; }
-      th, td { border: 1px solid #cbd5e1; padding: 6px; font-size: 11px; mso-number-format:"\\@"; }
-      
-      .th-base { background-color: #2d5016; color: #ffffff; text-align: center; font-weight: bold; }
-      .th-panen { background-color: #dc2626; color: #ffffff; text-align: center; font-weight: bold; }
-      .th-reject { background-color: #ea580c; color: #ffffff; text-align: center; font-weight: bold; }
-      .th-kirim { background-color: #2563eb; color: #ffffff; text-align: center; font-weight: bold; }
-      .th-mika { background-color: #9333ea; color: #ffffff; text-align: center; font-weight: bold; }
-      .th-stok { background-color: #2563eb; color: #ffffff; text-align: center; font-weight: bold; }
-      .th-aks { background-color: #0d9488; color: #ffffff; text-align: center; font-weight: bold; }
-      .th-gdg { background-color: #475569; color: #ffffff; text-align: center; font-weight: bold; }
-      .th-mut { background-color: #ea580c; color: #ffffff; text-align: center; font-weight: bold; }
+  const HEADER_COLORS = {
+    'th-base': 'FF2D5016', 'th-panen': 'FFDC2626', 'th-reject': 'FFEA580C',
+    'th-kirim': 'FF2563EB', 'th-mika': 'FF9333EA', 'th-stok': 'FF2563EB',
+    'th-aks': 'FF0D9488', 'th-gdg': 'FF475569', 'th-mut': 'FFEA580C'
+  };
+  const BADGE_COLORS = {
+    hatsu: ['FFDBEAFE', 'FF1E40AF'], gradea: ['FFDCFCE7', 'FF15803D'], gradeb: ['FFFFEDD5', 'FFC2410C'],
+    layer: ['FFE0E7FF', 'FF3730A3'], sleeve: ['FFFFEDD5', 'FF9A3412'],
+    stiker: ['FFFCE7F3', 'FF9D174D'], netfoam: ['FFF3E8FF', 'FF6B21A8']
+  };
+  const thin = { style: 'thin', color: { argb: 'FFCBD5E1' } };
+  const border = { top: thin, left: thin, bottom: thin, right: thin };
 
-      .tgl-col { background-color: #f1f5f9; text-align: center; font-weight: bold; }
-      .badge { padding: 4px 6px; border-radius: 4px; font-weight: bold; text-align: center; display: inline-block; width: 80%; }
-      .badge.hatsu { background-color: #dbeafe; color: #1e40af; }
-      .badge.gradea { background-color: #dcfce7; color: #15803d; }
-      .badge.gradeb { background-color: #ffedd5; color: #c2410c; }
-      .badge.layer { background-color: #e0e7ff; color: #3730a3; }
-      .badge.sleeve { background-color: #ffedd5; color: #9a3412; }
-      .badge.stiker { background-color: #fce7f3; color: #9d174d; }
-      .badge.netfoam { background-color: #f3e8ff; color: #6b21a8; }
-      .col-total { background-color: #eff6ff; font-weight: bold; }
-    </style>
-  `;
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Rekap Stock Opname');
 
-  // TAMBAHAN: meta http-equiv agar Excel tidak protes
-  let html = `
-    <html xmlns:o="urn:schemas-microsoft-com:office:office" 
-          xmlns:x="urn:schemas-microsoft-com:office:excel" 
-          xmlns="http://www.w3.org/TR/REC-html40">
-    <head>
-      <meta charset="UTF-8">
-      <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
-      ${excelCss}
-    </head>
-    <body>
-      ${clone.outerHTML}
-    </body>
-    </html>
-  `;
+  // Petakan tabel HTML (rowspan/colspan) ke grid Excel
+  const trs = [...table.querySelectorAll('tr')];
+  const used = {};
+  const merges = [];
+  let maxCol = 0;
+  trs.forEach((tr, ri) => {
+    let ci = 0;
+    [...tr.children].forEach(td => {
+      while (used[ri + ',' + ci]) ci++;
+      const rs = parseInt(td.getAttribute('rowspan') || '1', 10);
+      const cs = parseInt(td.getAttribute('colspan') || '1', 10);
+      for (let a = 0; a < rs; a++) for (let b = 0; b < cs; b++) used[(ri + a) + ',' + (ci + b)] = true;
 
-  const blob = new Blob(['\ufeff', html], { type: 'application/vnd.ms-excel' });
+      const cell = ws.getCell(ri + 1, ci + 1);
+      const txt = (td.innerText || td.textContent || '').trim();
+      const numTxt = txt.replace(/\./g, '').replace(',', '.');
+      const isNum = td.tagName === 'TD' && txt !== '' && /^-?\d+(\.\d+)?$/.test(numTxt);
+      cell.value = isNum ? Number(numTxt) : txt;
+      if (isNum) cell.numFmt = '#,##0';
+      cell.border = border;
+      cell.alignment = { vertical: 'middle', horizontal: td.tagName === 'TH' ? 'center' : (isNum ? 'right' : 'left'), wrapText: true };
+
+      if (td.tagName === 'TH') {
+        const cls = Object.keys(HEADER_COLORS).find(c => td.classList.contains(c)) || 'th-base';
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: HEADER_COLORS[cls] } };
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
+      } else {
+        const badge = td.querySelector('.badge');
+        if (badge) {
+          const key = Object.keys(BADGE_COLORS).find(k => badge.classList.contains(k));
+          if (key) {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BADGE_COLORS[key][0] } };
+            cell.font = { bold: true, color: { argb: BADGE_COLORS[key][1] }, size: 10 };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          }
+        } else if (td.classList.contains('tgl-col')) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+          cell.font = { bold: true, size: 10 };
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        } else if (td.classList.contains('col-total') || td.querySelector('b, strong') || getComputedStyle(td).fontWeight >= 600) {
+          cell.font = { bold: true, size: 10 };
+        }
+        const colr = getComputedStyle(td).color; // merah untuk reject
+        if (colr === 'rgb(220, 38, 38)') cell.font = Object.assign({}, cell.font, { color: { argb: 'FFDC2626' }, size: 10 });
+      }
+
+      if (rs > 1 || cs > 1) merges.push([ri + 1, ci + 1, ri + rs, ci + cs]);
+      ci += cs;
+      maxCol = Math.max(maxCol, ci);
+    });
+  });
+  merges.forEach(m => ws.mergeCells(m[0], m[1], m[2], m[3]));
+  for (let c = 1; c <= maxCol; c++) ws.getColumn(c).width = 13;
+  ws.getColumn(1).width = 12;
+  ws.views = [{ state: 'frozen', ySplit: trs.filter(tr => tr.querySelector('th')).length, xSplit: 2 }];
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  
-  const period = document.getElementById('mika-monthly-periode-label').value.replace(/\s+/g, '_');
-  link.download = `Rekap_Stock_Opname_${period}.xls`;
-  
+  const period = (document.getElementById('mika-monthly-periode-label').value || 'Periode').replace(/\s+/g, '_');
+  link.download = `Rekap_Stock_Opname_${period}.xlsx`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   setTimeout(() => URL.revokeObjectURL(link.href), 3000);
-  
   showToast('✅ File Excel berhasil diunduh!');
 }
