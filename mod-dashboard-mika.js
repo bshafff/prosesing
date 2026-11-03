@@ -1216,24 +1216,19 @@ function exportMikaExcel() {
   const table = document.querySelector('#mika-monthly-usage-card .recap-table');
   if (!table) return;
   
-  // Cek apakah ada data
   const tbody = table.querySelector('tbody');
   if (!tbody || tbody.innerText.includes('Belum ada data')) {
     showToast('Tidak ada data untuk di-export', 'error');
     return;
   }
 
-  // Clone tabel agar tidak merusak tampilan asli
   const clone = table.cloneNode(true);
 
-  // Kumpulan CSS yang ditanam langsung ke dalam file Excel
-  // (Excel butuh warna hex langsung, tidak bisa baca CSS external)
   let excelCss = `
     <style>
       table { border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; }
       th, td { border: 1px solid #cbd5e1; padding: 6px; font-size: 11px; mso-number-format:"\\@"; }
       
-      /* Warna Header */
       .th-base { background-color: #2d5016; color: #ffffff; text-align: center; font-weight: bold; }
       .th-panen { background-color: #dc2626; color: #ffffff; text-align: center; font-weight: bold; }
       .th-reject { background-color: #ea580c; color: #ffffff; text-align: center; font-weight: bold; }
@@ -1244,10 +1239,7 @@ function exportMikaExcel() {
       .th-gdg { background-color: #475569; color: #ffffff; text-align: center; font-weight: bold; }
       .th-mut { background-color: #ea580c; color: #ffffff; text-align: center; font-weight: bold; }
 
-      /* Warna Kolom Tanggal */
       .tgl-col { background-color: #f1f5f9; text-align: center; font-weight: bold; }
-
-      /* Warna Badge Jenis */
       .badge { padding: 4px 6px; border-radius: 4px; font-weight: bold; text-align: center; display: inline-block; width: 80%; }
       .badge.hatsu { background-color: #dbeafe; color: #1e40af; }
       .badge.gradea { background-color: #dcfce7; color: #15803d; }
@@ -1256,20 +1248,18 @@ function exportMikaExcel() {
       .badge.sleeve { background-color: #ffedd5; color: #9a3412; }
       .badge.stiker { background-color: #fce7f3; color: #9d174d; }
       .badge.netfoam { background-color: #f3e8ff; color: #6b21a8; }
-
-      /* Warna Total */
       .col-total { background-color: #eff6ff; font-weight: bold; }
-      
-      /* Teks Merah untuk Reject */
-      .text-reject { color: #dc2626; font-weight: bold; }
     </style>
   `;
 
-  // Bungkus HTML dengan tag khusus agar dikenali Microsoft Excel
+  // TAMBAHAN: meta http-equiv agar Excel tidak protes
   let html = `
-    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+    <html xmlns:o="urn:schemas-microsoft-com:office:office" 
+          xmlns:x="urn:schemas-microsoft-com:office:excel" 
+          xmlns="http://www.w3.org/TR/REC-html40">
     <head>
       <meta charset="UTF-8">
+      <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
       ${excelCss}
     </head>
     <body>
@@ -1278,7 +1268,6 @@ function exportMikaExcel() {
     </html>
   `;
 
-  // Buat file Blob
   const blob = new Blob(['\ufeff', html], { type: 'application/vnd.ms-excel' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
