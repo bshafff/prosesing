@@ -43,7 +43,8 @@ function pnUpsert(db, tgl, gh, fields, createIfAllZero) {
 
 function pnReadFields(keys, ghStr) {
   const out = {};
-  keys.forEach(k => { out[k] = getValP(pnId(k, ghStr)); });
+  // Lewati field yang tidak ada di layar supaya tidak menimpa data tersimpan dengan 0
+  keys.forEach(k => { if (document.getElementById(pnId(k, ghStr))) out[k] = getValP(pnId(k, ghStr)); });
   return out;
 }
 
