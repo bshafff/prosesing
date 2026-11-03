@@ -58,6 +58,15 @@ function showPanenTab(name, btn) {
   hitungAllPanen();
 }
 
+function showPanenTop(name, btn) {
+  document.querySelectorAll('#panen .pn-top').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById('pn-top-' + name);
+  if (panel) panel.classList.add('active');
+  document.querySelectorAll('#panen-top-tabs .sub-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (name === 'history') renderTablePanen();
+}
+
 function pnSetStatus(tab, saved) {
   const el = document.getElementById('pn-status-' + tab);
   if (!el) return;
@@ -91,34 +100,46 @@ function hitungAllPanen() {
   setTxt('sum-panen-gh2', kg(panen2));
   setTxt('calc-total-panen', kg(totalPanen));
 
-  // --- TAB 2: Reject Processing (fresh vs frozen) ---
-  const freshKeys = ['rp-crack', 'rp-poli', 'rp-hpt', 'rp-bruise', 'rp-overripe', 'rp-kuning'];
-  const rpFresh = sumKeys(freshKeys, 'gh1') + sumKeys(freshKeys, 'gh2');
-  const rpFrozen = getValP('rp-frozen-gh1') + getValP('rp-frozen-gh2');
-  const totRPros = rpFresh + rpFrozen;
-  setTxt('calc-rp-fresh', kg(rpFresh));
-  setTxt('calc-rp-frozen', kg(rpFrozen));
+  // --- TAB 2: Reject Processing (per GH + gabungan) ---
+  const rpKeys = ['rp-crack', 'rp-poli', 'rp-hpt', 'rp-bruise', 'rp-overripe', 'rp-kuning', 'rp-frozen'];
+  const rp1 = sumKeys(rpKeys, 'gh1'), rp2 = sumKeys(rpKeys, 'gh2');
+  const totRPros = rp1 + rp2;
+  setTxt('sum-rp-gh1', kg(rp1));
+  setTxt('sum-rp-gh2', kg(rp2));
   setTxt('calc-total-rp', kg(totRPros));
 
-  const grandTotalReject = totRkBun + totRPros;
+  const gr1 = rk1 + rp1, gr2 = rk2 + rp2;
+  const grandTotalReject = gr1 + gr2;
+  const pct = (x, y) => (y > 0 ? (x / y * 100) : 0).toFixed(2) + '%';
+  setTxt('sum-gr-gh1', kg(gr1));
+  setTxt('sum-gr-gh2', kg(gr2));
   setTxt('calc-grand-total-r', kg(grandTotalReject));
-  const rejectRate = totalPanen > 0 ? (grandTotalReject / totalPanen * 100) : 0;
-  setTxt('calc-reject-rate', rejectRate.toFixed(2) + '%');
+  setTxt('sum-rr-gh1', pct(gr1, panen1));
+  setTxt('sum-rr-gh2', pct(gr2, panen2));
+  setTxt('calc-reject-rate', pct(grandTotalReject, totalPanen));
 
-  // Pengiriman: grade + reject dikirim (frozen & fresh) -> masuk persentase kirim
-  const totalKirim = getValP('k-hatsu-gh1') + getValP('k-a11-gh1') + getValP('k-a15-gh1') +
-                     getValP('k-hatsu-gh2') + getValP('k-a11-gh2') + getValP('k-a15-gh2');
+  // --- Pengiriman grade (per GH + gabungan) ---
+  const kKeys = ['k-hatsu', 'k-a11', 'k-a15'];
+  const kirim1 = sumKeys(kKeys, 'gh1'), kirim2 = sumKeys(kKeys, 'gh2');
+  const totalKirim = kirim1 + kirim2;
+  setTxt('sum-kirim-gh1', kg(kirim1));
+  setTxt('sum-kirim-gh2', kg(kirim2));
+  setTxt('calc-total-kirim', kg(totalKirim));
+  setTxt('calc-total-kirim-b', kg(totalKirim));
+
+  // Reject dikirim (frozen & fresh) global -> masuk total & persentase kirim
   const kirimReject = getValP('k-frozen') + getValP('k-rfresh');
   const kirimAll = totalKirim + kirimReject;
-  const rateKirim = totalPanen > 0 ? (kirimAll / totalPanen * 100) : 0;
-  setTxt('calc-total-kirim', kg(totalKirim));
   setTxt('calc-kirim-reject', kg(kirimReject));
   setTxt('calc-total-kirim-all', kg(kirimAll));
-  setTxt('calc-rate-kirim', rateKirim.toFixed(2) + '%');
+  setTxt('calc-rate-kirim', pct(kirimAll, totalPanen));
 
-  const totalMika = getValP('m-hatsu-gh1') + getValP('m-a11-gh1') + getValP('m-a15-gh1') +
-                    getValP('m-hatsu-gh2') + getValP('m-a11-gh2') + getValP('m-a15-gh2');
-  setTxt('calc-total-mika', totalMika + ' Pcs');
+  // --- Mika (per GH + gabungan) ---
+  const mKeys = ['m-hatsu', 'm-a11', 'm-a15'];
+  const mika1 = sumKeys(mKeys, 'gh1'), mika2 = sumKeys(mKeys, 'gh2');
+  setTxt('sum-mika-gh1', mika1 + ' Pcs');
+  setTxt('sum-mika-gh2', mika2 + ' Pcs');
+  setTxt('calc-total-mika', (mika1 + mika2) + ' Pcs');
 }
 
 // ========== ISI FORM DARI DATA TERSIMPAN (per tanggal) ==========
