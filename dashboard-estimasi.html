@@ -1,0 +1,111 @@
+<div id="dash-estimasi" class="view">
+  <div class="view-toolbar">
+    <button class="btn btn-sm btn-home" onclick="goHome()">← Menu</button>
+    <span class="view-title">🎯 Estimasi vs Aktual</span>
+    <button class="btn btn-sm" onclick="estToggleImport()" style="margin-left:auto;flex:none;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;">📋 Tempel Estimasi</button>
+  </div>
+
+  <!-- ===== TEMPEL ESTIMASI DARI SHEET ===== -->
+  <div class="card" id="est-import-card" style="display:none;">
+    <div class="card-title">📋 Tempel Estimasi dari Sheet</div>
+    <small style="color:#666;display:block;margin-bottom:0.75rem;line-height:1.5;">
+      Di Sheet estimasi, blok baris data (dari <b>Tanggal</b> sampai <b>Pack Grade B</b>, tanpa judul &amp; baris total), salin (Ctrl+C), lalu tempel di bawah.
+      Kolom Valve boleh ikut atau tidak. Tanggal yang sama akan diperbarui.
+    </small>
+    <textarea id="est-paste" placeholder="Tempel di sini..." style="width:100%;min-height:130px;padding:0.75rem;border:1.5px solid #d1d5db;border-radius:8px;font-family:'Courier New',monospace;font-size:0.8rem;"></textarea>
+    <div class="row-2" style="margin-top:0.75rem;align-items:flex-end;">
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Format Tanggal</label>
+        <select id="est-datefmt">
+          <option value="auto">Otomatis (cek preview)</option>
+          <option value="mdy">Bulan/Hari/Tahun (5/1/2026 = 1 Mei)</option>
+          <option value="dmy">Hari/Bulan/Tahun (5/1/2026 = 5 Januari)</option>
+        </select>
+      </div>
+      <button class="btn btn-secondary" onclick="estParsePaste()">🔍 Cek Hasil</button>
+    </div>
+    <div id="est-preview" style="margin-top:1rem;"></div>
+    <div class="btn-group" id="est-save-wrap" style="display:none;">
+      <button class="btn btn-primary" onclick="estSavePaste()">💾 Simpan Estimasi</button>
+    </div>
+    <small style="color:#9ca3af;display:block;margin-top:0.5rem;">Estimasi tersimpan di HP/browser ini saja (tidak ikut sinkron ke Google Sheet).</small>
+  </div>
+
+  <!-- ===== FILTER ===== -->
+  <div class="card">
+    <div class="card-title">📅 Periode</div>
+    <div class="row-2">
+      <div class="input-group"><label>Dari</label><input type="date" id="est-dari" onchange="renderEstimasi()"></div>
+      <div class="input-group"><label>Sampai</label><input type="date" id="est-sampai" onchange="renderEstimasi()"></div>
+    </div>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+      <button class="btn btn-sm btn-secondary" onclick="estShortcut('minggu-ini')">Minggu Ini</button>
+      <button class="btn btn-sm btn-secondary" onclick="estShortcut('minggu-lalu')">Minggu Lalu</button>
+      <button class="btn btn-sm btn-secondary" onclick="estShortcut('7hari')">7 Hari Terakhir</button>
+    </div>
+    <div class="input-group" style="margin-bottom:0;max-width:260px;">
+      <label>Grade</label>
+      <select id="est-grade" onchange="renderEstimasi()">
+        <option value="all">Semua (Hatsu + A + B)</option>
+        <option value="hatsu">Hatsuhana</option>
+        <option value="a">Grade A (A11)</option>
+        <option value="b">Grade B (A15)</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- ===== RINGKASAN ===== -->
+  <div id="est-summary"></div>
+
+  <!-- ===== CHART ===== -->
+  <div class="card">
+    <div class="card-title">📈 Grafik Estimasi vs Aktual</div>
+    <div class="input-group" style="max-width:260px;">
+      <label>Tampilkan</label>
+      <select id="est-chart-metric" onchange="renderEstimasi()">
+        <option value="panen">Panen (Kg)</option>
+        <option value="pack">Pack</option>
+      </select>
+    </div>
+    <div id="est-chart" style="overflow-x:auto;"></div>
+    <div style="display:flex;gap:1rem;font-size:0.8rem;color:#555;margin-top:0.5rem;">
+      <span><span style="display:inline-block;width:10px;height:10px;background:#94a3b8;border-radius:2px;"></span> Estimasi</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:#16a34a;border-radius:2px;"></span> Aktual</span>
+    </div>
+  </div>
+
+  <!-- ===== TABEL PER TANGGAL ===== -->
+  <div class="card">
+    <div class="card-title">📋 Per Tanggal</div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Tanggal</th>
+            <th class="text-right">Est Panen</th>
+            <th class="text-right">Akt Panen</th>
+            <th class="text-right">Selisih</th>
+            <th class="text-right">%</th>
+            <th class="text-right">Kirim (Kg)</th>
+            <th class="text-right">Est Pack</th>
+            <th class="text-right">Akt Pack</th>
+            <th class="text-right">Selisih</th>
+            <th class="text-right">Kg/Pack Est</th>
+            <th class="text-right">Kg/Pack Akt</th>
+            <th class="text-right">Frozen Est</th>
+            <th class="text-right">Frozen Akt</th>
+          </tr>
+        </thead>
+        <tbody id="est-table-body">
+          <tr><td colspan="13" class="text-center" style="color:#999;">Belum ada data</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <small style="color:#666;display:block;margin-top:0.75rem;line-height:1.5;">
+      Aktual panen = panen grade (tanpa reject kebun). Aktual pack = jumlah mika terkirim. Frozen aktual = reject frozen dikirim. Kg/Pack = berat kirim ÷ pack (aktual), panen ÷ pack (estimasi).
+    </small>
+    <div class="btn-group" style="margin-top:1rem;">
+      <button class="btn btn-danger btn-sm" onclick="estClearRange()">🗑️ Hapus Estimasi Periode Ini</button>
+    </div>
+  </div>
+</div>

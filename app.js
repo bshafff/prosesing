@@ -4,6 +4,7 @@ const VIEW_FILES = {
   'lks': 'lks.html',
   'dashboard': 'dashboard-panen.html',
   'dash-mika': 'dashboard-mika.html',
+  'dash-estimasi': 'dashboard-estimasi.html',
   'panen': 'rekap-panen.html',
   'kemasan': 'stok-mika.html'
 };
@@ -66,6 +67,7 @@ async function initApp() {
   // 3. Init render data
   try { renderTableLks(); } catch (e) { console.warn('renderTableLks:', e); }
   try { renderTablePanen(); } catch (e) { console.warn('renderTablePanen:', e); }
+  try { initEstimasi(); renderEstimasi(); } catch (e) { console.warn('initEstimasi:', e); }
   try { loadPanenForDate(); } catch (e) { console.warn('loadPanenForDate:', e); }
   try { recalculateStockKemasan(); } catch (e) { console.warn('recalculateStockKemasan:', e); }
   try { renderKemasanForms(); } catch (e) { console.warn('renderKemasanForms:', e); }

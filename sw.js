@@ -1,4 +1,4 @@
-const CACHE_NAME = 'awb-processing-v59';
+const CACHE_NAME = 'awb-processing-v60';
 const ASSETS = [
   './',
   './index.html',
@@ -9,10 +9,12 @@ const ASSETS = [
   './lks.html',
   './dashboard-panen.html',
   './dashboard-mika.html',
+  './dashboard-estimasi.html',
   './rekap-panen.html',
   './stok-mika.html',
   './mod-dashboard-panen.js',
   './mod-dashboard-mika.js',
+  './mod-estimasi.js',
   './mod-lks.js',
   './mod-rekap-panen.js',
   './mod-stok-mika.js',
