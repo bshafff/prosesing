@@ -12,7 +12,13 @@
       Di Sheet estimasi, blok baris data (dari <b>Tanggal</b> sampai <b>Pack Grade B</b>, tanpa judul &amp; baris total), salin (Ctrl+C), lalu tempel di bawah.
       Kolom Valve boleh ikut atau tidak. Tanggal yang sama akan diperbarui.
     </small>
-    <textarea id="est-paste" placeholder="Tempel di sini..." style="width:100%;min-height:130px;padding:0.75rem;border:1.5px solid #d1d5db;border-radius:8px;font-family:'Courier New',monospace;font-size:0.8rem;"></textarea>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;margin-bottom:0.75rem;">
+      <button class="btn btn-secondary" onclick="document.getElementById('est-img').click()">📷 Baca dari Screenshot</button>
+      <input type="file" id="est-img" accept="image/*" style="display:none;" onchange="estOnPickImage(this)">
+      <small id="est-ocr-status" style="color:#555;"></small>
+    </div>
+    <small style="color:#666;display:block;margin-bottom:0.5rem;">Atau pilih screenshot tabel estimasi, atau tempel gambar (Ctrl+V) di kotak ini. Butuh internet. Angka hasil baca bisa dikoreksi sebelum disimpan.</small>
+    <textarea id="est-paste" onpaste="estHandlePaste(event)" placeholder="Tempel teks / gambar di sini..." style="width:100%;min-height:130px;padding:0.75rem;border:1.5px solid #d1d5db;border-radius:8px;font-family:'Courier New',monospace;font-size:0.8rem;"></textarea>
     <div class="row-2" style="margin-top:0.75rem;align-items:flex-end;">
       <div class="input-group" style="margin-bottom:0;">
         <label>Format Tanggal</label>
