@@ -9,8 +9,8 @@
   <div class="card" id="est-import-card" style="display:none;">
     <div class="card-title">📋 Tempel Estimasi dari Sheet</div>
     <small style="color:#666;display:block;margin-bottom:0.75rem;line-height:1.5;">
-      Di Sheet estimasi, blok baris data (dari <b>Tanggal</b> sampai <b>Pack Grade B</b>, tanpa judul &amp; baris total), salin (Ctrl+C), lalu tempel di bawah.
-      Kolom Valve boleh ikut atau tidak. Tanggal yang sama akan diperbarui.
+      Di Sheet estimasi, blok baris data (dari <b>Tanggal</b> sampai <b>Estimated Pack Grade B</b>, tanpa judul &amp; baris total), salin (Ctrl+C), lalu tempel di bawah.
+      Kolom GH/Valve boleh ikut atau tidak. Tanggal yang sama akan diperbarui.
     </small>
     <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;margin-bottom:0.75rem;">
       <button class="btn btn-secondary" onclick="document.getElementById('est-img').click()">📷 Baca dari Screenshot</button>
@@ -98,17 +98,15 @@
             <th class="text-right">Selisih</th>
             <th class="text-right">Kg/Pack Est</th>
             <th class="text-right">Kg/Pack Akt</th>
-            <th class="text-right">Frozen Est</th>
-            <th class="text-right">Frozen Akt</th>
           </tr>
         </thead>
         <tbody id="est-table-body">
-          <tr><td colspan="13" class="text-center" style="color:#999;">Belum ada data</td></tr>
+          <tr><td colspan="11" class="text-center" style="color:#999;">Belum ada data</td></tr>
         </tbody>
       </table>
     </div>
     <small style="color:#666;display:block;margin-top:0.75rem;line-height:1.5;">
-      Aktual panen = panen grade (tanpa reject kebun). Aktual pack = jumlah mika terkirim. Frozen aktual = reject frozen dikirim. Kg/Pack = berat kirim ÷ pack (aktual), panen ÷ pack (estimasi).
+      Estimasi hanya untuk Hatsuhana, Grade A, dan Grade B. Aktual panen = panen grade (tanpa reject kebun). Aktual pack = jumlah mika terkirim. Kg/Pack = berat kirim ÷ pack (aktual), panen ÷ pack (estimasi).
     </small>
     <div class="btn-group" style="margin-top:1rem;">
       <button class="btn btn-danger btn-sm" onclick="estClearRange()">🗑️ Hapus Estimasi Periode Ini</button>
