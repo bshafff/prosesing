@@ -109,10 +109,20 @@ function estParsePaste() {
     const tgl = estParseDateCell(cells[0], fmt);
     if (!tgl) return; // header / baris total
     let rest = cells.slice(1);
-    if (rest.length >= 8) rest = rest.slice(1); // buang kolom Valve
-    if (rest.every(c => c === '' || c == null)) { skipped++; return; } // baris kosong (mis. libur)
+    let warn = false;
+    if (l.indexOf('\t') < 0) {
+      // teks hasil OCR / spasi: ambil token angka saja, 7 terakhir = kolom data (Valve & simbol diabaikan)
+      const nums = rest.filter(c => /^[\d.,]+$/.test(c));
+      if (nums.length < 4) { skipped++; return; }
+      warn = nums.length < 7;
+      rest = nums.length >= 7 ? nums.slice(-7) : nums;
+    } else {
+      if (rest.length >= 8) rest = rest.slice(1); // buang kolom Valve
+      if (rest.every(c => c === '' || c == null)) { skipped++; return; } // baris kosong (mis. libur)
+    }
     const rec = { tgl: tgl };
     EST_FIELDS.forEach((f, i) => { rec[f] = estNum(rest[i]); });
+    if (warn) rec._warn = true;
     rows.push(rec);
   });
 
@@ -124,16 +134,20 @@ function estParsePaste() {
     wrap.style.display = 'none';
     return;
   }
+  const inp = (i, f, v, w) => `<input type="number" step="any" value="${v}" oninput="estEditPending(${i},'${f}',this.value)" style="width:${w}px;padding:4px;border:1px solid #d1d5db;border-radius:6px;text-align:right;">`;
+  const nWarn = rows.filter(r => r._warn).length;
   pv.innerHTML = `
-    <div style="font-size:0.85rem;margin-bottom:0.5rem;">
+    <div style="font-size:0.85rem;margin-bottom:0.5rem;line-height:1.5;">
       <b>${rows.length}</b> hari terbaca${skipped ? `, ${skipped} baris kosong dilewati` : ''}.
-      Format tanggal: <b>${fmt === 'dmy' ? 'Hari/Bulan/Tahun' : 'Bulan/Hari/Tahun'}</b>${auto ? ' (otomatis)' : ''} — cek tanggalnya benar.
+      Format tanggal: <b>${fmt === 'dmy' ? 'Hari/Bulan/Tahun' : 'Bulan/Hari/Tahun'}</b>${auto ? ' (otomatis)' : ''}.
+      <b>Cek angkanya</b> — kolom bisa diubah langsung sebelum disimpan.
+      ${nWarn ? `<br><span style="color:#b45309;font-weight:700;">⚠️ ${nWarn} baris kuning datanya kurang lengkap, mohon dicek.</span>` : ''}
     </div>
     <div class="table-container"><table>
       <thead><tr><th>Tanggal</th><th class="text-right">Hatsu</th><th class="text-right">A</th><th class="text-right">B</th><th class="text-right">Frozen</th><th class="text-right">Pk Hatsu</th><th class="text-right">Pk A</th><th class="text-right">Pk B</th></tr></thead>
-      <tbody>${rows.map(r => `<tr><td>${estLabel(r.tgl)} ${r.tgl.substring(0, 4)}</td>
-        <td class="text-right">${r.e_hatsu}</td><td class="text-right">${r.e_gradea}</td><td class="text-right">${r.e_gradeb}</td><td class="text-right">${r.e_frozen}</td>
-        <td class="text-right">${r.pk_hatsu}</td><td class="text-right">${r.pk_gradea}</td><td class="text-right">${r.pk_gradeb}</td></tr>`).join('')}</tbody>
+      <tbody>${rows.map((r, i) => `<tr${r._warn ? ' style="background:#fef9c3;"' : ''}>
+        <td style="white-space:nowrap;"><input type="date" value="${r.tgl}" onchange="estEditPending(${i},'tgl',this.value)" style="padding:4px;border:1px solid #d1d5db;border-radius:6px;"> <small style="color:#6b7280;">${estLabel(r.tgl).split(',')[0]}</small></td>
+        ${EST_FIELDS.map(f => `<td class="text-right">${inp(i, f, r[f], f.startsWith('pk_') ? 70 : 62)}</td>`).join('')}</tr>`).join('')}</tbody>
     </table></div>`;
   wrap.style.display = 'flex';
 }
@@ -354,4 +368,68 @@ function estRenderChart(rows) {
   });
   svg += '</svg>';
   el.innerHTML = svg;
+}
+
+function estEditPending(i, field, val) {
+  if (!estPending[i]) return;
+  estPending[i][field] = field === 'tgl' ? val : estNum(val);
+  if (field !== 'tgl') delete estPending[i]._warn;
+}
+
+// ---------- baca dari screenshot (OCR) ----------
+const EST_TESS_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js';
+
+function estLoadTesseract() {
+  return new Promise((resolve, reject) => {
+    if (window.Tesseract) return resolve();
+    const sc = document.createElement('script');
+    sc.src = EST_TESS_URL;
+    sc.onload = () => resolve();
+    sc.onerror = () => reject(new Error('Gagal memuat pembaca gambar. Pastikan internet aktif.'));
+    document.head.appendChild(sc);
+  });
+}
+
+function estOcrStatus(msg, isErr) {
+  const el = document.getElementById('est-ocr-status');
+  if (!el) return;
+  el.textContent = msg || '';
+  el.style.color = isErr ? '#dc2626' : '#555';
+}
+
+async function estOcrFile(file) {
+  if (!file) return;
+  try {
+    estOcrStatus('Memuat pembaca gambar (butuh internet, pertama kali agak lama)...');
+    await estLoadTesseract();
+    const worker = await Tesseract.createWorker('eng', 1, {
+      logger: m => { if (m.status === 'recognizing text') estOcrStatus('Membaca gambar... ' + Math.round((m.progress || 0) * 100) + '%'); }
+    });
+    await worker.setParameters({ tessedit_pageseg_mode: '4', preserve_interword_spaces: '1' });
+    const res = await worker.recognize(file);
+    await worker.terminate();
+    document.getElementById('est-paste').value = res.data.text;
+    estOcrStatus('Selesai. Cek hasilnya di bawah, perbaiki kalau ada angka yang salah.');
+    estParsePaste();
+  } catch (e) {
+    estOcrStatus(String(e && e.message ? e.message : e), true);
+  }
+}
+
+function estOnPickImage(input) {
+  const f = input.files && input.files[0];
+  input.value = '';
+  estOcrFile(f);
+}
+
+// tempel gambar (Ctrl+V) langsung di kotak tempel
+function estHandlePaste(ev) {
+  const items = (ev.clipboardData && ev.clipboardData.items) || [];
+  for (const it of items) {
+    if (it.type && it.type.indexOf('image') === 0) {
+      ev.preventDefault();
+      estOcrFile(it.getAsFile());
+      return;
+    }
+  }
 }
