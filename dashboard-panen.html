@@ -70,7 +70,13 @@
 
   <div class="card" id="panen-recap-harian-card">
     <div class="card-title">📋 Rekap Harian Panen, Reject & Pengiriman</div>
-    <div style="margin-bottom:0.75rem;" data-html2canvas-ignore="true">
+    <div style="margin-bottom:0.75rem;display:flex;gap:0.75rem;align-items:flex-end;flex-wrap:wrap;" data-html2canvas-ignore="true">
+      <div class="input-group" style="margin-bottom:0;min-width:220px;">
+        <label>Minggu</label>
+        <select id="recap-minggu" onchange="updateDashboard()">
+          <option value="all">Semua Minggu</option>
+        </select>
+      </div>
       <button type="button" class="btn btn-primary btn-sm" onclick="downloadRecapHarianImage()">📸 Screenshot</button>
     </div>
     <div class="recap-wrap">
