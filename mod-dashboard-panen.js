@@ -4,6 +4,7 @@ function setDashboardBulanIni() {
   document.getElementById('dashboard-bulan').value = nowMonth;
   const mg = document.getElementById('minggu-bulan');
   if (mg) mg.value = nowMonth;
+  const rm = document.getElementById('recap-minggu'); if (rm) rm.value = 'all';
   updateDashboard();
 }
 
@@ -11,6 +12,7 @@ function onDashboardMonthChange() {
   const v = document.getElementById('dashboard-bulan').value;
   const mg = document.getElementById('minggu-bulan');
   if (mg) mg.value = v;
+  const rm = document.getElementById('recap-minggu'); if (rm) rm.value = 'all';
   updateDashboard();
 }
 
@@ -19,6 +21,7 @@ function updateDashboard() {
   if (!bulanEl) return;
   if (!bulanEl.value) bulanEl.value = new Date().toISOString().substring(0, 7);
   const selectedMonth = bulanEl.value;
+  populateRecapWeeks(selectedMonth);
   const infoEl = document.getElementById('dashboard-period-info');
   if (infoEl) infoEl.innerHTML = `Menampilkan data: <b>${formatBulanIndo(selectedMonth)}</b> · <b>${ghLabelOf(dashGh())}</b>`;
   
@@ -57,6 +60,7 @@ function updateDashboard() {
     return (gradeKirimGHIni / gradeKirimSemua) * totalFrozenHariItu;
   };
 
+  const accumulate = (list) => {
   const T = {
     p_hatsu: 0, p_gradea: 0, p_gradeb: 0, rk_total: 0, panen_total: 0,
     rk_crack: 0, rk_poli: 0, rk_hpt: 0,
@@ -67,7 +71,7 @@ function updateDashboard() {
     t_curah: 0, t_hatsu: 0, t_a11: 0, t_a15: 0
   };
 
-  filtered.forEach(item => {
+  list.forEach(item => {
     const rk = (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
     const rp = (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0) + (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_kuning || 0) + (item.rp_frozen || 0);
     
@@ -112,6 +116,9 @@ function updateDashboard() {
       T.t_a15 += item.t_a15 || 0;
     }
   });
+  return T;
+  };
+  const T = accumulate(filtered); // kartu & grafik tetap per bulan (+filter GH)
 
   const rejectRate = T.panen_total > 0 ? (T.rej_total / T.panen_total * 100) : 0;
   const rateKirim = T.panen_total > 0 ? (T.kirim_total / T.panen_total * 100) : 0;
@@ -172,12 +179,13 @@ function updateDashboard() {
     dRejEl.textContent = `${diff > 0 ? '▲' : diff < 0 ? '▼' : '='} ${Math.abs(diff).toFixed(2)} poin vs bulan lalu (${pRate.toFixed(2)}%)${cutoffLabel}`;
   }
 
-  // Render Tabel Recap
+  // Render Tabel Recap (ikut filter minggu)
+  const tableRows = recapWeekFilter(filtered, selectedMonth);
   const tbody = document.getElementById('recap-body');
-  if (!filtered.length) {
-    tbody.innerHTML = `<tr><td colspan="25" style="text-align:center;color:#999;padding:1rem;">Belum ada data bulan ini</td></tr>`;
+  if (!tableRows.length) {
+    tbody.innerHTML = `<tr><td colspan="25" style="text-align:center;color:#999;padding:1rem;">Belum ada data pada periode ini</td></tr>`;
   } else {
-    tbody.innerHTML = filtered.map(item => {
+    tbody.innerHTML = tableRows.map(item => {
       const isGlobal = item.gh === 'GLOBAL';
       const rk = (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
       const panenTotal = (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + rk;
@@ -222,61 +230,64 @@ function updateDashboard() {
   }
 
   // Render Footer
-  const n = filtered.length || 1;
+  const TF = accumulate(tableRows);
+  const rejectRateF = TF.panen_total > 0 ? (TF.rej_total / TF.panen_total * 100) : 0;
+  const rateKirimF = TF.panen_total > 0 ? (TF.kirim_total / TF.panen_total * 100) : 0;
+  const n = tableRows.length || 1;
   document.getElementById('recap-foot').innerHTML = `
     <tr>
       <td style="text-align:center;font-weight:800;">Jumlah</td>
-      <td>${T.p_hatsu.toFixed(2)}</td>
-      <td>${T.p_gradea.toFixed(2)}</td>
-      <td>${T.p_gradeb.toFixed(2)}</td>
-      <td>${T.rk_total.toFixed(2)}</td>
-      <td>${T.panen_total.toFixed(2)}</td>
-      <td>${T.rp_crack.toFixed(2)}</td>
-      <td>${T.rp_poli.toFixed(2)}</td>
-      <td>${T.rp_hpt.toFixed(2)}</td>
-      <td>${T.rp_bruise.toFixed(2)}</td>
-      <td>${T.rp_overripe.toFixed(2)}</td>
-      <td>${T.rp_kuning.toFixed(2)}</td>
-      <td>${T.rp_frozen.toFixed(2)}</td>
-      <td>${T.rej_total.toFixed(2)}</td>
-      <td style="color:#fca5a5;">${rejectRate.toFixed(2)}%</td>
-      <td>${T.k_hatsu.toFixed(2)}</td>
-      <td>${T.k_a11.toFixed(2)}</td>
-      <td>${T.k_a15.toFixed(2)}</td>
-      <td>${T.k_frozen.toFixed(2)}</td>
-      <td>${T.kirim_total.toFixed(2)}</td>
-      <td style="color:#86efac;">${rateKirim.toFixed(2)}%</td>
-      <td>${T.m_hatsu}</td>
-      <td>${T.m_a11}</td>
-      <td>${T.m_a15}</td>
-      <td>${T.mika_total}</td>
+      <td>${TF.p_hatsu.toFixed(2)}</td>
+      <td>${TF.p_gradea.toFixed(2)}</td>
+      <td>${TF.p_gradeb.toFixed(2)}</td>
+      <td>${TF.rk_total.toFixed(2)}</td>
+      <td>${TF.panen_total.toFixed(2)}</td>
+      <td>${TF.rp_crack.toFixed(2)}</td>
+      <td>${TF.rp_poli.toFixed(2)}</td>
+      <td>${TF.rp_hpt.toFixed(2)}</td>
+      <td>${TF.rp_bruise.toFixed(2)}</td>
+      <td>${TF.rp_overripe.toFixed(2)}</td>
+      <td>${TF.rp_kuning.toFixed(2)}</td>
+      <td>${TF.rp_frozen.toFixed(2)}</td>
+      <td>${TF.rej_total.toFixed(2)}</td>
+      <td style="color:#fca5a5;">${rejectRateF.toFixed(2)}%</td>
+      <td>${TF.k_hatsu.toFixed(2)}</td>
+      <td>${TF.k_a11.toFixed(2)}</td>
+      <td>${TF.k_a15.toFixed(2)}</td>
+      <td>${TF.k_frozen.toFixed(2)}</td>
+      <td>${TF.kirim_total.toFixed(2)}</td>
+      <td style="color:#86efac;">${rateKirimF.toFixed(2)}%</td>
+      <td>${TF.m_hatsu}</td>
+      <td>${TF.m_a11}</td>
+      <td>${TF.m_a15}</td>
+      <td>${TF.mika_total}</td>
     </tr>
     <tr style="background:#4b5563;">
       <td style="text-align:center;font-weight:800;">Rata-rata</td>
-      <td>${(T.p_hatsu / n).toFixed(2)}</td>
-      <td>${(T.p_gradea / n).toFixed(2)}</td>
-      <td>${(T.p_gradeb / n).toFixed(2)}</td>
-      <td>${(T.rk_total / n).toFixed(2)}</td>
-      <td>${(T.panen_total / n).toFixed(2)}</td>
-      <td>${(T.rp_crack / n).toFixed(2)}</td>
-      <td>${(T.rp_poli / n).toFixed(2)}</td>
-      <td>${(T.rp_hpt / n).toFixed(2)}</td>
-      <td>${(T.rp_bruise / n).toFixed(2)}</td>
-      <td>${(T.rp_overripe / n).toFixed(2)}</td>
-      <td>${(T.rp_kuning / n).toFixed(2)}</td>
-      <td>${(T.rp_frozen / n).toFixed(2)}</td>
-      <td>${(T.rej_total / n).toFixed(2)}</td>
-      <td>${rejectRate.toFixed(2)}%</td>
-      <td>${(T.k_hatsu / n).toFixed(2)}</td>
-      <td>${(T.k_a11 / n).toFixed(2)}</td>
-      <td>${(T.k_a15 / n).toFixed(2)}</td>
-      <td>${(T.k_frozen / n).toFixed(2)}</td>
-      <td>${(T.kirim_total / n).toFixed(2)}</td>
-      <td>${rateKirim.toFixed(2)}%</td>
-      <td>${(T.m_hatsu / n).toFixed(0)}</td>
-      <td>${(T.m_a11 / n).toFixed(0)}</td>
-      <td>${(T.m_a15 / n).toFixed(0)}</td>
-      <td>${(T.mika_total / n).toFixed(0)}</td>
+      <td>${(TF.p_hatsu / n).toFixed(2)}</td>
+      <td>${(TF.p_gradea / n).toFixed(2)}</td>
+      <td>${(TF.p_gradeb / n).toFixed(2)}</td>
+      <td>${(TF.rk_total / n).toFixed(2)}</td>
+      <td>${(TF.panen_total / n).toFixed(2)}</td>
+      <td>${(TF.rp_crack / n).toFixed(2)}</td>
+      <td>${(TF.rp_poli / n).toFixed(2)}</td>
+      <td>${(TF.rp_hpt / n).toFixed(2)}</td>
+      <td>${(TF.rp_bruise / n).toFixed(2)}</td>
+      <td>${(TF.rp_overripe / n).toFixed(2)}</td>
+      <td>${(TF.rp_kuning / n).toFixed(2)}</td>
+      <td>${(TF.rp_frozen / n).toFixed(2)}</td>
+      <td>${(TF.rej_total / n).toFixed(2)}</td>
+      <td>${rejectRateF.toFixed(2)}%</td>
+      <td>${(TF.k_hatsu / n).toFixed(2)}</td>
+      <td>${(TF.k_a11 / n).toFixed(2)}</td>
+      <td>${(TF.k_a15 / n).toFixed(2)}</td>
+      <td>${(TF.k_frozen / n).toFixed(2)}</td>
+      <td>${(TF.kirim_total / n).toFixed(2)}</td>
+      <td>${rateKirimF.toFixed(2)}%</td>
+      <td>${(TF.m_hatsu / n).toFixed(0)}</td>
+      <td>${(TF.m_a11 / n).toFixed(0)}</td>
+      <td>${(TF.m_a15 / n).toFixed(0)}</td>
+      <td>${(TF.mika_total / n).toFixed(0)}</td>
     </tr>
   `;
 
@@ -555,6 +566,25 @@ function weekLabel(w) {
   if (w.sm === w.em && w.sy === w.ey) return `${w.sd}–${w.ed} ${sm} ${w.sy}`;
   if (w.sy === w.ey) return `${w.sd} ${sm} – ${w.ed} ${em} ${w.sy}`;
   return `${w.sd} ${sm} ${w.sy} – ${w.ed} ${em} ${w.ey}`;
+}
+
+function populateRecapWeeks(ym) {
+  const sel = document.getElementById('recap-minggu');
+  if (!sel) return;
+  const cur = sel.value;
+  const weeks = getWeekRanges(ym);
+  sel.innerHTML = '<option value="all">Semua Minggu</option>' +
+    weeks.map(w => `<option value="${w.idx}">Minggu ${w.idx} · ${weekLabel(w)}</option>`).join('');
+  sel.value = weeks.some(w => String(w.idx) === cur) ? cur : 'all';
+}
+
+function recapWeekFilter(list, ym) {
+  const sel = document.getElementById('recap-minggu');
+  const v = sel ? sel.value : 'all';
+  if (v === 'all') return list;
+  const w = getWeekRanges(ym).find(x => String(x.idx) === v);
+  if (!w) return list;
+  return list.filter(x => x.tgl >= w.startStr && x.tgl <= w.endStr);
 }
 
 function computeWeeklyPanenForMonth(ym) {
@@ -952,7 +982,7 @@ function downloadRecapHarianImage() {
   if (!bulan) { showToast('Pilih bulan dulu!', 'error'); return; }
   const ghLabel = ghLabelOf(dashGh());
   const panenDb = filterGh(JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]'), dashGh());
-  const filtered = panenDb.filter(x => x.tgl && x.tgl.startsWith(bulan)).sort((a, b) => new Date(a.tgl) - new Date(b.tgl));
+  const filtered = recapWeekFilter(panenDb.filter(x => x.tgl && x.tgl.startsWith(bulan)).sort((a, b) => new Date(a.tgl) - new Date(b.tgl)), bulan);
   const data = mergeByTgl(filtered);
   if (!data.length) { showToast('Belum ada data untuk bulan ini', 'error'); return; }
 
