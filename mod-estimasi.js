@@ -8,7 +8,7 @@ const EST_GRADE = {
   a:     { e: 'e_gradea', p: 'p_gradea', k: 'k_a11',   pk: 'pk_gradea', m: 'm_a11' },
   b:     { e: 'e_gradeb', p: 'p_gradeb', k: 'k_a15',   pk: 'pk_gradeb', m: 'm_a15' }
 };
-const EST_FIELDS = ['e_hatsu', 'e_gradea', 'e_gradeb', 'e_frozen', 'pk_hatsu', 'pk_gradea', 'pk_gradeb'];
+const EST_FIELDS = ['e_hatsu', 'e_gradea', 'e_gradeb', 'pk_hatsu', 'pk_gradea', 'pk_gradeb'];
 
 function estLoad() {
   try { const x = JSON.parse(localStorage.getItem(ESTIMASI_STORAGE_KEY) || '[]'); return Array.isArray(x) ? x : []; }
@@ -81,16 +81,54 @@ function estParseDateCell(cell, fmt) {
 }
 
 function estDetectFmt(lines) {
-  let dmy = false, mdy = false;
+  const dates = [];
   lines.forEach(l => {
     const first = estSplitLine(l)[0] || '';
     const m = first.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
-    if (!m) return;
-    if (parseInt(m[1], 10) > 12) dmy = true;
-    if (parseInt(m[2], 10) > 12) mdy = true;
+    if (m) { let y = parseInt(m[3], 10); if (y < 100) y += 2000; dates.push([parseInt(m[1], 10), parseInt(m[2], 10), y]); }
   });
-  if (dmy && !mdy) return 'dmy';
-  return 'mdy';
+  if (!dates.length) return 'dmy';
+  let dmyOk = true, mdyOk = true;
+  dates.forEach(d => { if (d[0] > 12) mdyOk = false; if (d[1] > 12) dmyOk = false; });
+  if (dmyOk && !mdyOk) return 'dmy';
+  if (mdyOk && !dmyOk) return 'mdy';
+  if (!dmyOk && !mdyOk) return 'dmy';
+  // keduanya masuk akal: pilih yang tanggalnya berurutan (hari demi hari), lalu yang terdekat dengan hari ini
+  const mk = fmt => dates.map(d => new Date(d[2], (fmt === 'dmy' ? d[1] : d[0]) - 1, fmt === 'dmy' ? d[0] : d[1]));
+  const score = arr => {
+    let sc = 0;
+    for (let i = 1; i < arr.length; i++) {
+      const gap = Math.round((arr[i] - arr[i - 1]) / 86400000);
+      sc += Math.abs(gap - 1) > 3 ? 100 : Math.abs(gap - 1);
+    }
+    return sc;
+  };
+  const sd = score(mk('dmy')), sm = score(mk('mdy'));
+  if (sd !== sm) return sd < sm ? 'dmy' : 'mdy';
+  const now = Date.now();
+  const dist = arr => arr.reduce((t, d) => t + Math.abs(d - now), 0);
+  return dist(mk('dmy')) <= dist(mk('mdy')) ? 'dmy' : 'mdy';
+}
+
+// Ambil 6 angka (Hatsu, A, B, Pack Hatsu, Pack A, Pack B) dari sel setelah tanggal.
+// Kolom GH / Valve di depan (mis. "1,2") dan simbol hasil OCR dibuang. Format lama (ada kolom Frozen, 7 angka) tetap didukung.
+function estPickValues(tokens) {
+  const ghLike = x => /^[12]([.,]?[12])?\.?$/.test(String(x).trim());
+  let t = tokens.map(x => String(x == null ? '' : x).trim());
+  // "1" "2" terbaca terpisah -> kolom GH
+  if (t.length >= 8 && /^[12]$/.test(t[0]) && /^[12]$/.test(t[1])) t = t.slice(2);
+  let withFrozen;
+  if (t.length >= 8) withFrozen = true;
+  else if (t.length === 7) withFrozen = !ghLike(t[0]);
+  else withFrozen = false;
+  const need = withFrozen ? 7 : 6;
+  let warn = false;
+  if (t.length > need) t = t.slice(-need);
+  else if (t.length < need) warn = true;
+  const v = t.map(estNum);
+  while (v.length < need) v.push(0);
+  const vals = withFrozen ? [v[0], v[1], v[2], v[4], v[5], v[6]] : v.slice(0, 6);
+  return { vals, warn };
 }
 
 function estParsePaste() {
@@ -109,20 +147,13 @@ function estParsePaste() {
     const tgl = estParseDateCell(cells[0], fmt);
     if (!tgl) return; // header / baris total
     let rest = cells.slice(1);
-    let warn = false;
-    if (l.indexOf('\t') < 0) {
-      // teks hasil OCR / spasi: ambil token angka saja, 7 terakhir = kolom data (Valve & simbol diabaikan)
-      const nums = rest.filter(c => /^[\d.,]+$/.test(c));
-      if (nums.length < 4) { skipped++; return; }
-      warn = nums.length < 7;
-      rest = nums.length >= 7 ? nums.slice(-7) : nums;
-    } else {
-      if (rest.length >= 8) rest = rest.slice(1); // buang kolom Valve
-      if (rest.every(c => c === '' || c == null)) { skipped++; return; } // baris kosong (mis. libur)
-    }
+    if (l.indexOf('\t') < 0) rest = rest.filter(c => /^[\d.,]+$/.test(c)); // OCR: hanya token angka
+    const filled = rest.filter(c => c !== '' && c != null).length;
+    if (l.indexOf('\t') >= 0 ? filled === 0 : filled < 4) { skipped++; return; } // baris kosong / libur
+    const pk = estPickValues(rest);
     const rec = { tgl: tgl };
-    EST_FIELDS.forEach((f, i) => { rec[f] = estNum(rest[i]); });
-    if (warn) rec._warn = true;
+    EST_FIELDS.forEach((f, i) => { rec[f] = pk.vals[i]; });
+    if (pk.warn) rec._warn = true;
     rows.push(rec);
   });
 
@@ -144,10 +175,10 @@ function estParsePaste() {
       ${nWarn ? `<br><span style="color:#b45309;font-weight:700;">⚠️ ${nWarn} baris kuning datanya kurang lengkap, mohon dicek.</span>` : ''}
     </div>
     <div class="table-container"><table>
-      <thead><tr><th>Tanggal</th><th class="text-right">Hatsu</th><th class="text-right">A</th><th class="text-right">B</th><th class="text-right">Frozen</th><th class="text-right">Pk Hatsu</th><th class="text-right">Pk A</th><th class="text-right">Pk B</th></tr></thead>
+      <thead><tr><th>Tanggal</th><th class="text-right">Hatsu</th><th class="text-right">A</th><th class="text-right">B</th><th class="text-right">Pk Hatsu</th><th class="text-right">Pk A</th><th class="text-right">Pk B</th></tr></thead>
       <tbody>${rows.map((r, i) => `<tr${r._warn ? ' style="background:#fef9c3;"' : ''}>
         <td style="white-space:nowrap;"><input type="date" value="${r.tgl}" onchange="estEditPending(${i},'tgl',this.value)" style="padding:4px;border:1px solid #d1d5db;border-radius:6px;"> <small style="color:#6b7280;">${estLabel(r.tgl).split(',')[0]}</small></td>
-        ${EST_FIELDS.map(f => `<td class="text-right">${inp(i, f, r[f], f.startsWith('pk_') ? 70 : 62)}</td>`).join('')}</tr>`).join('')}</tbody>
+        ${EST_FIELDS.map(f => `<td class="text-right">${inp(i, f, r[f], f.startsWith('pk_') ? 70 : 66)}</td>`).join('')}</tr>`).join('')}</tbody>
     </table></div>`;
   wrap.style.display = 'flex';
 }
@@ -207,12 +238,12 @@ function estBuildRows() {
   const est = {};
   estLoad().forEach(x => { est[x.tgl] = x; });
 
-  // aktual: jumlahkan GH 1 + GH 2 per tanggal; frozen dari GLOBAL
+  // aktual: jumlahkan GH 1 + GH 2 per tanggal
   const act = {};
   JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]').forEach(x => {
     if (!x.tgl || x.tgl < dari || x.tgl > sampai) return;
-    const a = act[x.tgl] || (act[x.tgl] = { p_hatsu: 0, p_gradea: 0, p_gradeb: 0, k_hatsu: 0, k_a11: 0, k_a15: 0, m_hatsu: 0, m_a11: 0, m_a15: 0, k_frozen: 0 });
-    if (x.gh === 'GLOBAL') { a.k_frozen += x.k_frozen || 0; return; }
+    const a = act[x.tgl] || (act[x.tgl] = { p_hatsu: 0, p_gradea: 0, p_gradeb: 0, k_hatsu: 0, k_a11: 0, k_a15: 0, m_hatsu: 0, m_a11: 0, m_a15: 0 });
+    if (x.gh === 'GLOBAL') return;
     ['p_hatsu', 'p_gradea', 'p_gradeb', 'k_hatsu', 'k_a11', 'k_a15', 'm_hatsu', 'm_a11', 'm_a15'].forEach(k => { a[k] += x[k] || 0; });
   });
 
@@ -228,7 +259,6 @@ function estBuildRows() {
       estPanen: estSum(e, 'e', grades), aktPanen: estSum(a, 'p', grades),
       kirim: estSum(a, 'k', grades),
       estPack: estSum(e, 'pk', grades), aktPack: estSum(a, 'm', grades),
-      estFrozen: e ? (e.e_frozen || 0) : 0, aktFrozen: a ? (a.k_frozen || 0) : 0
     };
     rows.push(r);
   }
@@ -261,7 +291,7 @@ function renderEstimasi() {
   const rows = estBuildRows();
 
   if (!rows.length) {
-    body.innerHTML = '<tr><td colspan="13" class="text-center" style="color:#999;">Pilih periode</td></tr>';
+    body.innerHTML = '<tr><td colspan="11" class="text-center" style="color:#999;">Pilih periode</td></tr>';
     document.getElementById('est-summary').innerHTML = '';
     document.getElementById('est-chart').innerHTML = '';
     return;
@@ -269,7 +299,7 @@ function renderEstimasi() {
 
   // dibandingkan hanya untuk hari yang punya estimasi DAN aktual
   const cmp = rows.filter(r => r.hasEst && r.hasAct);
-  const T = { estPanen: 0, aktPanen: 0, kirim: 0, estPack: 0, aktPack: 0, estFrozen: 0, aktFrozen: 0 };
+  const T = { estPanen: 0, aktPanen: 0, kirim: 0, estPack: 0, aktPack: 0 };
   cmp.forEach(r => { Object.keys(T).forEach(k => { T[k] += r[k]; }); });
   const sisaEst = rows.filter(r => r.hasEst && !r.hasAct).reduce((a, r) => a + r.estPanen, 0);
   const totalEst = rows.filter(r => r.hasEst).reduce((a, r) => a + r.estPanen, 0);
@@ -289,7 +319,6 @@ function renderEstimasi() {
         ${estCard('Panen', T.aktPanen, T.estPanen, 'Kg', 1, 'Kirim aktual: ' + estFmt(T.kirim, 1) + ' Kg')}
         ${estCard('Pack', T.aktPack, T.estPack, 'pack', 0, '')}
         ${estCard('Kg per Pack', kgpAkt, kgpEst, 'Kg', 3, 'Aktual = kirim ÷ pack · Estimasi = panen ÷ pack')}
-        ${estCard('Frozen', T.aktFrozen, T.estFrozen, 'Kg', 1, 'Aktual = reject frozen dikirim')}
       </div>`;
   }
 
@@ -314,8 +343,6 @@ function renderEstimasi() {
       <td class="text-right" style="color:${col(dPack)};font-weight:700;">${both ? (dPack >= 0 ? '+' : '') + estFmt(dPack, 0) : dash}</td>
       <td class="text-right">${r.hasEst && kgpE > 0 ? estFmt(kgpE, 3) : dash}</td>
       <td class="text-right">${r.hasAct && kgpA > 0 ? estFmt(kgpA, 3) : dash}</td>
-      <td class="text-right">${r.hasEst ? estFmt(r.estFrozen, 1) : dash}</td>
-      <td class="text-right">${r.hasAct || r.aktFrozen > 0 ? estFmt(r.aktFrozen, 1) : dash}</td>
     </tr>`;
   }).join('');
   if (cmp.length) {
@@ -329,7 +356,6 @@ function renderEstimasi() {
       <td class="text-right">${estFmt(T.estPack, 0)}</td><td class="text-right">${estFmt(T.aktPack, 0)}</td>
       <td class="text-right">${dK >= 0 ? '+' : ''}${estFmt(dK, 0)}</td>
       <td class="text-right">${kgpEst > 0 ? estFmt(kgpEst, 3) : '–'}</td><td class="text-right">${kgpAkt > 0 ? estFmt(kgpAkt, 3) : '–'}</td>
-      <td class="text-right">${estFmt(T.estFrozen, 1)}</td><td class="text-right">${estFmt(T.aktFrozen, 1)}</td>
     </tr>`;
   }
   body.innerHTML = html;
