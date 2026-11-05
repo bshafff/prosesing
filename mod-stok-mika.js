@@ -741,15 +741,16 @@ function renderKemasanTables() {
         const h = itemMap['Hatsu'] || {};
         const a = itemMap['Grade A'] || {};
         const b = itemMap['Grade B'] || {};
+        const detail = x => `<br><small style="color:#666;">Kirim ${x.kirim || 0} · Tamu ${x.tamu || 0} · <b style="color:${rejMika(x) > 0 ? '#dc2626' : '#666'};">Rej ${rejMika(x)}</b></small>`;
         return `<tr>
           <td>
             <button class="btn btn-sm btn-secondary" onclick="editKemasanHistory('${entry.id}')">✏️</button>
             <button class="btn btn-sm btn-danger" onclick="hapusKemasanHistory('${entry.id}')">🗑️</button>
           </td>
           <td>${entry.tgl}</td>
-          <td>G:${h.masuk || 0}/${h.bongkarDus || 0}D | P:${h.aktualPcs || 0}Pcs</td>
-          <td>G:${a.masuk || 0}/${a.bongkarDus || 0}D | P:${a.aktualPcs || 0}Pcs</td>
-          <td>G:${b.masuk || 0}/${b.bongkarDus || 0}D | P:${b.aktualPcs || 0}Pcs</td>
+          <td>G:${h.masuk || 0}/${h.bongkarDus || 0}D | P:${h.aktualPcs || 0}Pcs${detail(h)}</td>
+          <td>G:${a.masuk || 0}/${a.bongkarDus || 0}D | P:${a.aktualPcs || 0}Pcs${detail(a)}</td>
+          <td>G:${b.masuk || 0}/${b.bongkarDus || 0}D | P:${b.aktualPcs || 0}Pcs${detail(b)}</td>
           <td><small>Kirim: ${(h.kirim || 0) + (a.kirim || 0) + (b.kirim || 0)} | Rej: ${rejMika(h) + rejMika(a) + rejMika(b)}</small></td>
         </tr>`;
       }).join('');
@@ -814,6 +815,7 @@ function editKemasanHistory(id) {
   const body = document.getElementById('modal-edit-kemasan-body');
   let html = `<div class="input-group"><label>Tanggal</label><input type="date" id="edit-k-tgl" value="${entry.tgl}"></div>`;
 
+  const escA = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
   entry.items.forEach((it, idx) => {
     const rejVal = rejMika(it);
     html += `
@@ -831,6 +833,11 @@ function editKemasanHistory(id) {
           <div class="input-group"><label>Reject (Pcs)</label><input type="number" id="edit-reject-${idx}" value="${rejVal}"></div>
           <div class="input-group"><label>Koreksi Fisik Mika (Pcs)</label><input type="number" id="edit-processing-opname-${idx}" placeholder="Kosongkan kalau sesuai" value="${it.processingOpname != null ? it.processingOpname : ''}"></div>
         </div>
+        <div class="row-2">
+          <div class="input-group"><label>Mika Tamu / Sample (Pcs)</label><input type="number" id="edit-tamu-${idx}" value="${it.tamu || 0}"></div>
+          <div class="input-group"><label>Keterangan Tamu / Sample</label><input type="text" id="edit-ket-tamu-${idx}" value="${escA(it.ketTamu)}"></div>
+        </div>
+        <div class="input-group"><label>Keterangan Reject</label><input type="text" id="edit-ket-reject-${idx}" placeholder="Contoh: Sobek, pecah" value="${escA(it.ketReject)}"></div>
         ${(AKS_EDIT_FIELDS[it.name] || []).map(([f, lbl]) => {
           let v = it[f];
           if (v == null) {
@@ -885,6 +892,12 @@ function saveEditKemasan() {
     const aktual = parseFloat((document.getElementById(`edit-aktual-${i}`) || {}).value || 0);
     const kirim = parseFloat((document.getElementById(`edit-kirim-${i}`) || {}).value || 0);
     const reject = parseFloat((document.getElementById(`edit-reject-${i}`) || {}).value || 0);
+    const tamuEl = document.getElementById(`edit-tamu-${i}`);
+    const ketTamuEl = document.getElementById(`edit-ket-tamu-${i}`);
+    const ketRejectEl = document.getElementById(`edit-ket-reject-${i}`);
+    const tamu = tamuEl ? (parseFloat(tamuEl.value) || 0) : (old.tamu || 0);
+    const ketTamu = ketTamuEl ? ketTamuEl.value : (old.ketTamu || '');
+    const ketReject = ketRejectEl ? ketRejectEl.value : (old.ketReject || '');
     const opnameEl = document.getElementById(`edit-processing-opname-${i}`);
     const processingOpname = opnameEl && opnameEl.value !== '' ? parseFloat(opnameEl.value) : null;
     const stdPcs = bongkar * m.std;
@@ -893,7 +906,7 @@ function saveEditKemasan() {
       ...old,
       name: m.name, std: m.std,
       masuk, bongkarDus: bongkar, standarPcs: stdPcs, aktualPcs: aktual,
-      selisih: aktual - stdPcs, kirim, reject, processingOpname
+      selisih: aktual - stdPcs, kirim, reject, tamu, ketTamu, ketReject, processingOpname
     };
 
     (AKS_EDIT_FIELDS[m.name] || []).forEach(([f]) => {
