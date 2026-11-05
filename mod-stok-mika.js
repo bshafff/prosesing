@@ -365,6 +365,8 @@ function buildMikaForm(item, i) {
       <div class="card-title">📦 Mika ${item.name} <span class="badge ${item.badge}">Std: ${item.std} Pcs/Dus</span></div>
       <div class="info-box">Stok Awal: Gudang <b>${gAwal}</b> Dus | Processing <b>${pAwal}</b> Pcs</div>
 
+      <div class="km-cols">
+      <div class="km-col">
       <div class="sub-title">📦 1. Stok Gudang — Dus Belum Dibongkar</div>
       <div class="row-2">
         <div class="input-group"><label>Kemasan Masuk (Dus)</label><input type="number" id="masuk-${i}" placeholder="0" oninput="hitungKemasan(${i})"></div>
@@ -393,6 +395,8 @@ function buildMikaForm(item, i) {
         <input type="number" id="processing-opname-${i}" placeholder="Kosongkan kalau sesuai" oninput="hitungKemasan(${i})">
       </div>
 
+      </div>
+      <div class="km-col">
       <div class="sub-title">📤 4. Pengeluaran Hari Ini</div>
       <div class="row-2">
         <div class="input-group"><label>Kirim Packing (PCS)</label><input type="number" id="kirim-${i}" placeholder="0" oninput="recalcPakaiPenunjang(); hitungKemasan(${i})"></div>
@@ -403,6 +407,8 @@ function buildMikaForm(item, i) {
       <div class="sub-title">❌ 5. Reject Mika Hari Ini</div>
       <div class="input-group"><label>Reject Mika (PCS)</label><input type="number" id="reject-${i}" placeholder="0" oninput="hitungKemasan(${i})"></div>
       <div class="input-group"><label>Keterangan Reject</label><input type="text" id="ket-reject-${i}" placeholder="Contoh: Sobek, pecah"></div>
+      </div>
+      </div>
     </div>
   `;
 }
@@ -412,6 +418,8 @@ function buildMikaForm(item, i) {
 // ============================================================
 function renderPenunjangPanel() {
   return `
+    <div class="km-cols">
+    <div class="km-col">
     <div class="card">
       <div class="card-title">🧽 Netfoam Hatsuhana <span class="badge hatsu">1 Ball = ${AKS_KONVERSI.netfoam} Pcs · 1 Mika = ${NETFOAM_PER_MIKA} Pcs</span></div>
       ${netfoamCardHtml()}
@@ -420,6 +428,8 @@ function renderPenunjangPanel() {
       <div class="card-title">📄 Layer A11 <span class="badge gradea">1 Dus = ${AKS_KONVERSI.layer} Pcs · 1 Mika = 1 Layer</span></div>
       ${layerCardHtml()}
     </div>
+    </div>
+    <div class="km-col">
     <div class="card">
       <div class="card-title">📄 Sleeve A15 <span class="badge gradeb">1 Dus = ${AKS_KONVERSI.sleeve} Pcs · 1 Mika = 1 Sleeve</span></div>
       ${sleeveCardHtml()}
@@ -427,6 +437,8 @@ function renderPenunjangPanel() {
     <div class="card">
       <div class="card-title">🏷️ Stiker <span class="badge info">1 Lembar = ${AKS_KONVERSI.stiker} Pcs · 1 Mika = 1 Stiker</span></div>
       ${stikerCardHtml()}
+    </div>
+    </div>
     </div>
   `;
 }
