@@ -43,7 +43,13 @@
     #panen .sub-tab { white-space: normal; padding: 0.4rem 0.8rem; font-size: 0.8rem; }
     #panen .pn-two .input-group input { padding: 0.5rem 0.55rem; }
     #panen .pn-two .pn-sum b { font-size: 1rem; }
-    @media (max-width: 760px) { .pn-two { grid-template-columns: 1fr; } }
+    .pn-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.75rem; margin-bottom: 0.75rem; align-items: start; }
+    .pn-col { display: flex; flex-direction: column; gap: 0.75rem; min-width: 0; }
+    #panen .pn-cols .card { margin-bottom: 0; }
+    #panen .pn-cols .input-group input { padding: 0.5rem 0.55rem; }
+    #panen .pn-cols .pn-sum b { font-size: 1rem; }
+    #pn-panel-tamu .card { max-width: 760px; }
+    @media (max-width: 760px) { .pn-two, .pn-cols { grid-template-columns: minmax(0, 1fr); } }
     @media (max-width: 640px) { #panen .row-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } #panen .sub-tab { padding: 0.4rem 0.6rem; font-size: 0.75rem; } #panen .input-group input, #panen .input-group select { padding: 0.5rem 0.5rem; font-size: 0.9rem; } }
     .pn-top { display: none; }
     .pn-top.active { display: block; }
@@ -128,6 +134,8 @@
 
   <!-- ================= TAB 2: REJECT PROCESSING & PENGIRIMAN ================= -->
   <div id="pn-panel-proc" class="pn-panel">
+    <div class="pn-cols">
+    <div class="pn-col">
     <div class="card">
       <div class="card-title">🏭 3. Reject Processing (Kg)</div>
       <div class="sub-title" style="color:#1e40af;">GH 1</div>
@@ -172,6 +180,8 @@
       <div class="pn-note">Reject Rate = Grand Total Reject ÷ Total Panen (tab Panen &amp; Reject Kebun, tanggal yang sama).</div>
     </div>
 
+    </div>
+    <div class="pn-col">
     <div class="card">
       <div class="card-title">📦 4. Berat Pengiriman (Kg)</div>
       <div class="sub-title" style="color:#1e40af;">GH 1</div>
@@ -231,6 +241,9 @@
         <strong>Rate Kirim:</strong> <span id="calc-rate-kirim" style="color: #16a34a; font-size: 1.25rem;">0.00%</span>
       </div>
       <div class="pn-note">Isi sesuai yang benar-benar dikirim hari ini (termasuk stok freezer/chiller hari sebelumnya). Otomatis masuk total &amp; persentase pengiriman, jadi Rate Kirim bisa lebih dari 100%.</div>
+    </div>
+
+    </div>
     </div>
 
     <div class="btn-group">
