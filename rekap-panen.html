@@ -30,6 +30,15 @@
     #panen .input-group input, #panen .input-group select { padding: 0.55rem 0.7rem; font-size: 0.95rem; }
     #panen .row-3, #panen .row-2, #panen .row-4, #panen .row-6 { gap: 0.5rem; }
     #panen .sub-title { font-size: 0.8rem; margin-bottom: 0.25rem; }
+    .pn-two { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem; align-items: start; }
+    #panen .pn-two > .card { margin-bottom: 0; }
+    /* isian angka pendek: tetap 3 kolom per baris, juga di HP */
+    #panen .row-3, #panen .row-6 { grid-template-columns: repeat(3, 1fr); }
+    #panen .row-2 { grid-template-columns: repeat(2, 1fr); }
+    #panen .pn-two .input-group input { padding: 0.5rem 0.55rem; }
+    #panen .pn-two .pn-sum b { font-size: 1rem; }
+    @media (max-width: 760px) { .pn-two { grid-template-columns: 1fr; } }
+    @media (max-width: 640px) { #panen .row-4 { grid-template-columns: repeat(2, 1fr); } }
     .pn-top { display: none; }
     .pn-top.active { display: block; }
     .pn-panel { display: none; }
@@ -46,7 +55,7 @@
     .pn-sum .all { background: #f0fdf4; color: #166534; border: 1.5px solid #16a34a; }
     .pn-sum.rk .all { background: #fef2f2; color: #991b1b; border-color: #dc2626; }
     .pn-note { font-size: 0.8rem; color: #666; margin-top: 0.5rem; }
-    @media (max-width: 600px) { .pn-sum { grid-template-columns: 1fr; } }
+    @media (max-width: 600px) { .pn-sum { gap: 0.35rem; } .pn-sum > div { padding: 0.5rem 0.25rem; } .pn-sum b { font-size: 0.95rem; } }
   </style>
 
   <div class="sub-tabs" id="panen-tabs">
@@ -57,6 +66,7 @@
 
   <!-- ================= TAB 1: PANEN & REJECT KEBUN ================= -->
   <div id="pn-panel-panen" class="pn-panel active">
+    <div class="pn-two">
     <div class="card">
       <div class="card-title">🌾 1. Panen (Kg)</div>
       <div class="sub-title" style="color:#1e40af;">GH 1</div>
@@ -101,6 +111,8 @@
         <div class="gh2"><small>GH 2</small><b id="sum-rk-gh2">0.00 Kg</b></div>
         <div class="all"><small>Gabungan</small><b id="calc-total-rk">0.00 Kg</b></div>
       </div>
+    </div>
+
     </div>
 
     <div class="btn-group">
