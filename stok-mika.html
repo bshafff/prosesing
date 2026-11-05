@@ -1,4 +1,23 @@
 <div id="kemasan" class="view">
+  <style>
+    /* tampilan lebih ringkas: dua kolom di layar lebar, tanpa scroll samping */
+    #kemasan { max-width: 100%; overflow-x: hidden; }
+    #kemasan .card { padding: 1rem; margin-bottom: 0.75rem; min-width: 0; }
+    #kemasan .card-title { margin-bottom: 0.75rem; }
+    #kemasan .input-group { gap: 0.25rem; margin-bottom: 0.5rem; min-width: 0; }
+    #kemasan .input-group label { font-size: 0.75rem; }
+    #kemasan .input-group input, #kemasan .input-group select { padding: 0.5rem 0.6rem; font-size: 0.95rem; width: 100%; min-width: 0; box-sizing: border-box; }
+    #kemasan #kemasan-tgl { max-width: 240px; }
+    #kemasan .row-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
+    #kemasan .row-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
+    #kemasan .sub-title { font-size: 0.8rem; margin: 0.75rem 0 0.35rem; }
+    #kemasan .sub-tabs { flex-wrap: wrap; overflow-x: visible; }
+    #kemasan .sub-tab { white-space: normal; padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+    #kemasan .km-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
+    #kemasan .km-col { min-width: 0; }
+    @media (max-width: 760px) { #kemasan .km-cols { grid-template-columns: minmax(0, 1fr); gap: 0; } }
+    @media (max-width: 640px) { #kemasan .sub-tab { padding: 0.4rem 0.6rem; font-size: 0.75rem; } #kemasan .input-group input { padding: 0.5rem; font-size: 0.9rem; } }
+  </style>
   <div class="view-toolbar">
     <button class="btn btn-sm btn-home" onclick="goHome()">← Menu</button>
     <span class="view-title">📦 Stok Kemasan (Mika)</span>
