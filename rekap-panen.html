@@ -30,15 +30,21 @@
     #panen .input-group input, #panen .input-group select { padding: 0.55rem 0.7rem; font-size: 0.95rem; }
     #panen .row-3, #panen .row-2, #panen .row-4, #panen .row-6 { gap: 0.5rem; }
     #panen .sub-title { font-size: 0.8rem; margin-bottom: 0.25rem; }
-    .pn-two { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem; align-items: start; }
+    .pn-two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.75rem; margin-bottom: 0.75rem; align-items: start; }
     #panen .pn-two > .card { margin-bottom: 0; }
     /* isian angka pendek: tetap 3 kolom per baris, juga di HP */
-    #panen .row-3, #panen .row-6 { grid-template-columns: repeat(3, 1fr); }
-    #panen .row-2 { grid-template-columns: repeat(2, 1fr); }
+    #panen .row-3, #panen .row-6 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    #panen .row-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    /* cegah melebar / scroll kanan-kiri: kolom & isian boleh mengecil */
+    #panen { max-width: 100%; overflow-x: hidden; }
+    #panen .card, #panen .input-group { min-width: 0; }
+    #panen .input-group input, #panen .input-group select { width: 100%; min-width: 0; box-sizing: border-box; }
+    #panen .sub-tabs { flex-wrap: wrap; overflow-x: visible; }
+    #panen .sub-tab { white-space: normal; padding: 0.4rem 0.8rem; font-size: 0.8rem; }
     #panen .pn-two .input-group input { padding: 0.5rem 0.55rem; }
     #panen .pn-two .pn-sum b { font-size: 1rem; }
     @media (max-width: 760px) { .pn-two { grid-template-columns: 1fr; } }
-    @media (max-width: 640px) { #panen .row-4 { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 640px) { #panen .row-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } #panen .sub-tab { padding: 0.4rem 0.6rem; font-size: 0.75rem; } #panen .input-group input, #panen .input-group select { padding: 0.5rem 0.5rem; font-size: 0.9rem; } }
     .pn-top { display: none; }
     .pn-top.active { display: block; }
     .pn-panel { display: none; }
@@ -46,7 +52,7 @@
     .pn-status { font-size: 0.75rem; font-weight: 700; margin-left: 0.35rem; }
     .pn-status.ok { color: #16a34a; }
     .pn-status.empty { color: #9ca3af; }
-    .pn-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 1rem; }
+    .pn-sum { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; margin-top: 1rem; }
     .pn-sum > div { border-radius: 8px; padding: 0.75rem; text-align: center; }
     .pn-sum small { display: block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; opacity: 0.8; }
     .pn-sum b { font-size: 1.15rem; }
