@@ -1245,8 +1245,8 @@ function generateLaporanHarianGabungan() {
     p_hatsu: 0, p_gradea: 0, p_gradeb: 0,
     rk_crack: 0, rk_poli: 0, rk_hpt: 0,
     rp_crack: 0, rp_poli: 0, rp_hpt: 0, rp_bruise: 0, rp_overripe: 0, rp_kuning: 0, rp_frozen: 0,
-    k_hatsu: 0, k_a11: 0, k_a15: 0, k_frozen: 0,
-    reject_frozen: 0, reject_fresh: 0, // <-- VARIABEL BARU
+    k_hatsu: 0, k_a11: 0, k_a15: 0, 
+    k_frozen: 0, k_rfresh: 0, // <-- NAMA VARIABEL DISESUAIKAN
     m_hatsu: 0, m_a11: 0, m_a15: 0
   };
 
@@ -1268,9 +1268,9 @@ function generateLaporanHarianGabungan() {
     merged.k_a11 += (item.k_a11 || 0);
     merged.k_a15 += (item.k_a15 || 0);
     
-    // TANGKAP DATA BARU (Dengan fallback ke k_frozen jika data lama)
-    merged.reject_frozen += (item.reject_frozen || item.k_frozen || 0);
-    merged.reject_fresh += (item.reject_fresh || 0);
+    // TANGKAP DATA REJECT DIKIRIM DARI GLOBAL
+    merged.k_frozen += (item.k_frozen || 0);
+    merged.k_rfresh += (item.k_rfresh || 0);
 
     merged.m_hatsu += (item.m_hatsu || 0);
     merged.m_a11 += (item.m_a11 || 0);
@@ -1298,7 +1298,7 @@ function generateLaporanHarianGabungan() {
 
 function renderCanvasLaporanGabungan(item) {
   const W = 1000;
-  const H = 1150; // Tambah tinggi canvas karena ada baris ekstra
+  const H = 1150;
   const sc = 2;
   const cv = document.createElement('canvas');
   cv.width = W * sc; cv.height = H * sc;
@@ -1352,16 +1352,16 @@ function renderCanvasLaporanGabungan(item) {
   text('Pack (Pcs)', grX + 850, grY + 90, 15, '#475569', 'right', true);
 
   const rkTotal = (item.rk_crack||0) + (item.rk_poli||0) + (item.rk_hpt||0);
-  const totalKirimSemua = item.k_hatsu + item.k_a11 + item.k_a15 + item.reject_frozen + item.reject_fresh;
+  const totalKirimSemua = item.k_hatsu + item.k_a11 + item.k_a15 + item.k_frozen + item.k_rfresh;
 
-  // Array Rincian (Frozen dipisah jadi 2)
+  // Array Rincian
   const rows = [
     { name: 'Hatsuhana', p: item.p_hatsu, k: item.k_hatsu, m: item.m_hatsu, color: '#1e40af' },
     { name: 'Grade A', p: item.p_gradea, k: item.k_a11, m: item.m_a11, color: '#15803d' },
     { name: 'Grade B', p: item.p_gradeb, k: item.k_a15, m: item.m_a15, color: '#b45309' },
     { name: 'Reject Kebun', p: rkTotal, k: 0, m: 0, color: '#dc2626' },
-    { name: 'Reject Frozen (Global)', p: 0, k: item.reject_frozen, m: 0, color: '#7c3aed' },
-    { name: 'Reject Fresh (Global)', p: 0, k: item.reject_fresh, m: 0, color: '#0891b2' }
+    { name: 'Reject Frozen (Global)', p: 0, k: item.k_frozen, m: 0, color: '#7c3aed' },
+    { name: 'Reject Fresh (Global)', p: 0, k: item.k_rfresh, m: 0, color: '#0891b2' }
   ];
 
   rows.forEach((row, i) => {
