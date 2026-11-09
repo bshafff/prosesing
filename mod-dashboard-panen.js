@@ -1226,3 +1226,212 @@ async function downloadBulanCompareImage() {
   const filename = `Rekap_Perbandingan_Bulanan_${periodLabel}_${gh}.png`;
   captureCardAsImage('panen-bulan-compare-card', filename, true);
 }
+
+// ========== LAPORAN HARIAN GABUNGAN (ALL FARM) ==========
+function generateLaporanHarianGabungan() {
+  const tgl = document.getElementById('laporan-harian-tgl').value;
+  if (!tgl) { showToast('Pilih tanggal laporan dulu!', 'error'); return; }
+
+  const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+  const dailyData = db.filter(x => x.tgl === tgl);
+
+  if (dailyData.length === 0) {
+    showToast('Tidak ada data pada tanggal tersebut.', 'error');
+    return;
+  }
+
+  // Gabungkan data dari GH 1, GH 2, dan GLOBAL
+  let merged = {
+    tgl: tgl,
+    p_hatsu: 0, p_gradea: 0, p_gradeb: 0,
+    rk_crack: 0, rk_poli: 0, rk_hpt: 0,
+    rp_crack: 0, rp_poli: 0, rp_hpt: 0, rp_bruise: 0, rp_overripe: 0, rp_kuning: 0, rp_frozen: 0,
+    k_hatsu: 0, k_a11: 0, k_a15: 0, k_frozen: 0,
+    m_hatsu: 0, m_a11: 0, m_a15: 0
+  };
+
+  dailyData.forEach(item => {
+    merged.p_hatsu += (item.p_hatsu || 0);
+    merged.p_gradea += (item.p_gradea || 0);
+    merged.p_gradeb += (item.p_gradeb || 0);
+    merged.rk_crack += (item.rk_crack || 0);
+    merged.rk_poli += (item.rk_poli || 0);
+    merged.rk_hpt += (item.rk_hpt || 0);
+    merged.rp_crack += (item.rp_crack || 0);
+    merged.rp_poli += (item.rp_poli || 0);
+    merged.rp_hpt += (item.rp_hpt || 0);
+    merged.rp_bruise += (item.rp_bruise || 0);
+    merged.rp_overripe += (item.rp_overripe || 0);
+    merged.rp_kuning += (item.rp_kuning || 0);
+    merged.rp_frozen += (item.rp_frozen || 0);
+    merged.k_hatsu += (item.k_hatsu || 0);
+    merged.k_a11 += (item.k_a11 || 0);
+    merged.k_a15 += (item.k_a15 || 0);
+    merged.k_frozen += (item.k_frozen || 0); // Ambil dari Global
+    merged.m_hatsu += (item.m_hatsu || 0);
+    merged.m_a11 += (item.m_a11 || 0);
+    merged.m_a15 += (item.m_a15 || 0);
+  });
+
+  // Panggil fungsi Canvas
+  const dataURL = renderCanvasLaporanGabungan(merged);
+  
+  // Buka di tab baru agar bisa di-save / di-screenshot
+  const w = window.open('');
+  w.document.write(`
+    <html>
+      <head>
+        <title>Laporan Harian Gabungan - ${tgl}</title>
+        <style>
+          body { margin: 0; display: flex; justify-content: center; align-items: flex-start; background: #e5e7eb; padding: 20px; font-family: system-ui, sans-serif; }
+          img { max-width: 100%; height: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border-radius: 8px; }
+        </style>
+      </head>
+      <body>
+        <img src="${dataURL}" alt="Laporan Harian">
+      </body>
+    </html>
+  `);
+}
+
+function renderCanvasLaporanGabungan(item) {
+  const W = 900;
+  const H = 1000;
+  const sc = 2;
+  const cv = document.createElement('canvas');
+  cv.width = W * sc; cv.height = H * sc;
+  const ctx = cv.getContext('2d');
+  ctx.scale(sc, sc);
+
+  const fillRect = (x, y, w, h, color) => { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); };
+  const text = (t, x, y, size, color, align, bold) => {
+    ctx.font = `${bold ? '700' : '400'} ${size}px system-ui, -apple-system, sans-serif`;
+    ctx.fillStyle = color; ctx.textAlign = align || 'left'; ctx.textBaseline = 'middle'; ctx.fillText(String(t), x, y);
+  };
+  const roundRect = (x, y, w, h, r, color) => {
+    ctx.fillStyle = color; ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.fill();
+  };
+  const drawPie = (cx, cy, r, parts) => {
+    let start = -Math.PI / 2;
+    const total = parts.reduce((a, p) => a + p.v, 0);
+    if (total <= 0) { ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fillStyle = '#e5e7eb'; ctx.fill(); return; }
+    parts.forEach(p => {
+      if (p.v <= 0) return;
+      const angle = (p.v / total) * Math.PI * 2;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, r, start, start + angle);
+      ctx.fillStyle = p.c; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
+      start += angle;
+    });
+  };
+
+  const fmt = n => (parseFloat(n) || 0).toFixed(2).replace('.', ',');
+  const tglFmt = formatTanggalPanjang(item.tgl);
+
+  // Background Utama
+  fillRect(0, 0, W, H, '#f1f5f9');
+
+  // 1. Header Banner
+  fillRect(0, 0, W, 120, '#2d5016');
+  text('Laporan Harian Panen & Pengiriman', 40, 50, 26, '#ffffff', 'left', true);
+  text(`Semua Farm (Gabungan) • ${tglFmt}`, 40, 85, 18, '#bbf7d0', 'left');
+  text('PT. Agri Wangi Berry', W - 40, 60, 16, '#86efac', 'right', true);
+
+  // 2. Card Rincian Panen, Pengiriman & Pack
+  const grX = 40, grY = 160, grW = 820, grH = 260;
+  roundRect(grX, grY, grW, grH, 12, '#ffffff');
+  text('Rincian Panen, Pengiriman & Pack', grX + 30, grY + 35, 18, '#2d5016', 'left', true);
+  
+  fillRect(grX + 30, grY + 70, grW - 60, 40, '#f1f5f9');
+  text('Grade', grX + 60, grY + 90, 15, '#475569', 'left', true);
+  text('Panen (Kg)', grX + 300, grY + 90, 15, '#475569', 'right', true);
+  text('Kirim (Kg)', grX + 500, grY + 90, 15, '#475569', 'right', true);
+  text('Pack (Pcs)', grX + 740, grY + 90, 15, '#475569', 'right', true);
+
+  const rows = [
+    { name: 'Hatsuhana', p: item.p_hatsu, k: item.k_hatsu, m: item.m_hatsu, color: '#1e40af' },
+    { name: 'Grade A', p: item.p_gradea, k: item.k_a11, m: item.m_a11, color: '#15803d' },
+    { name: 'Grade B', p: item.p_gradeb, k: item.k_a15, m: item.m_a15, color: '#b45309' }
+  ];
+
+  rows.forEach((row, i) => {
+    const ry = grY + 120 + (i * 45);
+    text(row.name, grX + 60, ry + 20, 16, row.color, 'left', true);
+    text(fmt(row.p), grX + 300, ry + 20, 16, '#1e293b', 'right');
+    text(fmt(row.k), grX + 500, ry + 20, 16, '#1e293b', 'right');
+    text(row.m, grX + 740, ry + 20, 16, '#1e293b', 'right');
+    ctx.beginPath(); ctx.moveTo(grX+30, ry+45); ctx.lineTo(grX+grW-30, ry+45); ctx.strokeStyle='#f1f5f9'; ctx.lineWidth=1; ctx.stroke();
+  });
+
+  const sumP = item.p_hatsu + item.p_gradea + item.p_gradeb;
+  const sumK = item.k_hatsu + item.k_a11 + item.k_a15 + item.k_frozen;
+  const sumM = item.m_hatsu + item.m_a11 + item.m_a15;
+  const ryTotal = grY + 120 + (3 * 45);
+  text('TOTAL', grX + 60, ryTotal + 20, 18, '#0f172a', 'left', true);
+  text(fmt(sumP), grX + 300, ryTotal + 20, 18, '#0f172a', 'right', true);
+  text(fmt(sumK), grX + 500, ryTotal + 20, 18, '#0f172a', 'right', true);
+  text(sumM, grX + 740, ryTotal + 20, 18, '#0f172a', 'right', true);
+
+  // 3. Card Komposisi Reject (Kiri)
+  const rjX = 40, rjY = 440, rjW = 400, rjH = 400;
+  roundRect(rjX, rjY, rjW, rjH, 12, '#ffffff');
+  text('Komposisi Reject', rjX + 30, rjY + 35, 18, '#2d5016', 'left', true);
+
+  const rejects = [
+    { label: 'Cracking', v: (item.rk_crack || 0) + (item.rp_crack||0), c: '#dc2626' },
+    { label: 'Polinasi', v: (item.rk_poli || 0) + (item.rp_poli||0), c: '#ea580c' },
+    { label: 'HPT', v: (item.rk_hpt || 0) + (item.rp_hpt||0), c: '#f59e0b' },
+    { label: 'Bruise', v: item.rp_bruise||0, c: '#84cc16' },
+    { label: 'Overripe', v: item.rp_overripe||0, c: '#0891b2' },
+    { label: 'Buah Kuning', v: item.rp_kuning||0, c: '#eab308' },
+    { label: 'Frozen', v: item.rp_frozen||0, c: '#7c3aed' }
+  ].filter(r => r.v > 0);
+  
+  const totalReject = rejects.reduce((a, r) => a + r.v, 0);
+
+  const pieCx = rjX + 130; const pieCy = rjY + 230; const pieR = 100;
+  drawPie(pieCx, pieCy, pieR, rejects);
+  
+  // Donut Hole
+  ctx.beginPath(); ctx.arc(pieCx, pieCy, 55, 0, Math.PI*2); ctx.fillStyle = '#ffffff'; ctx.fill();
+  text('TOTAL', pieCx, pieCy - 20, 14, '#64748b', 'center', true);
+  text(fmt(totalReject), pieCx, pieCy + 5, 22, '#dc2626', 'center', true);
+  text('Kg', pieCx, pieCy + 25, 12, '#64748b', 'center');
+
+  // Legend (Kanan)
+  let lgY = rjY + 100;
+  rejects.forEach(r => {
+    fillRect(rjX + 260, lgY - 8, 14, 14, r.c);
+    text(r.label, rjX + 285, lgY, 14, '#1e293b', 'left');
+    text(fmt(r.v) + ' kg', rjX + 370, lgY, 14, '#1e293b', 'right', true);
+    lgY += 28;
+  });
+
+  // 4. Card Ringkasan Reject & Rate (Kanan)
+  const smX = 460, smY = 440, smW = 400, smH = 400;
+  roundRect(smX, smY, smW, smH, 12, '#ffffff');
+  text('Ringkasan Reject & Rate', smX + 30, smY + 35, 18, '#2d5016', 'left', true);
+
+  const rkTotal = (item.rk_crack||0) + (item.rk_poli||0) + (item.rk_hpt||0);
+  const rpTotal = (item.rp_crack||0) + (item.rp_poli||0) + (item.rp_hpt||0) + (item.rp_bruise||0) + (item.rp_overripe||0) + (item.rp_kuning||0) + (item.rp_frozen||0);
+  const totalPanenAsli = sumP + rkTotal;
+  const rateReject = totalPanenAsli > 0 ? (totalReject / totalPanenAsli * 100) : 0;
+
+  roundRect(smX + 30, smY + 80, smW - 60, 80, 8, '#f0fdf4');
+  text('Reject Kebun', smX + 50, smY + 105, 14, '#166534');
+  text(fmt(rkTotal) + ' Kg', smX + 50, smY + 135, 22, '#166534', 'left', true);
+
+  roundRect(smX + 30, smY + 175, smW - 60, 80, 8, '#fef2f2');
+  text('Reject Prosesing', smX + 50, smY + 200, 14, '#991b1b');
+  text(fmt(rpTotal) + ' Kg', smX + 50, smY + 230, 22, '#991b1b', 'left', true);
+
+  roundRect(smX + 30, smY + 270, smW - 60, 95, 8, '#fff7ed');
+  text('Reject Rate', smX + 50, smY + 295, 14, '#9a3412');
+  text(rateReject.toFixed(2) + '%', smX + 50, smY + 335, 28, '#ea580c', 'left', true);
+
+  // Footer
+  text(`Dibuat pada: ${new Date().toLocaleString('id-ID')}`, W / 2, H - 30, 12, '#94a3b8', 'center');
+
+  return cv.toDataURL('image/png');
+}
