@@ -5,6 +5,22 @@
     <button class="btn btn-sm" onclick="openModule('dash-mika')" style="margin-left:auto;flex:none;background:#faf5ff;color:#7e22ce;border:1px solid #e9d5ff;">🍓 Dashboard Mika</button>
   </div>
 
+  <!-- ========================================== -->
+  <!-- TAMBAHKAN KODE CARD BARU DI SINI -->
+  <!-- ========================================== -->
+  <div class="card" style="border-left: 4px solid #2d5016; margin-bottom: 1rem;">
+    <div class="card-title">🖼️ Cetak Laporan Harian (Gabungan Semua Farm)</div>
+    <div class="row-2" style="align-items: flex-end;">
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Pilih Tanggal Laporan</label>
+        <input type="date" id="laporan-harian-tgl">
+      </div>
+      <button class="btn btn-primary" onclick="generateLaporanHarianGabungan()" style="background:#2d5016;">📸 Buat Gambar Laporan</button>
+    </div>
+    <small style="color:#666;display:block;margin-top:0.5rem;">Menggabungkan data Panen, Kirim, Mika, dan Reject dari GH 1, GH 2, & Global pada tanggal tersebut.</small>
+  </div>
+  <!-- ========================================== -->
+
   <div class="card">
     <div class="card-title">📅 Pilih Periode Bulan</div>
     <div class="row-2" style="align-items: flex-end;">
