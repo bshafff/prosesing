@@ -63,6 +63,7 @@ async function initApp() {
   setVal('dashboard-bulan', today.substring(0, 7));
   setVal('mika-bulan', today.substring(0, 7));
   setVal('minggu-bulan', today.substring(0, 7));
+  setVal('laporan-harian-tgl', today); // <--- TAMBAHKAN BARIS INI
 
   // 3. Init render data
   try { renderTableLks(); } catch (e) { console.warn('renderTableLks:', e); }
