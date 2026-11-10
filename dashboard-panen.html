@@ -8,16 +8,51 @@
   <!-- ========================================== -->
   <!-- TAMBAHKAN KODE CARD BARU DI SINI -->
   <!-- ========================================== -->
+  <!-- CARD CETAK LAPORAN (HARIAN/MINGGUAN/BULANAN) -->
   <div class="card" style="border-left: 4px solid #2d5016; margin-bottom: 1rem;">
-    <div class="card-title">🖼️ Cetak Laporan Harian (Gabungan Semua Farm)</div>
-    <div class="row-2" style="align-items: flex-end;">
+    <div class="card-title">🖼️ Cetak Laporan (Harian / Mingguan / Bulanan)</div>
+    
+    <div class="row-3" style="align-items: flex-end;">
       <div class="input-group" style="margin-bottom:0;">
-        <label>Pilih Tanggal Laporan</label>
-        <input type="date" id="laporan-harian-tgl">
+        <label>Jenis Laporan</label>
+        <select id="lap-jenis" onchange="toggleLaporanInput()">
+          <option value="harian">Harian</option>
+          <option value="mingguan">Mingguan (Senin–Sabtu)</option>
+          <option value="bulanan">Bulanan</option>
+        </select>
       </div>
-      <button class="btn btn-primary" onclick="generateLaporanHarianGabungan()" style="background:#2d5016;">📸 Buat Gambar Laporan</button>
+
+      <!-- Input Harian -->
+      <div class="input-group" id="lap-input-harian" style="margin-bottom:0;">
+        <label>Pilih Tanggal</label>
+        <input type="date" id="lap-tgl-harian">
+      </div>
+
+      <!-- Input Mingguan -->
+      <div class="input-group" id="lap-input-mingguan" style="margin-bottom:0; display:none;">
+        <label>Pilih Salah Satu Tanggal di Minggu Tersebut</label>
+        <input type="date" id="lap-tgl-mingguan">
+      </div>
+
+      <!-- Input Bulanan -->
+      <div class="input-group" id="lap-input-bulanan" style="margin-bottom:0; display:none;">
+        <label>Pilih Bulan</label>
+        <input type="month" id="lap-tgl-bulanan">
+      </div>
+
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Greenhouse</label>
+        <select id="lap-gh">
+          <option value="all">Semua Farm (Gabungan)</option>
+          <option value="GH 1">GH 1 Saja</option>
+          <option value="GH 2">GH 2 Saja</option>
+        </select>
+      </div>
     </div>
-    <small style="color:#666;display:block;margin-top:0.5rem;">Menggabungkan data Panen, Kirim, Mika, dan Reject dari GH 1, GH 2, & Global pada tanggal tersebut.</small>
+
+    <div style="margin-top: 1rem;">
+      <button class="btn btn-primary" onclick="generateLaporanGabungan()" style="background:#2d5016; width:100%;">📸 Buat Gambar Laporan</button>
+    </div>
   </div>
   <!-- ========================================== -->
 
