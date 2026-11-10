@@ -83,23 +83,25 @@
     <div class="chart-title">🥧 Komposisi Reject Bulan Ini</div>
     <div id="chart-reject"></div>
   </div>
-    <div class="card" style="margin-top:1rem;">
-    <div class="card-title">📝 Analisis Breakdown Reject Bulanan</div>
+  
+     <div class="card" style="margin-top:1rem;">
+    <div class="card-title">📝 Analisis Breakdown Reject Bulanan (Per GH)</div>
     <div class="info-box" style="margin-bottom:1rem;">
-      Menampilkan masalah utama (reject tertinggi) pada setiap bulan. Siap dicopy untuk laporan.
+      Menampilkan 2 masalah utama (reject tertinggi) pada setiap GH di tiap bulannya.
     </div>
     <div class="table-container">
-      <table class="recap-table" style="min-width: 600px;">
+      <table class="recap-table" style="min-width: 700px;">
         <thead>
           <tr>
-            <th class="th-base" style="text-align:left;">Bulan</th>
+            <th class="th-base" style="text-align:left; width:150px;">Bulan</th>
+            <th class="th-base">GH</th>
             <th class="th-reject">Total Reject (Kg)</th>
             <th class="th-reject" style="text-align:left;">Masalah Utama</th>
-            <th class="th-reject">Persentase Tertinggi</th>
+            <th class="th-reject">Persentase</th>
           </tr>
         </thead>
         <tbody id="reject-breakdown-body">
-          <tr><td colspan="4" style="text-align:center;color:#999;">Belum ada data</td></tr>
+          <tr><td colspan="5" style="text-align:center;color:#999;">Belum ada data</td></tr>
         </tbody>
       </table>
     </div>
