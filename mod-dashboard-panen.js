@@ -1522,8 +1522,11 @@ function renderRejectBreakdown() {
       { name: 'Frozen <11 gr', val: m.frozen }
     ].sort((a, b) => b.val - a.val); // Urutkan dari terbesar
 
-    const topCategory = categories[0];
-    const topPct = m.total > 0 ? (topCategory.val / m.total * 100).toFixed(1) : 0;
+    const top1 = categories[0];
+    const top2 = categories[1]; // Ambil peringkat 2
+
+    const pct1 = m.total > 0 ? (top1.val / m.total * 100).toFixed(1) : 0;
+    const pct2 = (top2 && m.total > 0) ? (top2.val / m.total * 100).toFixed(1) : 0;
 
     // Warna baris khusus untuk bulan berjalan
     const nowYM = new Date().toISOString().substring(0, 7);
@@ -1536,8 +1539,14 @@ function renderRejectBreakdown() {
           ${formatBulanIndo(m.ym)} ${isCurrentMonth ? ' <span class="notif-badge good">Bulan Ini</span>' : ''}
         </td>
         <td style="font-weight:800; color:#dc2626;">${fmt(m.total)} Kg</td>
-        <td style="text-align:left; font-weight:700; color:#ea580c;">${topCategory.name}</td>
-        <td><span class="notif-badge warn" style="font-size:0.8rem;">${topPct}%</span></td>
+        <td style="text-align:left; font-weight:700; color:#ea580c;">
+          1. ${top1.name}<br>
+          2. ${top2.name}
+        </td>
+        <td>
+          <span class="notif-badge warn" style="font-size:0.8rem; display:inline-block; margin-bottom:4px;">${pct1}%</span><br>
+          <span class="notif-badge warn" style="font-size:0.8rem; opacity:0.85;">${pct2}%</span>
+        </td>
       </tr>
     `;
   }).join('');
