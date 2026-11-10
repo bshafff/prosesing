@@ -1229,25 +1229,70 @@ async function downloadBulanCompareImage() {
 }
 
 // ========== LAPORAN HARIAN GABUNGAN (ALL FARM) ==========
-function generateLaporanHarianGabungan() {
-  const tgl = document.getElementById('laporan-harian-tgl').value;
-  if (!tgl) { showToast('Pilih tanggal laporan dulu!', 'error'); return; }
+// ========== LOGIKA TAMPILAN FORM ==========
+function toggleLaporanInput() {
+  const jenis = document.getElementById('lap-jenis').value;
+  document.getElementById('lap-input-harian').style.display = jenis === 'harian' ? 'block' : 'none';
+  document.getElementById('lap-input-mingguan').style.display = jenis === 'mingguan' ? 'block' : 'none';
+  document.getElementById('lap-input-bulanan').style.display = jenis === 'bulanan' ? 'block' : 'none';
+}
 
+// ========== GENERATE LAPORAN (HARIAN/MINGGUAN/BULANAN) ==========
+function generateLaporanGabungan() {
+  const jenis = document.getElementById('lap-jenis').value;
+  const ghFilter = document.getElementById('lap-gh').value;
+  
+  let start = '', end = '', labelPeriode = '';
+
+  // 1. Tentukan Rentang Tanggal
+  if (jenis === 'harian') {
+    const tgl = document.getElementById('lap-tgl-harian').value;
+    if (!tgl) { showToast('Pilih tanggal laporan!', 'error'); return; }
+    start = tgl; end = tgl;
+    labelPeriode = formatTanggalPanjang(tgl);
+  } 
+  else if (jenis === 'mingguan') {
+    const tgl = document.getElementById('lap-tgl-mingguan').value;
+    if (!tgl) { showToast('Pilih tanggal di minggu tersebut!', 'error'); return; }
+    const d = new Date(tgl);
+    const startW = mondayOf(d);
+    const endW = new Date(startW);
+    endW.setDate(endW.getDate() + 5); // Senin + 5 = Sabtu
+    start = formatYMD(startW); 
+    end = formatYMD(endW);
+    labelPeriode = `Mingguan: ${formatTanggalPanjang(start)} – ${formatTanggalPanjang(end)}`;
+  } 
+  else if (jenis === 'bulanan') {
+    const bln = document.getElementById('lap-tgl-bulanan').value;
+    if (!bln) { showToast('Pilih bulan laporan!', 'error'); return; }
+    start = `${bln}-01`;
+    const [y, m] = bln.split('-');
+    const lastDay = new Date(y, m, 0).getDate();
+    end = `${bln}-${String(lastDay).padStart(2, '0')}`;
+    labelPeriode = `Bulanan: ${formatBulanIndo(bln)}`;
+  }
+
+  // 2. Ambil & Filter Data
   const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
-  const dailyData = db.filter(x => x.tgl === tgl);
+  let dailyData = db.filter(x => x.tgl >= start && x.tgl <= end);
+  
+  if (ghFilter !== 'all') {
+    dailyData = dailyData.filter(x => ghOf(x) === ghFilter);
+  }
 
   if (dailyData.length === 0) {
-    showToast('Tidak ada data pada tanggal tersebut.', 'error');
+    showToast('Tidak ada data pada periode & GH tersebut.', 'error');
     return;
   }
 
+  // 3. Gabungkan Data (Agregasi)
   let merged = {
-    tgl: tgl,
+    tgl: start === end ? start : `${start}_sd_${end}`, // Penanda
     p_hatsu: 0, p_gradea: 0, p_gradeb: 0,
     rk_crack: 0, rk_poli: 0, rk_hpt: 0,
     rp_crack: 0, rp_poli: 0, rp_hpt: 0, rp_bruise: 0, rp_overripe: 0, rp_kuning: 0, rp_frozen: 0,
     k_hatsu: 0, k_a11: 0, k_a15: 0, 
-    k_frozen: 0, k_rfresh: 0, // <-- NAMA VARIABEL DISESUAIKAN
+    k_frozen: 0, k_rfresh: 0,
     m_hatsu: 0, m_a11: 0, m_a15: 0
   };
 
@@ -1268,36 +1313,37 @@ function generateLaporanHarianGabungan() {
     merged.k_hatsu += (item.k_hatsu || 0);
     merged.k_a11 += (item.k_a11 || 0);
     merged.k_a15 += (item.k_a15 || 0);
-    
-    // TANGKAP DATA REJECT DIKIRIM DARI GLOBAL
     merged.k_frozen += (item.k_frozen || 0);
     merged.k_rfresh += (item.k_rfresh || 0);
-
     merged.m_hatsu += (item.m_hatsu || 0);
     merged.m_a11 += (item.m_a11 || 0);
     merged.m_a15 += (item.m_a15 || 0);
   });
 
-  const dataURL = renderCanvasLaporanGabungan(merged);
+  // 4. Render ke Canvas (Kirim label periode & filter GH)
+  const ghLabel = ghFilter === 'all' ? 'Semua Farm (Gabungan)' : ghFilter;
+  const dataURL = renderCanvasLaporanGabungan(merged, `${ghLabel} • ${labelPeriode}`);
   
+  // 5. Buka di Tab Baru
   const w = window.open('');
   w.document.write(`
     <html>
       <head>
-        <title>Laporan Harian Gabungan - ${tgl}</title>
+        <title>Laporan ${jenis} - ${labelPeriode}</title>
         <style>
           body { margin: 0; display: flex; justify-content: center; align-items: flex-start; background: #e5e7eb; padding: 20px; font-family: system-ui, sans-serif; }
           img { max-width: 100%; height: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border-radius: 8px; }
         </style>
       </head>
       <body>
-        <img src="${dataURL}" alt="Laporan Harian">
+        <img src="${dataURL}" alt="Laporan Panen">
       </body>
     </html>
   `);
 }
 
-function renderCanvasLaporanGabungan(item) {
+// ========== CANVAS LAPORAN ==========
+function renderCanvasLaporanGabungan(item, titleText) {
   const W = 1000;
   const H = 1150;
   const sc = 2;
@@ -1330,14 +1376,13 @@ function renderCanvasLaporanGabungan(item) {
   };
 
   const fmt = n => (parseFloat(n) || 0).toFixed(2).replace('.', ',');
-  const tglFmt = formatTanggalPanjang(item.tgl);
 
   fillRect(0, 0, W, H, '#f1f5f9');
 
-  // Header
+  // Header Banner
   fillRect(0, 0, W, 120, '#2d5016');
-  text('Laporan Harian Panen & Pengiriman', 40, 50, 26, '#ffffff', 'left', true);
-  text(`Semua Farm (Gabungan) • ${tglFmt}`, 40, 85, 18, '#bbf7d0', 'left');
+  text('Laporan Panen & Pengiriman', 40, 50, 26, '#ffffff', 'left', true);
+  text(titleText, 40, 85, 18, '#bbf7d0', 'left'); // <-- Menggunakan label periode dinamis
   text('PT. Agri Wangi Berry', W - 40, 60, 16, '#86efac', 'right', true);
 
   // Tabel Rincian
@@ -1355,7 +1400,6 @@ function renderCanvasLaporanGabungan(item) {
   const rkTotal = (item.rk_crack||0) + (item.rk_poli||0) + (item.rk_hpt||0);
   const totalKirimSemua = item.k_hatsu + item.k_a11 + item.k_a15 + item.k_frozen + item.k_rfresh;
 
-  // Array Rincian
   const rows = [
     { name: 'Hatsuhana', p: item.p_hatsu, k: item.k_hatsu, m: item.m_hatsu, color: '#1e40af' },
     { name: 'Grade A', p: item.p_gradea, k: item.k_a11, m: item.m_a11, color: '#15803d' },
@@ -1403,10 +1447,10 @@ function renderCanvasLaporanGabungan(item) {
   text(pctTotalK.toFixed(1) + '%', grX + 670, ryTotal, 18, '#16a34a', 'right', true);
   text(sumM, grX + 850, ryTotal, 18, '#0f172a', 'right', true);
 
-  // Komposisi Reject (Kiri)
+  // Komposisi Reject
   const rjX = 40, rjY = 620, rjW = 450, rjH = 460;
   roundRect(rjX, rjY, rjW, rjH, 12, '#ffffff');
-  text('Komposisi Reject (Kebun & Processing)', rjX + 30, rjY + 35, 18, '#2d5016', 'left', true);
+  text('Komposisi Reject', rjX + 30, rjY + 35, 18, '#2d5016', 'left', true);
 
   const rejects = [
     { label: 'Cracking', v: (item.rk_crack || 0) + (item.rp_crack||0), c: '#dc2626' },
@@ -1436,7 +1480,7 @@ function renderCanvasLaporanGabungan(item) {
     lgY += 35;
   });
 
-  // Ringkasan (Kanan)
+  // Ringkasan
   const smX = 510, smY = 620, smW = 450, smH = 460;
   roundRect(smX, smY, smW, smH, 12, '#ffffff');
   text('Ringkasan Reject & Rate', smX + 30, smY + 35, 18, '#2d5016', 'left', true);
