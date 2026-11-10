@@ -1462,28 +1462,33 @@ function renderCanvasLaporanGabungan(item) {
   return cv.toDataURL('image/png');
 }
 
-// ========== ANALISIS BREAKDOWN REJECT BULANAN ==========
+// ========== ANALISIS BREAKDOWN REJECT BULANAN (PER GH) ==========
 function renderRejectBreakdown() {
   const tbody = document.getElementById('reject-breakdown-body');
   if (!tbody) return;
 
-  const db = filterGh(JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]'), dashGh());
-  const byMonth = new Map();
+  // Ambil data mentah, abaikan filter GH global agar GH 1 & GH 2 selalu muncul
+  const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+  const byMonthGh = new Map();
 
-  // 1. Akumulasi data reject per bulan
+  // 1. Akumulasi data reject per bulan & per GH
   db.forEach(item => {
     if (!item.tgl) return;
-    const ym = item.tgl.substring(0, 7); // Ambil format YYYY-MM
+    const gh = ghOf(item);
+    if (gh === 'GLOBAL') return; // Global tidak punya data panen/reject kebun
 
-    if (!byMonth.has(ym)) {
-      byMonth.set(ym, {
-        ym: ym,
+    const ym = item.tgl.substring(0, 7); // Format YYYY-MM
+    const key = `${ym}_${gh}`;
+
+    if (!byMonthGh.has(key)) {
+      byMonthGh.set(key, {
+        ym: ym, gh: gh,
         crack: 0, poli: 0, hpt: 0, bruise: 0, overripe: 0, kuning: 0, frozen: 0,
         total: 0
       });
     }
 
-    const m = byMonth.get(ym);
+    const m = byMonthGh.get(key);
     const crack = (item.rk_crack || 0) + (item.rp_crack || 0);
     const poli = (item.rk_poli || 0) + (item.rp_poli || 0);
     const hpt = (item.rk_hpt || 0) + (item.rp_hpt || 0);
@@ -1497,21 +1502,28 @@ function renderRejectBreakdown() {
     m.total += (crack + poli + hpt + bruise + overripe + kuning + frozen);
   });
 
-  // 2. Urutkan dari bulan terbaru ke terlama
-  const sortedMonths = [...byMonth.values()]
+  // 2. Urutkan: Bulan terbaru di atas, lalu urutkan GH 1 lalu GH 2
+  const sorted = [...byMonthGh.values()]
     .filter(m => m.total > 0)
-    .sort((a, b) => b.ym.localeCompare(a.ym));
+    .sort((a, b) => {
+      if (a.ym !== b.ym) return b.ym.localeCompare(a.ym);
+      return a.gh.localeCompare(b.gh);
+    });
 
-  if (!sortedMonths.length) {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999;">Belum ada data reject</td></tr>';
+  if (!sorted.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;">Belum ada data reject</td></tr>';
     return;
   }
 
-  // 3. Render tabel
   const fmt = n => Number(n || 0).toFixed(2);
-  
-  tbody.innerHTML = sortedMonths.map(m => {
-    // Kumpulkan semua kategori untuk mencari nilai tertinggi
+  const monthCounts = {};
+  sorted.forEach(m => { monthCounts[m.ym] = (monthCounts[m.ym] || 0) + 1; });
+
+  let currentMonth = '';
+  const nowYM = new Date().toISOString().substring(0, 7);
+
+  // 3. Render tabel
+  tbody.innerHTML = sorted.map(m => {
     const categories = [
       { name: 'Cracking', val: m.crack },
       { name: 'Polinasi', val: m.poli },
@@ -1520,24 +1532,31 @@ function renderRejectBreakdown() {
       { name: 'Overripe', val: m.overripe },
       { name: 'Buah Kuning <80%', val: m.kuning },
       { name: 'Frozen <11 gr', val: m.frozen }
-    ].sort((a, b) => b.val - a.val); // Urutkan dari terbesar
+    ].sort((a, b) => b.val - a.val);
 
     const top1 = categories[0];
-    const top2 = categories[1]; // Ambil peringkat 2
-
+    const top2 = categories[1];
     const pct1 = m.total > 0 ? (top1.val / m.total * 100).toFixed(1) : 0;
     const pct2 = (top2 && m.total > 0) ? (top2.val / m.total * 100).toFixed(1) : 0;
 
-    // Warna baris khusus untuk bulan berjalan
-    const nowYM = new Date().toISOString().substring(0, 7);
-    const isCurrentMonth = (m.ym === nowYM);
-    const trStyle = isCurrentMonth ? 'background-color: #f0fdf4;' : '';
+    // Logika Rowspan untuk kolom Bulan (biar tidak dobel ketik)
+    let monthCell = '';
+    if (m.ym !== currentMonth) {
+      currentMonth = m.ym;
+      const isCurrentMonth = (m.ym === nowYM);
+      const badge = isCurrentMonth ? ' <br><span class="notif-badge good">Bulan Ini</span>' : '';
+      monthCell = `<td rowspan="${monthCounts[m.ym]}" style="text-align:left; font-weight:700; vertical-align:top; background-color: #f8fafc;">
+        ${formatBulanIndo(m.ym)} ${badge}
+      </td>`;
+    }
+
+    // Warna baris selang-seling untuk bedakan GH
+    const trStyle = m.gh === 'GH 1' ? 'background-color: #ffffff;' : 'background-color: #f8fafc;';
 
     return `
       <tr style="${trStyle}">
-        <td style="text-align:left; font-weight:600; white-space:nowrap;">
-          ${formatBulanIndo(m.ym)} ${isCurrentMonth ? ' <span class="notif-badge good">Bulan Ini</span>' : ''}
-        </td>
+        ${monthCell}
+        <td style="font-weight:700; color:${m.gh === 'GH 1' ? '#1e40af' : '#b45309'};">${m.gh}</td>
         <td style="font-weight:800; color:#dc2626;">${fmt(m.total)} Kg</td>
         <td style="text-align:left; font-weight:700; color:#ea580c;">
           1. ${top1.name}<br>
