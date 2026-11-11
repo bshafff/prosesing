@@ -1617,7 +1617,7 @@ function renderRejectBreakdown() {
 }
 
 // ========== TREN REJECT STAND-ALONE (LINE CHART) ==========
-// Fungsi Validasi Maksimal 3 Centang
+// Fungsi Validasi Maksimal 4 Centang
 function handleRejectCheck(el) {
   const checked = document.querySelectorAll('.rej-chk:checked');
   
@@ -1630,11 +1630,11 @@ function handleRejectCheck(el) {
     document.querySelector('input[value="all"]').checked = false;
   }
 
-  // Batasi maksimal 3 centang
+  // Batasi maksimal 4 centang
   const currentChecked = document.querySelectorAll('.rej-chk:checked');
-  if (currentChecked.length > 3) {
+  if (currentChecked.length > 4) { // <--- UBAH JADI 4
     el.checked = false; // Batalkan centang terakhir
-    showToast('Maksimal pilih 3 jenis reject agar grafik mudah dibaca!', 'error');
+    showToast('Maksimal pilih 4 jenis reject agar grafik mudah dibaca!', 'error'); // <--- UBAH TEKSNYA
   }
   
   renderRejectTrendChart();
