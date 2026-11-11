@@ -293,11 +293,12 @@ function updateDashboard() {
 
   renderChartRejectPie(T);
   renderMikaDashboard();
-  const mgEl = document.getElementById('minggu-bulan');
+   const mgEl = document.getElementById('minggu-bulan');
   if (mgEl && !mgEl.value) mgEl.value = selectedMonth;
   renderMonthlyComparison();
   renderWeeklyPanen();
-  renderRejectBreakdown(); // <--- TAMBAHKAN BARIS INI
+  renderRejectBreakdown(); 
+  renderRejectTrendChart(); // <--- TAMBAHKAN INI JUGA
 }
 
 // ========== REKAP PERBANDINGAN BULANAN ==========
