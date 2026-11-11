@@ -1617,89 +1617,116 @@ function renderRejectBreakdown() {
 }
 
 // ========== TREN REJECT STAND-ALONE (LINE CHART) ==========
+// Fungsi Validasi Maksimal 3 Centang
+function handleRejectCheck(el) {
+  const checked = document.querySelectorAll('.rej-chk:checked');
+  
+  // Jika user centang "Total Keseluruhan", hapus centang yang lain
+  if (el.value === 'all' && el.checked) {
+    document.querySelectorAll('.rej-chk').forEach(chk => { if(chk.value !== 'all') chk.checked = false; });
+  } 
+  // Jika user centang yang lain, hapus centang "Total Keseluruhan"
+  else if (el.value !== 'all' && el.checked) {
+    document.querySelector('input[value="all"]').checked = false;
+  }
+
+  // Batasi maksimal 3 centang
+  const currentChecked = document.querySelectorAll('.rej-chk:checked');
+  if (currentChecked.length > 3) {
+    el.checked = false; // Batalkan centang terakhir
+    showToast('Maksimal pilih 3 jenis reject agar grafik mudah dibaca!', 'error');
+  }
+  
+  renderRejectTrendChart();
+}
+
+// ========== TREN REJECT STAND-ALONE (MULTI-LINE) ==========
 function renderRejectTrendChart() {
   const el = document.getElementById('chart-reject-trend');
   if (!el) return;
 
   const dari = document.getElementById('reject-chart-dari').value;
   const sampai = document.getElementById('reject-chart-sampai').value;
-  const jenis = document.getElementById('reject-chart-jenis').value;
   const filterGh = document.getElementById('reject-chart-gh').value;
+  
+  // Ambil array jenis reject yang dicentang
+  let jenisArr = Array.from(document.querySelectorAll('.rej-chk:checked')).map(cb => cb.value);
+  if (jenisArr.length === 0) jenisArr = ['all']; // Fallback
 
   if (!dari || !sampai) return;
 
   const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
-  
-  // Filter berdasarkan rentang tanggal
   let filtered = db.filter(x => x.tgl >= dari && x.tgl <= sampai);
-
-  // Filter berdasarkan pilihan GH
-  if (filterGh !== 'all') {
-    filtered = filtered.filter(x => ghOf(x) === filterGh);
-  }
+  if (filterGh !== 'all') filtered = filtered.filter(x => ghOf(x) === filterGh);
 
   if (!filtered.length) {
     el.innerHTML = '<div style="text-align:center;color:#999;padding:2rem;">Tidak ada data pada periode ini</div>';
     return;
   }
 
-  // Kumpulkan semua tanggal unik dan urutkan
   const dates = [...new Set(filtered.map(x => x.tgl))].sort();
-  
-  // Siapkan data per GH
   const ghList = filterGh === 'all' ? ['GH 1', 'GH 2'] : [filterGh];
-  const colors = { 'GH 1': '#2563eb', 'GH 2': '#ea580c' };
+  
+  // Palet warna dan gaya garis
+  const baseColors = { 'GH 1': '#2563eb', 'GH 2': '#ea580c' };
+  const lineStyles = ['0', '5,5', '2,4']; // Solid, Dashed, Dotted
+  const labelMap = { all: 'Total', poli: 'Polinasi', crack: 'Cracking', hpt: 'HPT', overripe: 'Overripe', bruise: 'Bruise', kuning: 'Kuning', frozen: 'Frozen' };
 
-  const seriesData = {};
-  ghList.forEach(gh => {
-    seriesData[gh] = {};
-    dates.forEach(d => seriesData[gh][d] = { rej: 0, panen: 0 });
+  // Siapkan data
+  const datasets = [];
+  jenisArr.forEach((jenis, jIdx) => {
+    ghList.forEach(gh => {
+      datasets.push({
+        gh: gh, jenis: jenis, 
+        label: `${gh} - ${labelMap[jenis]}`,
+        color: baseColors[gh],
+        dash: lineStyles[jIdx % lineStyles.length], // Ganti gaya garis per jenis
+        data: {}
+      });
+    });
   });
 
-  // Akumulasi data reject & panen per tanggal
+  // Akumulasi data
+  datasets.forEach(ds => {
+    dates.forEach(d => ds.data[d] = { rej: 0, panen: 0 });
+  });
+
   filtered.forEach(item => {
     const d = item.tgl;
     const gh = ghOf(item);
-    if (!seriesData[gh] || !seriesData[gh][d]) return;
-
-    let rejVal = 0;
     const rkTotal = (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
     const panenTotal = (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + rkTotal;
 
-    if (jenis === 'all') {
-      rejVal = rkTotal + (item.rp_crack||0) + (item.rp_poli||0) + (item.rp_hpt||0) + (item.rp_bruise||0) + (item.rp_overripe||0) + (item.rp_kuning||0) + (item.rp_frozen||0);
-    } else if (jenis === 'crack') {
-      rejVal = (item.rk_crack || 0) + (item.rp_crack || 0);
-    } else if (jenis === 'poli') {
-      rejVal = (item.rk_poli || 0) + (item.rp_poli || 0);
-    } else if (jenis === 'hpt') {
-      rejVal = (item.rk_hpt || 0) + (item.rp_hpt || 0);
-    } else if (jenis === 'bruise') {
-      rejVal = item.rp_bruise || 0;
-    } else if (jenis === 'overripe') {
-      rejVal = item.rp_overripe || 0;
-    } else if (jenis === 'kuning') {
-      rejVal = item.rp_kuning || 0;
-    } else if (jenis === 'frozen') {
-      rejVal = item.rp_frozen || 0;
-    }
+    datasets.forEach(ds => {
+      if (ds.gh !== gh) return;
+      let rejVal = 0;
+      const j = ds.jenis;
+      if (j === 'all') rejVal = rkTotal + (item.rp_crack||0) + (item.rp_poli||0) + (item.rp_hpt||0) + (item.rp_bruise||0) + (item.rp_overripe||0) + (item.rp_kuning||0) + (item.rp_frozen||0);
+      else if (j === 'crack') rejVal = (item.rk_crack || 0) + (item.rp_crack || 0);
+      else if (j === 'poli') rejVal = (item.rk_poli || 0) + (item.rp_poli || 0);
+      else if (j === 'hpt') rejVal = (item.rk_hpt || 0) + (item.rp_hpt || 0);
+      else if (j === 'bruise') rejVal = item.rp_bruise || 0;
+      else if (j === 'overripe') rejVal = item.rp_overripe || 0;
+      else if (j === 'kuning') rejVal = item.rp_kuning || 0;
+      else if (j === 'frozen') rejVal = item.rp_frozen || 0;
 
-    seriesData[gh][d].rej += rejVal;
-    seriesData[gh][d].panen += panenTotal;
+      ds.data[d].rej += rejVal;
+      ds.data[d].panen += panenTotal;
+    });
   });
 
-  // Hitung persentase
-  let maxPct = 5; // Minimal skala Y-axis 5%
-  ghList.forEach(gh => {
+  // Cari nilai maksimal untuk Y-Axis
+  let maxPct = 5;
+  datasets.forEach(ds => {
     dates.forEach(d => {
-      const dt = seriesData[gh][d];
+      const dt = ds.data[d];
       dt.pct = dt.panen > 0 ? (dt.rej / dt.panen) * 100 : 0;
       if (dt.pct > maxPct) maxPct = dt.pct;
     });
   });
-  maxPct = Math.ceil(maxPct * 1.2); // Beri ruang 20% di atas grafik
+  maxPct = Math.ceil(maxPct * 1.2);
 
-  // Setup Dimensi SVG
+  // Gambar SVG
   const W = Math.max(800, dates.length * 50);
   const H = 320;
   const padL = 50, padR = 30, padT = 30, padB = 60;
@@ -1712,7 +1739,6 @@ function renderRejectTrendChart() {
 
   let svg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" style="min-width:${W}px; width:100%; height:auto;">`;
 
-  // 1. Grid & Y-Axis Labels
   for (let i = 0; i <= 5; i++) {
     const val = (maxPct / 5) * i;
     const y = getY(val);
@@ -1720,52 +1746,46 @@ function renderRejectTrendChart() {
     svg += `<text x="${padL - 10}" y="${y + 4}" text-anchor="end" font-size="11" fill="#64748b">${val.toFixed(1)}%</text>`;
   }
 
-  // 2. X-Axis Labels & Garis Bantu Vertikal
   dates.forEach((d, i) => {
     const x = getX(i);
     const [y, m, day] = d.split('-');
     svg += `<text x="${x}" y="${H - padB + 20}" text-anchor="middle" font-size="10" fill="#64748b">${day}/${m}</text>`;
   });
 
-  // 3. Gambar Garis & Titik per GH
-  ghList.forEach(gh => {
+  datasets.forEach(ds => {
     let pathD = '';
     let points = [];
-
     dates.forEach((d, i) => {
-      const val = seriesData[gh][d].pct;
+      const val = ds.data[d].pct;
       const x = getX(i);
       const y = getY(val);
-      
       if (i === 0) pathD = `M ${x} ${y}`;
       else pathD += ` L ${x} ${y}`;
-      
       points.push({ x, y, val, date: d });
     });
 
-    // Gambar garis path
     if (dates.length > 1) {
-      svg += `<path d="${pathD}" fill="none" stroke="${colors[gh]}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+      svg += `<path d="${pathD}" fill="none" stroke="${ds.color}" stroke-width="2.5" stroke-dasharray="${ds.dash}" stroke-linejoin="round" stroke-linecap="round"/>`;
     }
 
-    // Gambar titik (circle) di setiap data
     points.forEach(p => {
-      svg += `<circle cx="${p.x}" cy="${p.y}" r="4" fill="#ffffff" stroke="${colors[gh]}" stroke-width="2">
-        <title>${gh} • ${p.date}\n${p.val.toFixed(2)}%</title>
+      svg += `<circle cx="${p.x}" cy="${p.y}" r="3" fill="#ffffff" stroke="${ds.color}" stroke-width="2">
+        <title>${ds.label} • ${p.date}\n${p.val.toFixed(2)}%</title>
       </circle>`;
-      // Tooltip transparan yang lebih besar untuk mempermudah hover
       svg += `<circle cx="${p.x}" cy="${p.y}" r="10" fill="transparent">
-        <title>${gh} • ${p.date}\n${p.val.toFixed(2)}%</title>
+        <title>${ds.label} • ${p.date}\n${p.val.toFixed(2)}%</title>
       </circle>`;
     });
   });
 
   svg += `</svg>`;
 
-  // 4. Legend
-  let legend = '<div class="chart-legend" style="justify-content:center; margin-top:1rem;">';
-  ghList.forEach(gh => {
-    legend += `<span><span class="dot" style="background:${colors[gh]}; width:14px; height:14px; border-radius:50%;"></span> <b>${gh}</b></span>`;
+  // Legend
+  let legend = '<div class="chart-legend" style="justify-content:center; margin-top:1rem; gap:1.5rem;">';
+  datasets.forEach(ds => {
+    // SVG kecil untuk meniru gaya garis di legenda
+    const lineSvg = `<svg width="20" height="10" style="vertical-align:middle; margin-right:4px;"><line x1="0" y1="5" x2="20" y2="5" stroke="${ds.color}" stroke-width="3" stroke-dasharray="${ds.dash}"/></svg>`;
+    legend += `<span style="display:inline-flex; align-items:center; font-size:0.8rem;">${lineSvg} <b>${ds.label}</b></span>`;
   });
   legend += '</div>';
 
