@@ -1640,7 +1640,7 @@ function handleRejectCheck(el) {
   renderRejectTrendChart();
 }
 
-// ========== TREN REJECT STAND-ALONE (MULTI-LINE) ==========
+// ========== TREN REJECT STAND-ALONE (MULTI-LINE OPSI 1) ==========
 function renderRejectTrendChart() {
   const el = document.getElementById('chart-reject-trend');
   if (!el) return;
@@ -1649,9 +1649,8 @@ function renderRejectTrendChart() {
   const sampai = document.getElementById('reject-chart-sampai').value;
   const filterGh = document.getElementById('reject-chart-gh').value;
   
-  // Ambil array jenis reject yang dicentang
   let jenisArr = Array.from(document.querySelectorAll('.rej-chk:checked')).map(cb => cb.value);
-  if (jenisArr.length === 0) jenisArr = ['all']; // Fallback
+  if (jenisArr.length === 0) jenisArr = ['all'];
 
   if (!dari || !sampai) return;
 
@@ -1667,26 +1666,43 @@ function renderRejectTrendChart() {
   const dates = [...new Set(filtered.map(x => x.tgl))].sort();
   const ghList = filterGh === 'all' ? ['GH 1', 'GH 2'] : [filterGh];
   
-  // Palet warna dan gaya garis
-  const baseColors = { 'GH 1': '#2563eb', 'GH 2': '#ea580c' };
-  const lineStyles = ['0', '5,5', '2,4']; // Solid, Dashed, Dotted
-  const labelMap = { all: 'Total', poli: 'Polinasi', crack: 'Cracking', hpt: 'HPT', overripe: 'Overripe', bruise: 'Bruise', kuning: 'Kuning', frozen: 'Frozen' };
+  // --- PEMETAAN WARNA JENIS REJECT ---
+  const colorMap = {
+    all: '#475569',      // Slate
+    poli: '#ea580c',     // Oranye
+    crack: '#dc2626',    // Merah
+    hpt: '#d97706',      // Amber
+    overripe: '#0891b2', // Cyan
+    bruise: '#84cc16',   // Lime
+    kuning: '#eab308',   // Kuning
+    frozen: '#7c3aed'    // Ungu
+  };
 
-  // Siapkan data
+  const labelMap = { 
+    all: 'Total', poli: 'Polinasi', crack: 'Cracking', hpt: 'HPT', 
+    overripe: 'Overripe', bruise: 'Bruise', kuning: 'Kuning', frozen: 'Frozen' 
+  };
+
+  // --- PEMETAAN GAYA GARIS PER GH ---
+  const dashMap = {
+    'GH 1': '0',     // Solid
+    'GH 2': '6,4'    // Putus-putus (Dashed)
+  };
+
   const datasets = [];
-  jenisArr.forEach((jenis, jIdx) => {
+  // Urutkan loop: Jenis Reject (luar), lalu GH (dalam)
+  jenisArr.forEach(jenis => {
     ghList.forEach(gh => {
       datasets.push({
         gh: gh, jenis: jenis, 
-        label: `${gh} - ${labelMap[jenis]}`,
-        color: baseColors[gh],
-        dash: lineStyles[jIdx % lineStyles.length], // Ganti gaya garis per jenis
+        label: `${labelMap[jenis]} (${gh})`,
+        color: colorMap[jenis],
+        dash: dashMap[gh] || '0',
         data: {}
       });
     });
   });
 
-  // Akumulasi data
   datasets.forEach(ds => {
     dates.forEach(d => ds.data[d] = { rej: 0, panen: 0 });
   });
@@ -1715,7 +1731,6 @@ function renderRejectTrendChart() {
     });
   });
 
-  // Cari nilai maksimal untuk Y-Axis
   let maxPct = 5;
   datasets.forEach(ds => {
     dates.forEach(d => {
@@ -1726,7 +1741,6 @@ function renderRejectTrendChart() {
   });
   maxPct = Math.ceil(maxPct * 1.2);
 
-  // Gambar SVG
   const W = Math.max(800, dates.length * 50);
   const H = 320;
   const padL = 50, padR = 30, padT = 30, padB = 60;
@@ -1769,9 +1783,11 @@ function renderRejectTrendChart() {
     }
 
     points.forEach(p => {
-      svg += `<circle cx="${p.x}" cy="${p.y}" r="3" fill="#ffffff" stroke="${ds.color}" stroke-width="2">
+      // Titik penanda lingkaran
+      svg += `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="#ffffff" stroke="${ds.color}" stroke-width="2">
         <title>${ds.label} • ${p.date}\n${p.val.toFixed(2)}%</title>
       </circle>`;
+      // Area hover yang lebih besar
       svg += `<circle cx="${p.x}" cy="${p.y}" r="10" fill="transparent">
         <title>${ds.label} • ${p.date}\n${p.val.toFixed(2)}%</title>
       </circle>`;
@@ -1781,11 +1797,11 @@ function renderRejectTrendChart() {
   svg += `</svg>`;
 
   // Legend
-  let legend = '<div class="chart-legend" style="justify-content:center; margin-top:1rem; gap:1.5rem;">';
+  let legend = '<div class="chart-legend" style="justify-content:center; margin-top:1rem; gap:1.5rem; flex-wrap:wrap;">';
   datasets.forEach(ds => {
-    // SVG kecil untuk meniru gaya garis di legenda
-    const lineSvg = `<svg width="20" height="10" style="vertical-align:middle; margin-right:4px;"><line x1="0" y1="5" x2="20" y2="5" stroke="${ds.color}" stroke-width="3" stroke-dasharray="${ds.dash}"/></svg>`;
-    legend += `<span style="display:inline-flex; align-items:center; font-size:0.8rem;">${lineSvg} <b>${ds.label}</b></span>`;
+    // SVG kecil meniru gaya garis
+    const lineSvg = `<svg width="24" height="10" style="vertical-align:middle; margin-right:6px;"><line x1="0" y1="5" x2="24" y2="5" stroke="${ds.color}" stroke-width="3.5" stroke-dasharray="${ds.dash}"/></svg>`;
+    legend += `<span style="display:inline-flex; align-items:center; font-size:0.8rem; color:#1a1a18;">${lineSvg} ${ds.label}</span>`;
   });
   legend += '</div>';
 
