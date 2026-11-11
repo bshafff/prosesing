@@ -1640,7 +1640,7 @@ function handleRejectCheck(el) {
   renderRejectTrendChart();
 }
 
-// ========== TREN REJECT STAND-ALONE (MULTI-LINE OPSI 1) ==========
+// ========== TREN REJECT STAND-ALONE (SMALL MULTIPLES / TERPISAH) ==========
 function renderRejectTrendChart() {
   const el = document.getElementById('chart-reject-trend');
   if (!el) return;
@@ -1666,144 +1666,153 @@ function renderRejectTrendChart() {
   const dates = [...new Set(filtered.map(x => x.tgl))].sort();
   const ghList = filterGh === 'all' ? ['GH 1', 'GH 2'] : [filterGh];
   
-  // --- PEMETAAN WARNA JENIS REJECT ---
-  const colorMap = {
-    all: '#475569',      // Slate
-    poli: '#ea580c',     // Oranye
-    crack: '#dc2626',    // Merah
-    hpt: '#d97706',      // Amber
-    overripe: '#0891b2', // Cyan
-    bruise: '#84cc16',   // Lime
-    kuning: '#eab308',   // Kuning
-    frozen: '#7c3aed'    // Ungu
-  };
-
+  // Warna sekarang konsisten untuk GH (Biru & Oranye)
+  const colorMapGh = { 'GH 1': '#2563eb', 'GH 2': '#ea580c' };
+  const dashMapGh = { 'GH 1': '0', 'GH 2': '6,4' }; // GH1 solid, GH2 putus-putus
   const labelMap = { 
-    all: 'Total', poli: 'Polinasi', crack: 'Cracking', hpt: 'HPT', 
-    overripe: 'Overripe', bruise: 'Bruise', kuning: 'Kuning', frozen: 'Frozen' 
+    all: 'Total Reject (Keseluruhan)', poli: 'Polinasi', crack: 'Cracking', hpt: 'HPT', 
+    overripe: 'Overripe', bruise: 'Bruise', kuning: 'Buah Kuning', frozen: 'Frozen' 
   };
 
-  // --- PEMETAAN GAYA GARIS PER GH ---
-  const dashMap = {
-    'GH 1': '0',     // Solid
-    'GH 2': '6,4'    // Putus-putus (Dashed)
-  };
+  // Siapkan wadah grid untuk grafik-grafik kecil
+  let htmlOutput = `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 1.5rem; width: 100%;">`;
 
-  const datasets = [];
-  // Urutkan loop: Jenis Reject (luar), lalu GH (dalam)
+  // Looping untuk setiap JENIS REJECT yang dicentang
   jenisArr.forEach(jenis => {
+    
+    // 1. Siapkan data untuk jenis reject ini
+    const datasets = [];
     ghList.forEach(gh => {
       datasets.push({
-        gh: gh, jenis: jenis, 
-        label: `${labelMap[jenis]} (${gh})`,
-        color: colorMap[jenis],
-        dash: dashMap[gh] || '0',
+        gh: gh,
+        label: gh,
+        color: colorMapGh[gh],
+        dash: dashMapGh[gh],
         data: {}
       });
     });
-  });
-
-  datasets.forEach(ds => {
-    dates.forEach(d => ds.data[d] = { rej: 0, panen: 0 });
-  });
-
-  filtered.forEach(item => {
-    const d = item.tgl;
-    const gh = ghOf(item);
-    const rkTotal = (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
-    const panenTotal = (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + rkTotal;
 
     datasets.forEach(ds => {
-      if (ds.gh !== gh) return;
-      let rejVal = 0;
-      const j = ds.jenis;
-      if (j === 'all') rejVal = rkTotal + (item.rp_crack||0) + (item.rp_poli||0) + (item.rp_hpt||0) + (item.rp_bruise||0) + (item.rp_overripe||0) + (item.rp_kuning||0) + (item.rp_frozen||0);
-      else if (j === 'crack') rejVal = (item.rk_crack || 0) + (item.rp_crack || 0);
-      else if (j === 'poli') rejVal = (item.rk_poli || 0) + (item.rp_poli || 0);
-      else if (j === 'hpt') rejVal = (item.rk_hpt || 0) + (item.rp_hpt || 0);
-      else if (j === 'bruise') rejVal = item.rp_bruise || 0;
-      else if (j === 'overripe') rejVal = item.rp_overripe || 0;
-      else if (j === 'kuning') rejVal = item.rp_kuning || 0;
-      else if (j === 'frozen') rejVal = item.rp_frozen || 0;
-
-      ds.data[d].rej += rejVal;
-      ds.data[d].panen += panenTotal;
+      dates.forEach(d => ds.data[d] = { rej: 0, panen: 0 });
     });
-  });
 
-  let maxPct = 5;
-  datasets.forEach(ds => {
-    dates.forEach(d => {
-      const dt = ds.data[d];
-      dt.pct = dt.panen > 0 ? (dt.rej / dt.panen) * 100 : 0;
-      if (dt.pct > maxPct) maxPct = dt.pct;
+    // Akumulasi data per GH
+    filtered.forEach(item => {
+      const d = item.tgl;
+      const gh = ghOf(item);
+      const rkTotal = (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
+      const panenTotal = (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + rkTotal;
+
+      datasets.forEach(ds => {
+        if (ds.gh !== gh) return;
+        let rejVal = 0;
+        
+        if (jenis === 'all') rejVal = rkTotal + (item.rp_crack||0) + (item.rp_poli||0) + (item.rp_hpt||0) + (item.rp_bruise||0) + (item.rp_overripe||0) + (item.rp_kuning||0) + (item.rp_frozen||0);
+        else if (jenis === 'crack') rejVal = (item.rk_crack || 0) + (item.rp_crack || 0);
+        else if (jenis === 'poli') rejVal = (item.rk_poli || 0) + (item.rp_poli || 0);
+        else if (jenis === 'hpt') rejVal = (item.rk_hpt || 0) + (item.rp_hpt || 0);
+        else if (jenis === 'bruise') rejVal = item.rp_bruise || 0;
+        else if (jenis === 'overripe') rejVal = item.rp_overripe || 0;
+        else if (jenis === 'kuning') rejVal = item.rp_kuning || 0;
+        else if (jenis === 'frozen') rejVal = item.rp_frozen || 0;
+
+        ds.data[d].rej += rejVal;
+        ds.data[d].panen += panenTotal;
+      });
     });
-  });
-  maxPct = Math.ceil(maxPct * 1.2);
 
-  const W = Math.max(800, dates.length * 50);
-  const H = 320;
-  const padL = 50, padR = 30, padT = 30, padB = 60;
-  const chartW = W - padL - padR;
-  const chartH = H - padT - padB;
-  const stepX = chartW / Math.max(1, dates.length - 1);
+    // 2. Cari nilai max Y-axis untuk grafik spesifik ini
+    let maxPct = 2; // Minimal 2% agar grafik tidak terlalu melebar ke atas jika datanya kecil
+    datasets.forEach(ds => {
+      dates.forEach(d => {
+        const dt = ds.data[d];
+        dt.pct = dt.panen > 0 ? (dt.rej / dt.panen) * 100 : 0;
+        if (dt.pct > maxPct) maxPct = dt.pct;
+      });
+    });
+    maxPct = Math.ceil(maxPct * 1.2);
 
-  const getX = idx => padL + (idx * stepX);
-  const getY = val => padT + chartH - ((val / maxPct) * chartH);
+    // 3. Setup Dimensi SVG
+    const W = Math.max(400, dates.length * 40);
+    const H = 240; // Sedikit lebih pendek karena ada beberapa grafik
+    const padL = 45, padR = 15, padT = 15, padB = 40;
+    const chartW = W - padL - padR;
+    const chartH = H - padT - padB;
+    const stepX = chartW / Math.max(1, dates.length - 1);
 
-  let svg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" style="min-width:${W}px; width:100%; height:auto;">`;
+    const getX = idx => padL + (idx * stepX);
+    const getY = val => padT + chartH - ((val / maxPct) * chartH);
 
-  for (let i = 0; i <= 5; i++) {
-    const val = (maxPct / 5) * i;
-    const y = getY(val);
-    svg += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#e5e7eb" stroke-dasharray="${i === 0 ? '0' : '4'}"/>`;
-    svg += `<text x="${padL - 10}" y="${y + 4}" text-anchor="end" font-size="11" fill="#64748b">${val.toFixed(1)}%</text>`;
-  }
+    let svg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" style="width:100%; height:auto;">`;
 
-  dates.forEach((d, i) => {
-    const x = getX(i);
-    const [y, m, day] = d.split('-');
-    svg += `<text x="${x}" y="${H - padB + 20}" text-anchor="middle" font-size="10" fill="#64748b">${day}/${m}</text>`;
-  });
-
-  datasets.forEach(ds => {
-    let pathD = '';
-    let points = [];
-    dates.forEach((d, i) => {
-      const val = ds.data[d].pct;
-      const x = getX(i);
+    // Grid & Y-Axis
+    for (let i = 0; i <= 4; i++) {
+      const val = (maxPct / 4) * i;
       const y = getY(val);
-      if (i === 0) pathD = `M ${x} ${y}`;
-      else pathD += ` L ${x} ${y}`;
-      points.push({ x, y, val, date: d });
-    });
-
-    if (dates.length > 1) {
-      svg += `<path d="${pathD}" fill="none" stroke="${ds.color}" stroke-width="2.5" stroke-dasharray="${ds.dash}" stroke-linejoin="round" stroke-linecap="round"/>`;
+      svg += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#e5e7eb" stroke-dasharray="${i === 0 ? '0' : '3'}"/>`;
+      svg += `<text x="${padL - 8}" y="${y + 4}" text-anchor="end" font-size="9" fill="#64748b">${val.toFixed(1)}%</text>`;
     }
 
-    points.forEach(p => {
-      // Titik penanda lingkaran
-      svg += `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="#ffffff" stroke="${ds.color}" stroke-width="2">
-        <title>${ds.label} • ${p.date}\n${p.val.toFixed(2)}%</title>
-      </circle>`;
-      // Area hover yang lebih besar
-      svg += `<circle cx="${p.x}" cy="${p.y}" r="10" fill="transparent">
-        <title>${ds.label} • ${p.date}\n${p.val.toFixed(2)}%</title>
-      </circle>`;
+    // X-Axis
+    dates.forEach((d, i) => {
+      // Tampilkan maksimal 8 label tanggal agar tidak tumpang tindih
+      if (dates.length > 8 && i % Math.ceil(dates.length / 8) !== 0 && i !== dates.length - 1) return;
+      const x = getX(i);
+      const [y, m, day] = d.split('-');
+      svg += `<text x="${x}" y="${H - padB + 15}" text-anchor="middle" font-size="9" fill="#64748b">${day}/${m}</text>`;
     });
+
+    // Gambar Garis
+    datasets.forEach(ds => {
+      let pathD = '';
+      let points = [];
+      dates.forEach((d, i) => {
+        const val = ds.data[d].pct;
+        const x = getX(i);
+        const y = getY(val);
+        if (i === 0) pathD = `M ${x} ${y}`;
+        else pathD += ` L ${x} ${y}`;
+        points.push({ x, y, val, date: d });
+      });
+
+      if (dates.length > 1) {
+        svg += `<path d="${pathD}" fill="none" stroke="${ds.color}" stroke-width="2.5" stroke-dasharray="${ds.dash}" stroke-linejoin="round" stroke-linecap="round"/>`;
+      }
+
+      points.forEach(p => {
+        svg += `<circle cx="${p.x}" cy="${p.y}" r="3" fill="#ffffff" stroke="${ds.color}" stroke-width="2">
+          <title>${ds.label} • ${p.date}\n${p.val.toFixed(2)}%</title>
+        </circle>`;
+        svg += `<circle cx="${p.x}" cy="${p.y}" r="8" fill="transparent">
+          <title>${ds.label} • ${p.date}\n${p.val.toFixed(2)}%</title>
+        </circle>`;
+      });
+    });
+
+    svg += `</svg>`;
+
+    // Legend khusus untuk grafik ini
+    let legend = '<div class="chart-legend" style="justify-content:center; margin-top:0.5rem; gap:1rem;">';
+    datasets.forEach(ds => {
+      const lineSvg = `<svg width="16" height="8" style="vertical-align:middle; margin-right:4px;"><line x1="0" y1="4" x2="16" y2="4" stroke="${ds.color}" stroke-width="3" stroke-dasharray="${ds.dash}"/></svg>`;
+      legend += `<span style="display:inline-flex; align-items:center; font-size:0.75rem; color:#1a1a18;">${lineSvg} ${ds.label}</span>`;
+    });
+    legend += '</div>';
+
+    // Bungkus dalam Card kecil
+    htmlOutput += `
+      <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; background: #ffffff;">
+        <div style="font-weight: 800; font-size: 0.85rem; color: #2d5016; margin-bottom: 0.5rem; text-align:center;">
+          Tren Reject: ${labelMap[jenis]}
+        </div>
+        <div style="overflow-x: auto;">
+          ${svg}
+        </div>
+        ${legend}
+      </div>
+    `;
   });
 
-  svg += `</svg>`;
-
-  // Legend
-  let legend = '<div class="chart-legend" style="justify-content:center; margin-top:1rem; gap:1.5rem; flex-wrap:wrap;">';
-  datasets.forEach(ds => {
-    // SVG kecil meniru gaya garis
-    const lineSvg = `<svg width="24" height="10" style="vertical-align:middle; margin-right:6px;"><line x1="0" y1="5" x2="24" y2="5" stroke="${ds.color}" stroke-width="3.5" stroke-dasharray="${ds.dash}"/></svg>`;
-    legend += `<span style="display:inline-flex; align-items:center; font-size:0.8rem; color:#1a1a18;">${lineSvg} ${ds.label}</span>`;
-  });
-  legend += '</div>';
-
-  el.innerHTML = svg + legend;
+  htmlOutput += `</div>`;
+  el.innerHTML = htmlOutput;
 }
