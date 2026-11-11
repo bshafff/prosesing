@@ -143,9 +143,7 @@
   </div>
 
     <!-- CARD TREN REJECT STAND-ALONE -->
-  <div class="card" style="margin-top:1.5rem;">
-    <div class="card-title">📈 Tren Persentase Reject (Stand Alone)</div>
-    <div class="row-4" style="align-items: flex-end;">
+     <div class="row-3" style="align-items: flex-end; margin-bottom: 1rem;">
       <div class="input-group" style="margin-bottom:0;">
         <label>Dari Tanggal</label>
         <input type="date" id="reject-chart-dari" onchange="renderRejectTrendChart()">
@@ -153,19 +151,6 @@
       <div class="input-group" style="margin-bottom:0;">
         <label>Sampai Tanggal</label>
         <input type="date" id="reject-chart-sampai" onchange="renderRejectTrendChart()">
-      </div>
-      <div class="input-group" style="margin-bottom:0;">
-        <label>Pilih Jenis Reject</label>
-        <select id="reject-chart-jenis" onchange="renderRejectTrendChart()">
-          <option value="all">Total Reject (Keseluruhan)</option>
-          <option value="crack">Cracking</option>
-          <option value="poli">Polinasi</option>
-          <option value="hpt">HPT</option>
-          <option value="bruise">Bruise</option>
-          <option value="overripe">Overripe</option>
-          <option value="kuning">Buah Kuning</option>
-          <option value="frozen">Frozen</option>
-        </select>
       </div>
       <div class="input-group" style="margin-bottom:0;">
         <label>Greenhouse</label>
@@ -176,7 +161,39 @@
         </select>
       </div>
     </div>
-    <div class="chart-scroll" id="chart-reject-trend" style="margin-top:1.5rem; min-height:320px;"></div>
+
+    <!-- Multi-select Checkbox untuk Jenis Reject -->
+    <div class="input-group">
+      <label>Pilih Jenis Reject (Maksimal 3 agar grafik tidak berantakan)</label>
+      <div style="display:flex; flex-wrap:wrap; gap:0.75rem; background:#f8fafc; padding:0.75rem; border-radius:8px; border:1px solid #e5e7eb;">
+        <label style="display:flex;align-items:center;gap:0.4rem;font-weight:normal;cursor:pointer;">
+          <input type="checkbox" value="all" class="rej-chk" checked onchange="handleRejectCheck(this)"> Total Keseluruhan
+        </label>
+        <label style="display:flex;align-items:center;gap:0.4rem;font-weight:normal;cursor:pointer;">
+          <input type="checkbox" value="poli" class="rej-chk" onchange="handleRejectCheck(this)"> Polinasi
+        </label>
+        <label style="display:flex;align-items:center;gap:0.4rem;font-weight:normal;cursor:pointer;">
+          <input type="checkbox" value="crack" class="rej-chk" onchange="handleRejectCheck(this)"> Cracking
+        </label>
+        <label style="display:flex;align-items:center;gap:0.4rem;font-weight:normal;cursor:pointer;">
+          <input type="checkbox" value="hpt" class="rej-chk" onchange="handleRejectCheck(this)"> HPT
+        </label>
+        <label style="display:flex;align-items:center;gap:0.4rem;font-weight:normal;cursor:pointer;">
+          <input type="checkbox" value="overripe" class="rej-chk" onchange="handleRejectCheck(this)"> Overripe
+        </label>
+        <label style="display:flex;align-items:center;gap:0.4rem;font-weight:normal;cursor:pointer;">
+          <input type="checkbox" value="bruise" class="rej-chk" onchange="handleRejectCheck(this)"> Bruise
+        </label>
+        <label style="display:flex;align-items:center;gap:0.4rem;font-weight:normal;cursor:pointer;">
+          <input type="checkbox" value="kuning" class="rej-chk" onchange="handleRejectCheck(this)"> Buah Kuning
+        </label>
+        <label style="display:flex;align-items:center;gap:0.4rem;font-weight:normal;cursor:pointer;">
+          <input type="checkbox" value="frozen" class="rej-chk" onchange="handleRejectCheck(this)"> Frozen
+        </label>
+      </div>
+    </div>
+
+    <div class="chart-scroll" id="chart-reject-trend" style="margin-top:1rem; min-height:320px;"></div>
   </div>
   <div class="card" id="panen-recap-harian-card">
     <div class="card-title">📋 Rekap Harian Panen, Reject & Pengiriman</div>
