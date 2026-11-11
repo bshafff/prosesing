@@ -53,7 +53,7 @@ async function initApp() {
   // 1. Load semua views dulu (WAJIB jalan pertama)
   await loadAllViews();
 
-  // 2. Set default tanggal
+   // 2. Set default tanggal
   const today = new Date().toISOString().split('T')[0];
   const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
   setVal('lks-tanggal', today);
@@ -63,7 +63,17 @@ async function initApp() {
   setVal('dashboard-bulan', today.substring(0, 7));
   setVal('mika-bulan', today.substring(0, 7));
   setVal('minggu-bulan', today.substring(0, 7));
-  setVal('laporan-harian-tgl', today); // <--- TAMBAHKAN BARIS INI
+  setVal('laporan-harian-tgl', today);
+
+  // --- TAMBAHAN UNTUK DEFAULT GRAFIK TREN REJECT ---
+  // Menghitung tanggal 30 hari yang lalu
+  const date30DaysAgo = new Date();
+  date30DaysAgo.setDate(date30DaysAgo.getDate() - 30);
+  const ymd30 = date30DaysAgo.toISOString().split('T')[0];
+  
+  // Isi otomatis filter dari & sampai
+  setVal('reject-chart-dari', ymd30);
+  setVal('reject-chart-sampai', today);
 
   // 3. Init render data
   try { renderTableLks(); } catch (e) { console.warn('renderTableLks:', e); }
