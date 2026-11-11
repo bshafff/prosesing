@@ -1614,3 +1614,159 @@ function renderRejectBreakdown() {
     `;
   }).join('');
 }
+
+// ========== TREN REJECT STAND-ALONE (LINE CHART) ==========
+function renderRejectTrendChart() {
+  const el = document.getElementById('chart-reject-trend');
+  if (!el) return;
+
+  const dari = document.getElementById('reject-chart-dari').value;
+  const sampai = document.getElementById('reject-chart-sampai').value;
+  const jenis = document.getElementById('reject-chart-jenis').value;
+  const filterGh = document.getElementById('reject-chart-gh').value;
+
+  if (!dari || !sampai) return;
+
+  const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+  
+  // Filter berdasarkan rentang tanggal
+  let filtered = db.filter(x => x.tgl >= dari && x.tgl <= sampai);
+
+  // Filter berdasarkan pilihan GH
+  if (filterGh !== 'all') {
+    filtered = filtered.filter(x => ghOf(x) === filterGh);
+  }
+
+  if (!filtered.length) {
+    el.innerHTML = '<div style="text-align:center;color:#999;padding:2rem;">Tidak ada data pada periode ini</div>';
+    return;
+  }
+
+  // Kumpulkan semua tanggal unik dan urutkan
+  const dates = [...new Set(filtered.map(x => x.tgl))].sort();
+  
+  // Siapkan data per GH
+  const ghList = filterGh === 'all' ? ['GH 1', 'GH 2'] : [filterGh];
+  const colors = { 'GH 1': '#2563eb', 'GH 2': '#ea580c' };
+
+  const seriesData = {};
+  ghList.forEach(gh => {
+    seriesData[gh] = {};
+    dates.forEach(d => seriesData[gh][d] = { rej: 0, panen: 0 });
+  });
+
+  // Akumulasi data reject & panen per tanggal
+  filtered.forEach(item => {
+    const d = item.tgl;
+    const gh = ghOf(item);
+    if (!seriesData[gh] || !seriesData[gh][d]) return;
+
+    let rejVal = 0;
+    const rkTotal = (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
+    const panenTotal = (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + rkTotal;
+
+    if (jenis === 'all') {
+      rejVal = rkTotal + (item.rp_crack||0) + (item.rp_poli||0) + (item.rp_hpt||0) + (item.rp_bruise||0) + (item.rp_overripe||0) + (item.rp_kuning||0) + (item.rp_frozen||0);
+    } else if (jenis === 'crack') {
+      rejVal = (item.rk_crack || 0) + (item.rp_crack || 0);
+    } else if (jenis === 'poli') {
+      rejVal = (item.rk_poli || 0) + (item.rp_poli || 0);
+    } else if (jenis === 'hpt') {
+      rejVal = (item.rk_hpt || 0) + (item.rp_hpt || 0);
+    } else if (jenis === 'bruise') {
+      rejVal = item.rp_bruise || 0;
+    } else if (jenis === 'overripe') {
+      rejVal = item.rp_overripe || 0;
+    } else if (jenis === 'kuning') {
+      rejVal = item.rp_kuning || 0;
+    } else if (jenis === 'frozen') {
+      rejVal = item.rp_frozen || 0;
+    }
+
+    seriesData[gh][d].rej += rejVal;
+    seriesData[gh][d].panen += panenTotal;
+  });
+
+  // Hitung persentase
+  let maxPct = 5; // Minimal skala Y-axis 5%
+  ghList.forEach(gh => {
+    dates.forEach(d => {
+      const dt = seriesData[gh][d];
+      dt.pct = dt.panen > 0 ? (dt.rej / dt.panen) * 100 : 0;
+      if (dt.pct > maxPct) maxPct = dt.pct;
+    });
+  });
+  maxPct = Math.ceil(maxPct * 1.2); // Beri ruang 20% di atas grafik
+
+  // Setup Dimensi SVG
+  const W = Math.max(800, dates.length * 50);
+  const H = 320;
+  const padL = 50, padR = 30, padT = 30, padB = 60;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+  const stepX = chartW / Math.max(1, dates.length - 1);
+
+  const getX = idx => padL + (idx * stepX);
+  const getY = val => padT + chartH - ((val / maxPct) * chartH);
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" style="min-width:${W}px; width:100%; height:auto;">`;
+
+  // 1. Grid & Y-Axis Labels
+  for (let i = 0; i <= 5; i++) {
+    const val = (maxPct / 5) * i;
+    const y = getY(val);
+    svg += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#e5e7eb" stroke-dasharray="${i === 0 ? '0' : '4'}"/>`;
+    svg += `<text x="${padL - 10}" y="${y + 4}" text-anchor="end" font-size="11" fill="#64748b">${val.toFixed(1)}%</text>`;
+  }
+
+  // 2. X-Axis Labels & Garis Bantu Vertikal
+  dates.forEach((d, i) => {
+    const x = getX(i);
+    const [y, m, day] = d.split('-');
+    svg += `<text x="${x}" y="${H - padB + 20}" text-anchor="middle" font-size="10" fill="#64748b">${day}/${m}</text>`;
+  });
+
+  // 3. Gambar Garis & Titik per GH
+  ghList.forEach(gh => {
+    let pathD = '';
+    let points = [];
+
+    dates.forEach((d, i) => {
+      const val = seriesData[gh][d].pct;
+      const x = getX(i);
+      const y = getY(val);
+      
+      if (i === 0) pathD = `M ${x} ${y}`;
+      else pathD += ` L ${x} ${y}`;
+      
+      points.push({ x, y, val, date: d });
+    });
+
+    // Gambar garis path
+    if (dates.length > 1) {
+      svg += `<path d="${pathD}" fill="none" stroke="${colors[gh]}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+    }
+
+    // Gambar titik (circle) di setiap data
+    points.forEach(p => {
+      svg += `<circle cx="${p.x}" cy="${p.y}" r="4" fill="#ffffff" stroke="${colors[gh]}" stroke-width="2">
+        <title>${gh} • ${p.date}\n${p.val.toFixed(2)}%</title>
+      </circle>`;
+      // Tooltip transparan yang lebih besar untuk mempermudah hover
+      svg += `<circle cx="${p.x}" cy="${p.y}" r="10" fill="transparent">
+        <title>${gh} • ${p.date}\n${p.val.toFixed(2)}%</title>
+      </circle>`;
+    });
+  });
+
+  svg += `</svg>`;
+
+  // 4. Legend
+  let legend = '<div class="chart-legend" style="justify-content:center; margin-top:1rem;">';
+  ghList.forEach(gh => {
+    legend += `<span><span class="dot" style="background:${colors[gh]}; width:14px; height:14px; border-radius:50%;"></span> <b>${gh}</b></span>`;
+  });
+  legend += '</div>';
+
+  el.innerHTML = svg + legend;
+}
