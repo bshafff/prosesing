@@ -5,9 +5,6 @@
     <button class="btn btn-sm" onclick="openModule('dash-mika')" style="margin-left:auto;flex:none;background:#faf5ff;color:#7e22ce;border:1px solid #e9d5ff;">🍓 Dashboard Mika</button>
   </div>
 
-  <!-- ========================================== -->
-  <!-- TAMBAHKAN KODE CARD BARU DI SINI -->
-  <!-- ========================================== -->
   <!-- CARD CETAK LAPORAN (HARIAN/MINGGUAN/BULANAN) -->
   <div class="card" style="border-left: 4px solid #2d5016; margin-bottom: 1rem;">
     <div class="card-title">🖼️ Cetak Laporan (Harian / Mingguan / Bulanan)</div>
@@ -54,7 +51,6 @@
       <button class="btn btn-primary" onclick="generateLaporanGabungan()" style="background:#2d5016; width:100%;">📸 Buat Gambar Laporan</button>
     </div>
   </div>
-  <!-- ========================================== -->
 
   <div class="card">
     <div class="card-title">📅 Pilih Periode Bulan</div>
@@ -68,11 +64,11 @@
     <div class="input-group" style="margin:1rem 0 0;">
       <label>Greenhouse</label>
       <select id="dashboard-gh" onchange="updateDashboard()">
-  <option value="all">Semua GH</option>
-  <option value="GH 1">GH 1</option>
-  <option value="GH 2">GH 2</option>
-  <option value="GLOBAL">🌐 Global (Frozen/Tamu)</option> <!-- TAMBAH INI -->
-</select>
+        <option value="all">Semua GH</option>
+        <option value="GH 1">GH 1</option>
+        <option value="GH 2">GH 2</option>
+        <option value="GLOBAL">🌐 Global (Frozen/Tamu)</option>
+      </select>
     </div>
     <div class="info-box" style="margin-top:1rem;margin-bottom:0;" id="dashboard-period-info">
       Menampilkan data: <b>-</b>
@@ -119,7 +115,7 @@
     <div id="chart-reject"></div>
   </div>
   
-     <div class="card" style="margin-top:1rem;">
+  <div class="card" style="margin-top:1rem;">
     <div class="card-title">📝 Analisis Breakdown Reject Bulanan (Per GH)</div>
     <div class="info-box" style="margin-bottom:1rem;">
       Menampilkan 2 masalah utama (reject tertinggi) pada setiap GH di tiap bulannya.
@@ -142,8 +138,10 @@
     </div>
   </div>
 
-    <!-- CARD TREN REJECT STAND-ALONE -->
-     <div class="row-3" style="align-items: flex-end; margin-bottom: 1rem;">
+  <!-- CARD TREN REJECT STAND-ALONE -->
+  <div class="card" style="margin-top:1.5rem;">
+    <div class="card-title">📈 Tren Persentase Reject (Stand Alone)</div>
+    <div class="row-3" style="align-items: flex-end; margin-bottom: 1rem;">
       <div class="input-group" style="margin-bottom:0;">
         <label>Dari Tanggal</label>
         <input type="date" id="reject-chart-dari" onchange="renderRejectTrendChart()">
@@ -195,6 +193,7 @@
 
     <div class="chart-scroll" id="chart-reject-trend" style="margin-top:1rem; min-height:320px;"></div>
   </div>
+
   <div class="card" id="panen-recap-harian-card">
     <div class="card-title">📋 Rekap Harian Panen, Reject & Pengiriman</div>
     <div style="margin-bottom:0.75rem;display:flex;gap:0.75rem;align-items:flex-end;flex-wrap:wrap;" data-html2canvas-ignore="true">
@@ -328,11 +327,11 @@
       <div class="input-group" style="margin-bottom:0;">
         <label>Greenhouse</label>
         <select id="minggu-gh" onchange="renderWeeklyPanen()">
-  <option value="all">Semua GH</option>
-  <option value="GH 1">GH 1</option>
-  <option value="GH 2">GH 2</option>
-  <option value="GLOBAL">🌐 Global</option> <!-- TAMBAH INI -->
-</select>
+          <option value="all">Semua GH</option>
+          <option value="GH 1">GH 1</option>
+          <option value="GH 2">GH 2</option>
+          <option value="GLOBAL">🌐 Global</option>
+        </select>
       </div>
       <div class="input-group" style="margin-bottom:0;">
         <label>Tampilkan</label>
