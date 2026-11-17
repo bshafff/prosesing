@@ -678,13 +678,10 @@ function renderWeeklyPanen() {
 
   const tbody = document.getElementById('weekly-body');
   const footEl = document.getElementById('weekly-foot');
-  const noteEl = document.getElementById('weekly-forecast-note');
 
   if (!weeks.some(w => w.daysWithData > 0)) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#999;padding:1rem;">Belum ada data panen untuk periode ini</td></tr>';
     footEl.innerHTML = '';
-    noteEl.innerHTML = '';
-    weeklyExportData = null;
     return;
   }
 
@@ -733,78 +730,26 @@ function renderWeeklyPanen() {
       </td>
     </tr>`).join('');
 
-  const active = weeks.filter(w => w.daysWithData > 0);
-  const lastActive = active[active.length - 1];
-
-  const fcRate = {};
-  WEEK_GRADES.forEach(g => {
-    fcRate[g.key] = linForecast(active.map(w => w[g.key] / Math.max(1, w.daysWithData)));
+  // --- HITUNG TOTAL BAWAH TABEL ---
+  const totalShown = { hatsu: 0, gradeA: 0, gradeB: 0, reject: 0, total: 0 };
+  list.forEach(w => {
+    totalShown.hatsu += w.hatsu;
+    totalShown.gradeA += w.gradeA;
+    totalShown.gradeB += w.gradeB;
+    totalShown.reject += w.reject;
+    totalShown.total += w.total;
   });
-  const fcTotalRate = linForecast(active.map(w => w.total / Math.max(1, w.daysWithData)));
 
-  const lastFull = {};
-  WEEK_GRADES.forEach(g => {
-    lastFull[g.key] = lastActive[g.key] / Math.max(1, lastActive.daysWithData) * WEEK_LEN;
-  });
-  lastFull.total = lastActive.total / Math.max(1, lastActive.daysWithData) * WEEK_LEN;
-
-  const fcCell = (rate, lastVal, totalsKey) => {
-    const isTotalCol = (totalsKey === 'total');
-    const estWeekTotal = (fcTotalRate !== null && isFinite(fcTotalRate)) ? fcTotalRate * WEEK_LEN : 0;
-    if (rate === null || !isFinite(rate)) return '<span style="opacity:.6;">–</span>';
-    const est = rate * WEEK_LEN;
-    let d = '';
-    if (lastVal > 0) {
-      const pct = (est - lastVal) / lastVal * 100;
-      const col = pct > 0 ? '#86efac' : pct < 0 ? '#fecaca' : '#cbd5e1';
-      d = `<div class="wk-delta" style="color:${col};">${pct > 0 ? '▲' : pct < 0 ? '▼' : '='} ${Math.abs(pct).toFixed(1)}% vs minggu lalu</div>`;
-    }
-    const base = isTotalCol ? totals.total : estWeekTotal;
-    const lbl = isTotalCol ? 'dari total bulan' : 'dari total minggu';
-    const share = base > 0 ? `<div class="wk-pct" style="color:#ccfbf1;">≈ ${(est / base * 100).toFixed(1)}% ${lbl}</div>` : '';
-    return `<div class="wk-val">${est.toFixed(2)}</div>${share}${d}`;
-  };
-
+  // --- RENDER BARIS TOTAL ---
   footEl.innerHTML = `<tr>
-    <td class="tgl-col" style="background:#0d9488;color:#fff;">🔮 Estimasi</td>
-    <td class="wk-periode" style="background:#0d9488;color:#fff;">
-      Minggu berikutnya<br><small style="color:#ccfbf1;">proyeksi ${WEEK_LEN} hari (Senin–Sabtu)</small>
-    </td>
-    ${WEEK_GRADES.map(g =>
-      `<td style="background:#0d9488;color:#fff;">${fcCell(fcRate[g.key], lastFull[g.key], g.key)}</td>`
-    ).join('')}
-    <td style="background:#0d9488;color:#fff;">${fcCell(fcTotalRate, lastFull.total, 'total')}</td>
+    <td class="tgl-col" style="background:#2d5016;color:#fff;">TOTAL</td>
+    <td class="wk-periode" style="background:#2d5016;color:#fff;">Total Keseluruhan</td>
+    <td style="background:#2d5016;color:#fff;font-weight:bold;font-size:0.9rem;text-align:right;">${totalShown.hatsu.toFixed(2)}</td>
+    <td style="background:#2d5016;color:#fff;font-weight:bold;font-size:0.9rem;text-align:right;">${totalShown.gradeA.toFixed(2)}</td>
+    <td style="background:#2d5016;color:#fff;font-weight:bold;font-size:0.9rem;text-align:right;">${totalShown.gradeB.toFixed(2)}</td>
+    <td style="background:#2d5016;color:#fff;font-weight:bold;font-size:0.9rem;text-align:right;">${totalShown.reject.toFixed(2)}</td>
+    <td style="background:#2d5016;color:#fff;font-weight:bold;font-size:0.9rem;text-align:right;">${totalShown.total.toFixed(2)}</td>
   </tr>`;
-
-  const fcInfo = (rate, lastVal, totalsKey) => {
-    if (rate === null || !isFinite(rate)) return { est: '', pct: '', delta: '' };
-    const est = rate * WEEK_LEN;
-    const isTot = (totalsKey === 'total');
-    const base = isTot ? totals.total : (fcTotalRate !== null && isFinite(fcTotalRate) ? fcTotalRate * WEEK_LEN : 0);
-    const pct = base > 0 ? `≈ ${(est / base * 100).toFixed(1)}% ${isTot ? 'dari total bulan' : 'dari total minggu'}` : '0%';
-    let delta = '';
-    if (lastVal > 0) {
-      const d = (est - lastVal) / lastVal * 100;
-      delta = `${d > 0 ? '▲' : d < 0 ? '▼' : '='} ${Math.abs(d).toFixed(1)}% vs minggu lalu`;
-    }
-    return { est: est.toFixed(2), pct, delta };
-  };
-  weeklyExportData = {
-    ym, weeks, totals, list,
-    forecast: {
-      cats: WEEK_GRADES.map(g => fcInfo(fcRate[g.key], lastFull[g.key], g.key)),
-      total: fcInfo(fcTotalRate, lastFull.total, 'total')
-    }
-  };
-
-  const usedDays = active.map(w => `M${w.idx}: ${w.daysWithData}/${w.days} hari`).join(' · ');
-  noteEl.innerHTML = `<div class="warn-box" style="margin-top:1rem;">
-    <b>📌 Catatan minggu:</b> Senin–Sabtu (6 hari). Minggu bisa lintas bulan, contoh: <b>28 Sep – 3 Okt</b> atau <b>31 Agu – 5 Sep</b>.<br>
-    <b>📊 Cara baca persen:</b> tiap kategori (Hatsuhana, Grade A, Grade B, Reject) = % dari <b>total minggu itu sendiri</b> (Senin–Sabtu), jadi 4 kategori dalam satu minggu jumlahnya 100%. Total (Kg) = % dari total bulan. Reject = reject kebun (crack + poli + HPT), sama seperti total panen di rekap harian.<br>
-    <b>🔮 Cara baca estimasi:</b> memakai tren linear dari rata-rata panen <b>per hari</b> tiap minggu, lalu dikali ${WEEK_LEN} hari.
-    Jadi minggu yang baru terisi sebagian (misal baru 3 hari) tetap sebanding dan tidak menyeret angka turun.<br>
-    Hari terisi per minggu → <b>${usedDays}</b>. Angka ini hanya perkiraan arah tren, bukan target panen.
-  </div>`;
 }
 
 function weeklyDeltaText(d, isNew) {
@@ -1815,4 +1760,54 @@ function renderRejectTrendChart() {
 
   htmlOutput += `</div>`;
   el.innerHTML = htmlOutput;
+}
+
+// ========== RENDER DATA DETAIL REJECT ==========
+function renderDetailReject() {
+  const tbody = document.getElementById('detail-reject-body');
+  if (!tbody) return;
+
+  const dari = document.getElementById('detail-reject-dari').value;
+  const sampai = document.getElementById('detail-reject-sampai').value;
+  if (!dari || !sampai) return;
+
+  const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+  const filtered = db.filter(x => x.tgl >= dari && x.tgl <= sampai).sort((a, b) => new Date(b.tgl) - new Date(a.tgl));
+
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#999;">Tidak ada data pada periode ini</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(item => {
+    const isGlobal = item.gh === 'GLOBAL';
+    
+    const crack = (item.rk_crack || 0) + (item.rp_crack || 0);
+    const poli = (item.rk_poli || 0) + (item.rp_poli || 0);
+    const hpt = (item.rk_hpt || 0) + (item.rp_hpt || 0);
+    const bruise = item.rp_bruise || 0;
+    const overripe = item.rp_overripe || 0;
+    const kuning = item.rp_kuning || 0;
+    const frozen = item.rp_frozen || 0;
+    const totalReject = crack + poli + hpt + bruise + overripe + kuning + frozen;
+    
+    const totalPanen = (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
+    const rejRate = totalPanen > 0 ? (totalReject / totalPanen * 100) : 0;
+
+    const fmt = n => n > 0 ? n.toFixed(2) : '-';
+
+    return `<tr>
+      <td style="text-align:center;">${item.tgl}</td>
+      <td style="text-align:center; font-weight:bold; color:${isGlobal ? '#9333ea' : '#2d5016'};">${isGlobal ? '🌐 Global' : item.gh}</td>
+      <td class="text-right" style="color:#dc2626;">${fmt(crack)}</td>
+      <td class="text-right" style="color:#dc2626;">${fmt(poli)}</td>
+      <td class="text-right" style="color:#dc2626;">${fmt(hpt)}</td>
+      <td class="text-right" style="color:#dc2626;">${fmt(bruise)}</td>
+      <td class="text-right" style="color:#dc2626;">${fmt(overripe)}</td>
+      <td class="text-right" style="color:#dc2626;">${fmt(kuning)}</td>
+      <td class="text-right" style="color:#dc2626;">${fmt(frozen)}</td>
+      <td class="text-right" style="font-weight:bold; color:#dc2626;">${fmt(totalReject)}</td>
+      <td class="text-right" style="font-weight:bold; color:#ea580c;">${rejRate.toFixed(2)}%</td>
+    </tr>`;
+  }).join('');
 }
