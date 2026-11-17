@@ -194,33 +194,30 @@
     <div class="chart-scroll" id="chart-reject-trend" style="margin-top:1rem; min-height:320px;"></div>
   </div>
 
-  <div class="card" id="panen-recap-harian-card">
-    <div class="card-title">📋 Rekap Harian Panen, Reject & Pengiriman</div>
-    <div style="margin-bottom:0.75rem;display:flex;gap:0.75rem;align-items:flex-end;flex-wrap:wrap;" data-html2canvas-ignore="true">
-      <div class="input-group" style="margin-bottom:0;min-width:220px;">
-        <label>Minggu</label>
-        <select id="recap-minggu" onchange="updateDashboard()">
-          <option value="all">Semua Minggu</option>
-        </select>
+    <div class="card" style="margin-top:1.5rem;">
+    <div class="card-title">📋 Data Detail Reject</div>
+    <div class="row-3" style="align-items:flex-end; margin-bottom:1rem;">
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Dari Tanggal</label>
+        <input type="date" id="detail-reject-dari" onchange="renderDetailReject()">
       </div>
-      <button type="button" class="btn btn-primary btn-sm" onclick="downloadRecapHarianImage()">📸 Screenshot</button>
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Sampai Tanggal</label>
+        <input type="date" id="detail-reject-sampai" onchange="renderDetailReject()">
+      </div>
+      <button class="btn btn-primary" onclick="renderDetailReject()">Tampilkan Data</button>
     </div>
     <div class="recap-wrap">
-      <table class="recap-table">
+      <table class="recap-table" style="min-width: 1000px;">
         <thead>
           <tr>
             <th class="th-base" rowspan="2">Tanggal</th>
-            <th class="th-panen" colspan="5">PANEN (Kg)</th>
-            <th class="th-reject" colspan="9">TOTAL REJECT (Kg)</th>
-            <th class="th-kirim" colspan="6">BERAT PENGIRIMAN (Kg)</th>
-            <th class="th-mika" colspan="4">JUMLAH KIRIM (Pcs)</th>
+            <th class="th-base" rowspan="2">GH</th>
+            <th class="th-reject" colspan="7">Rincian Reject (Kg)</th>
+            <th class="th-reject" rowspan="2">Total Reject (Kg)</th>
+            <th class="th-reject" rowspan="2">Reject Rate</th>
           </tr>
           <tr>
-            <th class="th-panen">Hatsu</th>
-            <th class="th-panen">Grade A</th>
-            <th class="th-panen">Grade B</th>
-            <th class="th-panen">Reject</th>
-            <th class="th-panen">Total</th>
             <th class="th-reject">Crack</th>
             <th class="th-reject">Polinasi</th>
             <th class="th-reject">HPT</th>
@@ -228,24 +225,11 @@
             <th class="th-reject">Overripe</th>
             <th class="th-reject">Kuning</th>
             <th class="th-reject">Frozen</th>
-            <th class="th-reject">Total</th>
-            <th class="th-reject">Rej %</th>
-            <th class="th-kirim">Hatsu</th>
-            <th class="th-kirim">A11</th>
-            <th class="th-kirim">A15</th>
-            <th class="th-kirim">Frozen</th>
-            <th class="th-kirim">Total</th>
-            <th class="th-kirim">Rate %</th>
-            <th class="th-mika">Hatsu</th>
-            <th class="th-mika">A11</th>
-            <th class="th-mika">A15</th>
-            <th class="th-mika">Total</th>
           </tr>
         </thead>
-        <tbody id="recap-body">
-          <tr><td colspan="25" style="text-align:center;color:#999;padding:1rem;">Belum ada data bulan ini</td></tr>
+        <tbody id="detail-reject-body">
+          <tr><td colspan="11" style="text-align:center;color:#999;">Belum ada data</td></tr>
         </tbody>
-        <tfoot id="recap-foot"></tfoot>
       </table>
     </div>
   </div>
@@ -374,6 +358,5 @@
       </table>
     </div>
 
-    <div id="weekly-forecast-note"></div>
   </div>
 </div>
