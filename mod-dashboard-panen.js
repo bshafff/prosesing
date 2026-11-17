@@ -4,7 +4,6 @@ function setDashboardBulanIni() {
   document.getElementById('dashboard-bulan').value = nowMonth;
   const mg = document.getElementById('minggu-bulan');
   if (mg) mg.value = nowMonth;
-  const rm = document.getElementById('recap-minggu'); if (rm) rm.value = 'all';
   updateDashboard();
 }
 
@@ -12,7 +11,6 @@ function onDashboardMonthChange() {
   const v = document.getElementById('dashboard-bulan').value;
   const mg = document.getElementById('minggu-bulan');
   if (mg) mg.value = v;
-  const rm = document.getElementById('recap-minggu'); if (rm) rm.value = 'all';
   updateDashboard();
 }
 
@@ -21,7 +19,6 @@ function updateDashboard() {
   if (!bulanEl) return;
   if (!bulanEl.value) bulanEl.value = new Date().toISOString().substring(0, 7);
   const selectedMonth = bulanEl.value;
-  populateRecapWeeks(selectedMonth);
   const infoEl = document.getElementById('dashboard-period-info');
   if (infoEl) infoEl.innerHTML = `Menampilkan data: <b>${formatBulanIndo(selectedMonth)}</b> · <b>${ghLabelOf(dashGh())}</b>`;
   
@@ -178,118 +175,6 @@ function updateDashboard() {
     dRejEl.className = 'stat-delta ' + (diff > 0 ? 'down' : diff < 0 ? 'up' : '');
     dRejEl.textContent = `${diff > 0 ? '▲' : diff < 0 ? '▼' : '='} ${Math.abs(diff).toFixed(2)} poin vs bulan lalu (${pRate.toFixed(2)}%)${cutoffLabel}`;
   }
-
-  // Render Tabel Recap (ikut filter minggu)
-  const tableRows = recapWeekFilter(filtered, selectedMonth);
-  const tbody = document.getElementById('recap-body');
-  if (!tableRows.length) {
-    tbody.innerHTML = `<tr><td colspan="25" style="text-align:center;color:#999;padding:1rem;">Belum ada data pada periode ini</td></tr>`;
-  } else {
-    tbody.innerHTML = tableRows.map(item => {
-      const isGlobal = item.gh === 'GLOBAL';
-      const rk = (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
-      const panenTotal = (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + rk;
-      const rpTotal = (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0) + (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_kuning || 0) + (item.rp_frozen || 0);
-      const totalRej = rk + rpTotal;
-      const rejRate = panenTotal > 0 ? (totalRej / panenTotal * 100) : 0;
-      
-      const alokasiFrozen = getFrozenAlokasi(item);
-      const kirimTotal = (item.k_hatsu || 0) + (item.k_a11 || 0) + (item.k_a15 || 0) + alokasiFrozen + (isGlobal ? (gKirimOf(item)||0) : 0);
-      const rKirim = panenTotal > 0 ? (kirimTotal / panenTotal * 100) : 0;
-      const mikaTotal = (item.m_hatsu || 0) + (item.m_a11 || 0) + (item.m_a15 || 0);
-      const tglFmt = item.tgl.split('-').reverse().join('/');
-      
-      return `<tr>
-        <td class="tgl-col">${tglFmt}<br><small style="color:#64748b;">${isGlobal ? '🌐 Global' : ghOf(item)}</small></td>
-        <td>${(item.p_hatsu || 0).toFixed(2)}</td>
-        <td>${(item.p_gradea || 0).toFixed(2)}</td>
-        <td>${(item.p_gradeb || 0).toFixed(2)}</td>
-        <td>${rk.toFixed(2)}</td>
-        <td><strong>${panenTotal.toFixed(2)}</strong></td>
-        <td>${(item.rp_crack || 0).toFixed(2)}</td>
-        <td>${(item.rp_poli || 0).toFixed(2)}</td>
-        <td>${(item.rp_hpt || 0).toFixed(2)}</td>
-        <td>${(item.rp_bruise || 0).toFixed(2)}</td>
-        <td>${(item.rp_overripe || 0).toFixed(2)}</td>
-        <td>${(item.rp_kuning || 0).toFixed(2)}</td>
-        <td>${(item.rp_frozen || 0).toFixed(2)}</td>
-        <td>${totalRej.toFixed(2)}</td>
-        <td class="reject-rate">${rejRate.toFixed(2)}%</td>
-        <td>${(item.k_hatsu || 0).toFixed(2)}</td>
-        <td>${(item.k_a11 || 0).toFixed(2)}</td>
-        <td>${(item.k_a15 || 0).toFixed(2)}</td>
-        <td>${(isGlobal ? (gKirimOf(item)||0) : alokasiFrozen).toFixed(2)}</td>
-        <td><strong>${kirimTotal.toFixed(2)}</strong></td>
-        <td class="rate-kirim">${rKirim.toFixed(2)}%</td>
-        <td>${item.m_hatsu || 0}</td>
-        <td>${item.m_a11 || 0}</td>
-        <td>${item.m_a15 || 0}</td>
-        <td><strong>${mikaTotal}</strong></td>
-      </tr>`;
-    }).join('');
-  }
-
-  // Render Footer
-  const TF = accumulate(tableRows);
-  const rejectRateF = TF.panen_total > 0 ? (TF.rej_total / TF.panen_total * 100) : 0;
-  const rateKirimF = TF.panen_total > 0 ? (TF.kirim_total / TF.panen_total * 100) : 0;
-  const n = tableRows.length || 1;
-  document.getElementById('recap-foot').innerHTML = `
-    <tr>
-      <td style="text-align:center;font-weight:800;">Jumlah</td>
-      <td>${TF.p_hatsu.toFixed(2)}</td>
-      <td>${TF.p_gradea.toFixed(2)}</td>
-      <td>${TF.p_gradeb.toFixed(2)}</td>
-      <td>${TF.rk_total.toFixed(2)}</td>
-      <td>${TF.panen_total.toFixed(2)}</td>
-      <td>${TF.rp_crack.toFixed(2)}</td>
-      <td>${TF.rp_poli.toFixed(2)}</td>
-      <td>${TF.rp_hpt.toFixed(2)}</td>
-      <td>${TF.rp_bruise.toFixed(2)}</td>
-      <td>${TF.rp_overripe.toFixed(2)}</td>
-      <td>${TF.rp_kuning.toFixed(2)}</td>
-      <td>${TF.rp_frozen.toFixed(2)}</td>
-      <td>${TF.rej_total.toFixed(2)}</td>
-      <td style="color:#fca5a5;">${rejectRateF.toFixed(2)}%</td>
-      <td>${TF.k_hatsu.toFixed(2)}</td>
-      <td>${TF.k_a11.toFixed(2)}</td>
-      <td>${TF.k_a15.toFixed(2)}</td>
-      <td>${TF.k_frozen.toFixed(2)}</td>
-      <td>${TF.kirim_total.toFixed(2)}</td>
-      <td style="color:#86efac;">${rateKirimF.toFixed(2)}%</td>
-      <td>${TF.m_hatsu}</td>
-      <td>${TF.m_a11}</td>
-      <td>${TF.m_a15}</td>
-      <td>${TF.mika_total}</td>
-    </tr>
-    <tr style="background:#4b5563;">
-      <td style="text-align:center;font-weight:800;">Rata-rata</td>
-      <td>${(TF.p_hatsu / n).toFixed(2)}</td>
-      <td>${(TF.p_gradea / n).toFixed(2)}</td>
-      <td>${(TF.p_gradeb / n).toFixed(2)}</td>
-      <td>${(TF.rk_total / n).toFixed(2)}</td>
-      <td>${(TF.panen_total / n).toFixed(2)}</td>
-      <td>${(TF.rp_crack / n).toFixed(2)}</td>
-      <td>${(TF.rp_poli / n).toFixed(2)}</td>
-      <td>${(TF.rp_hpt / n).toFixed(2)}</td>
-      <td>${(TF.rp_bruise / n).toFixed(2)}</td>
-      <td>${(TF.rp_overripe / n).toFixed(2)}</td>
-      <td>${(TF.rp_kuning / n).toFixed(2)}</td>
-      <td>${(TF.rp_frozen / n).toFixed(2)}</td>
-      <td>${(TF.rej_total / n).toFixed(2)}</td>
-      <td>${rejectRateF.toFixed(2)}%</td>
-      <td>${(TF.k_hatsu / n).toFixed(2)}</td>
-      <td>${(TF.k_a11 / n).toFixed(2)}</td>
-      <td>${(TF.k_a15 / n).toFixed(2)}</td>
-      <td>${(TF.k_frozen / n).toFixed(2)}</td>
-      <td>${(TF.kirim_total / n).toFixed(2)}</td>
-      <td>${rateKirimF.toFixed(2)}%</td>
-      <td>${(TF.m_hatsu / n).toFixed(0)}</td>
-      <td>${(TF.m_a11 / n).toFixed(0)}</td>
-      <td>${(TF.m_a15 / n).toFixed(0)}</td>
-      <td>${(TF.mika_total / n).toFixed(0)}</td>
-    </tr>
-  `;
 
   renderChartRejectPie(T);
   renderMikaDashboard();
@@ -571,25 +456,6 @@ function weekLabel(w) {
   return `${w.sd} ${sm} ${w.sy} – ${w.ed} ${em} ${w.ey}`;
 }
 
-function populateRecapWeeks(ym) {
-  const sel = document.getElementById('recap-minggu');
-  if (!sel) return;
-  const cur = sel.value;
-  const weeks = getWeekRanges(ym);
-  sel.innerHTML = '<option value="all">Semua Minggu</option>' +
-    weeks.map(w => `<option value="${w.idx}">Minggu ${w.idx} · ${weekLabel(w)}</option>`).join('');
-  sel.value = weeks.some(w => String(w.idx) === cur) ? cur : 'all';
-}
-
-function recapWeekFilter(list, ym) {
-  const sel = document.getElementById('recap-minggu');
-  const v = sel ? sel.value : 'all';
-  if (v === 'all') return list;
-  const w = getWeekRanges(ym).find(x => String(x.idx) === v);
-  if (!w) return list;
-  return list.filter(x => x.tgl >= w.startStr && x.tgl <= w.endStr);
-}
-
 function computeWeeklyPanenForMonth(ym) {
   const monthRanges = getWeekRanges(ym);
   if (!monthRanges.length) return [];
@@ -641,22 +507,6 @@ function computeWeeklyPanenForMonth(ym) {
   return result.slice(1);
 }
 
-function linForecast(vals) {
-  const n = vals.length;
-  if (!n) return null;
-  if (n === 1) return vals[0];
-  let sx = 0, sy = 0, sxy = 0, sxx = 0;
-  vals.forEach((y, i) => {
-    const x = i + 1;
-    sx += x; sy += y; sxy += x * y; sxx += x * x;
-  });
-  const denom = n * sxx - sx * sx;
-  if (denom === 0) return vals[n - 1];
-  const slope = (n * sxy - sx * sy) / denom;
-  const intercept = (sy - slope * sx) / n;
-  return Math.max(0, slope * (n + 1) + intercept);
-}
-
 function renderWeeklyPanen() {
   const bulanEl = document.getElementById('minggu-bulan');
   if (!bulanEl) return;
@@ -683,6 +533,7 @@ function renderWeeklyPanen() {
   if (!weeks.some(w => w.daysWithData > 0)) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#999;padding:1rem;">Belum ada data panen untuk periode ini</td></tr>';
     footEl.innerHTML = '';
+    weeklyExportData = null;
     return;
   }
 
@@ -741,6 +592,8 @@ function renderWeeklyPanen() {
     totalShown.total += w.total;
   });
 
+  weeklyExportData = { ym, list, totals: totalShown, monthTotal: totals.total };
+
   // --- RENDER BARIS TOTAL ---
   footEl.innerHTML = `<tr>
     <td class="tgl-col" style="background:#2d5016;color:#fff;">TOTAL</td>
@@ -775,9 +628,9 @@ function downloadWeeklyImage() {
     .concat(WEEK_GRADES.map(g => ({ k: g.key, w: 172, label: g.label + ' (Kg)' })))
     .concat([{ k: 'total', w: 172, label: 'Total (Kg)' }]);
   const W = cols.reduce((a, c) => a + c.w, 0);
-  const rowH = 64, headH = 34, topH = 86, noteH = 64;
+  const rowH = 64, headH = 34, topH = 86;
   const rows = d.list;
-  const H = topH + headH + rows.length * rowH + rowH + rowH + noteH;
+  const H = topH + headH + rows.length * rowH + rowH;
   const sc = 2;
   const cv = document.createElement('canvas');
   cv.width = W * sc; cv.height = H * sc;
@@ -835,7 +688,7 @@ function downloadWeeklyImage() {
     }));
     cells.push({
       kg: w.total.toFixed(2),
-      pct: weeklyPctText(w.total, d.totals.total, 'dari total bulan'),
+      pct: weeklyPctText(w.total, d.monthTotal, 'dari total bulan'),
       delta: weeklyDeltaText(w.d_total, w.dnew_total)
     });
     drawRow(y, `Minggu ${w.idx}`, [weekLabel(w), `${w.days} hari · ${w.daysWithData} terisi`], cells, idx % 2 ? '#f8faf7' : '#ffffff', '#1a1a18', '#64748b');
@@ -844,20 +697,11 @@ function downloadWeeklyImage() {
 
   const tot = WEEK_GRADES.map(g => ({
     kg: d.totals[g.key].toFixed(2),
-    pct: weeklyPctText(d.totals[g.key], d.totals.total, 'dari total bulan'), delta: ''
+    pct: weeklyPctText(d.totals[g.key], d.totals.total, 'dari total'), delta: ''
   }));
-  tot.push({ kg: d.totals.total.toFixed(2), pct: '100.0% dari total bulan', delta: '' });
-  drawRow(y, 'Jumlah', ['Seluruh minggu bulan ini'], tot, '#eff6ff', '#1e3a8a', '#64748b');
+  tot.push({ kg: d.totals.total.toFixed(2), pct: '', delta: '' });
+  drawRow(y, 'TOTAL', ['Total keseluruhan'], tot, '#2d5016', '#ffffff', '#d9ead0');
   y += rowH;
-
-  const f = d.forecast;
-  const fc = f.cats.concat([f.total]).map(z => ({ kg: z.est || '–', pct: z.pct || '', delta: z.delta || '' }));
-  drawRow(y, 'Estimasi', ['Minggu berikutnya', `proyeksi ${WEEK_LEN} hari`], fc, '#0d9488', '#ffffff', '#ccfbf1');
-  y += rowH;
-
-  txt('Persen kategori = dari total minggu itu sendiri. Persen Total = dari total bulan. Reject = reject kebun.', 12, y + 18, { s: 10.5, c: '#64748b' });
-  txt('Estimasi = tren linear rata-rata per hari × 6 hari, hanya perkiraan arah tren.', 12, y + 36, { s: 10.5, c: '#64748b' });
-  txt('Dibuat ' + new Date().toLocaleString('id-ID'), 12, y + 52, { s: 10, c: '#94a3b8' });
 
   cv.toBlob(blob => {
     if (!blob) { showToast('Gagal membuat gambar', 'error'); return; }
@@ -922,248 +766,6 @@ function renderWeeklyChart(weeks) {
   el.innerHTML = svg + `<div class="chart-legend">` +
     WEEK_GRADES.map(g => `<span><span class="dot" style="background:${g.color};"></span> ${g.label}</span>`).join('') +
     `</div>`;
-}
-
-// ========== SCREENSHOT: REKAP HARIAN (CANVAS MANUAL) ==========
-function downloadRecapHarianImage() {
-  const bulan = document.getElementById('dashboard-bulan')?.value;
-  if (!bulan) { showToast('Pilih bulan dulu!', 'error'); return; }
-  const ghLabel = ghLabelOf(dashGh());
-  const panenDb = filterGh(JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]'), dashGh());
-  const filtered = recapWeekFilter(panenDb.filter(x => x.tgl && x.tgl.startsWith(bulan)).sort((a, b) => new Date(a.tgl) - new Date(b.tgl)), bulan);
-  const data = mergeByTgl(filtered);
-  if (!data.length) { showToast('Belum ada data untuk bulan ini', 'error'); return; }
-
-  const GROUPS = [
-    { key: 'base', label: '', color: '#2d5016', cols: [
-      { key: 'tgl', label: 'Tanggal', width: 92, isString: true }
-    ]},
-    { key: 'panen', label: 'PANEN (Kg)', color: '#dc2626', cols: [
-      { key: 'p_hatsu', label: 'Hatsu', width: 60 },
-      { key: 'p_gradea', label: 'Grade A', width: 66 },
-      { key: 'p_gradeb', label: 'Grade B', width: 66 },
-      { key: 'rk_total', label: 'Reject', width: 54 },
-      { key: 'panen_total', label: 'Total', width: 68, bold: true }
-    ]},
-    { key: 'reject', label: 'TOTAL REJECT (Kg)', color: '#ea580c', cols: [
-      { key: 'rp_crack', label: 'Crack', width: 54 },
-      { key: 'rp_poli', label: 'Polinasi', width: 58 },
-      { key: 'rp_hpt', label: 'HPT', width: 50 },
-      { key: 'rp_bruise', label: 'Bruise', width: 54 },
-      { key: 'rp_overripe', label: 'Overripe', width: 60 },
-      { key: 'rp_kuning', label: 'Kuning', width: 54 },
-      { key: 'rp_frozen', label: 'Frozen', width: 54 },
-      { key: 'rej_total', label: 'Total', width: 60, bold: true },
-      { key: 'rej_rate', label: 'Rej %', width: 56, isPercent: true, isRed: true }
-    ]},
-    { key: 'kirim', label: 'BERAT PENGIRIMAN (Kg)', color: '#2563eb', cols: [
-      { key: 'k_hatsu', label: 'Hatsu', width: 60 },
-      { key: 'k_a11', label: 'A11', width: 58 },
-      { key: 'k_a15', label: 'A15', width: 58 },
-      { key: 'k_frozen', label: 'Frozen', width: 58 },
-      { key: 'kirim_total', label: 'Total', width: 68, bold: true },
-      { key: 'rate_kirim', label: 'Rate %', width: 58, isPercent: true, isGreen: true }
-    ]},
-    { key: 'mika', label: 'JUMLAH KIRIM (Pcs)', color: '#9333ea', cols: [
-      { key: 'm_hatsu', label: 'Hatsu', width: 58, isInt: true },
-      { key: 'm_a11', label: 'A11', width: 56, isInt: true },
-      { key: 'm_a15', label: 'A15', width: 56, isInt: true },
-      { key: 'mika_total', label: 'Total', width: 62, isInt: true, bold: true }
-    ]}
-  ];
-
-  const enriched = data.map(it => {
-    const rk = (it.rk_crack || 0) + (it.rk_poli || 0) + (it.rk_hpt || 0);
-    const rpTotal = (it.rp_crack || 0) + (it.rp_poli || 0) + (it.rp_hpt || 0) + (it.rp_bruise || 0) + (it.rp_overripe || 0) + (it.rp_kuning || 0) + (it.rp_frozen || 0);
-    const panenTotal = (it.p_hatsu || 0) + (it.p_gradea || 0) + (it.p_gradeb || 0) + rk;
-    const rejTotal = rk + rpTotal;
-    const kirimTotal = (it.k_hatsu || 0) + (it.k_a11 || 0) + (it.k_a15 || 0) + (gKirimOf(it) || 0);
-    const mikaTotal = (it.m_hatsu || 0) + (it.m_a11 || 0) + (it.m_a15 || 0);
-    return {
-      ...it, rk_total: rk, panen_total: panenTotal, rej_total: rejTotal,
-      kirim_total: kirimTotal, mika_total: mikaTotal,
-      rej_rate: panenTotal > 0 ? (rejTotal / panenTotal * 100) : 0,
-      rate_kirim: panenTotal > 0 ? (kirimTotal / panenTotal * 100) : 0
-    };
-  });
-
-  const flatCols = [];
-  GROUPS.forEach(g => g.cols.forEach(c => flatCols.push({ ...c, group: g.key })));
-
-  const totals = {};
-  flatCols.forEach(c => {
-    if (c.key === 'tgl' || c.isPercent) return;
-    totals[c.key] = enriched.reduce((a, r) => a + (parseFloat(r[c.key]) || 0), 0);
-  });
-  const n = enriched.length;
-  const TpanenTotal = totals['panen_total'] || 0;
-  const TrejTotal = totals['rej_total'] || 0;
-  const TkirimTotal = totals['kirim_total'] || 0;
-  totals['rej_rate'] = TpanenTotal > 0 ? (TrejTotal / TpanenTotal * 100) : 0;
-  totals['rate_kirim'] = TpanenTotal > 0 ? (TkirimTotal / TpanenTotal * 100) : 0;
-
-  const averages = {};
-  flatCols.forEach(c => {
-    if (c.key === 'tgl') return;
-    if (c.isPercent) averages[c.key] = totals[c.key];
-    else averages[c.key] = (totals[c.key] || 0) / n;
-  });
-
-  const W = flatCols.reduce((a, c) => a + c.width, 0);
-  const titleH = 58, groupHeadH = 26, colHeadH = 30, headH = groupHeadH + colHeadH;
-  const rowH = 26, footRowH = 30;
-  const totalH = titleH + headH + enriched.length * rowH + footRowH * 2 + 16;
-  const sc = 2;
-
-  const cv = document.createElement('canvas');
-  cv.width = W * sc; cv.height = totalH * sc;
-  const ctx = cv.getContext('2d');
-  ctx.scale(sc, sc);
-  const F = 'system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
-
-  const txt = (t, x, y, o = {}) => {
-    ctx.font = `${o.b ? '700' : '400'} ${o.s || 10.5}px ${F}`;
-    ctx.fillStyle = o.c || '#1a1a18';
-    ctx.textAlign = o.a || 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(String(t), x, y);
-  };
-  const fmtNum = (v, isInt) => {
-    const nn = parseFloat(v) || 0;
-    return isInt ? String(Math.round(nn)) : nn.toFixed(2);
-  };
-  const fmtPct = (v) => (parseFloat(v) || 0).toFixed(2) + '%';
-
-  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, totalH);
-
-  // TITLE BANNER
-  ctx.fillStyle = '#2d5016'; ctx.fillRect(0, 0, W, titleH);
-  txt('Rekap Harian Panen, Reject & Pengiriman', 14, titleH/2 - 8, { b: 1, s: 15, c: '#ffffff' });
-  txt(`${ghLabel} · ${formatBulanIndo(bulan)} · PT. Agri Wangi Berry — Processing`, 14, titleH/2 + 12, { s: 11, c: '#c9e8b0' });
-
-  // TANGGAL COLUMN (rowspan 2)
-  const tglW = GROUPS[0].cols[0].width;
-  ctx.fillStyle = '#2d5016'; ctx.fillRect(0, titleH, tglW, headH);
-  ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1;
-  ctx.strokeRect(0.5, titleH + 0.5, tglW - 1, headH - 1);
-  txt('Tanggal', tglW/2, titleH + headH/2, { b: 1, s: 11, c: '#ffffff', a: 'center' });
-
-  // GROUP HEADERS (row 1)
-  let gx = tglW;
-  GROUPS.forEach(g => {
-    if (g.key === 'base') return;
-    const gw = g.cols.reduce((a, c) => a + c.width, 0);
-    ctx.fillStyle = g.color; ctx.fillRect(gx, titleH, gw, groupHeadH);
-    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-    ctx.strokeRect(gx + 0.5, titleH + 0.5, gw - 1, groupHeadH - 1);
-    txt(g.label, gx + gw/2, titleH + groupHeadH/2, { b: 1, s: 11, c: '#ffffff', a: 'center' });
-    gx += gw;
-  });
-
-  // COLUMN HEADERS (row 2)
-  gx = tglW;
-  GROUPS.forEach(g => {
-    if (g.key === 'base') return;
-    g.cols.forEach(c => {
-      ctx.fillStyle = g.color; ctx.fillRect(gx, titleH + groupHeadH, c.width, colHeadH);
-      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-      ctx.strokeRect(gx + 0.5, titleH + groupHeadH + 0.5, c.width - 1, colHeadH - 1);
-      txt(c.label, gx + c.width/2, titleH + groupHeadH + colHeadH/2, { b: 1, s: 10, c: '#ffffff', a: 'center' });
-      gx += c.width;
-    });
-  });
-
-  // DATA ROWS
-  let ry = titleH + headH;
-  enriched.forEach((row, idx) => {
-    ctx.fillStyle = idx % 2 === 0 ? '#ffffff' : '#fafcfa';
-    ctx.fillRect(0, ry, W, rowH);
-    ctx.fillStyle = '#f9fafb';
-    ctx.fillRect(0, ry, tglW, rowH);
-    const [yy, mm, dd] = row.tgl.split('-');
-    txt(`${dd}/${mm}/${yy}`, tglW/2, ry + rowH/2, { b: 1, s: 10.5, c: '#1a1a18', a: 'center' });
-
-    let cx = tglW;
-    GROUPS.forEach(g => {
-      if (g.key === 'base') return;
-      g.cols.forEach(c => {
-        let text, color = '#1a1a18';
-        if (c.isPercent) {
-          text = fmtPct(row[c.key]);
-          if (c.isRed) color = '#dc2626';
-          if (c.isGreen) color = '#16a34a';
-        } else {
-          text = fmtNum(row[c.key], c.isInt);
-        }
-        txt(text, cx + c.width/2, ry + rowH/2, { b: c.bold, s: 10.5, c: color, a: 'center' });
-        cx += c.width;
-      });
-    });
-
-    ctx.strokeStyle = '#e5e7eb';
-    ctx.beginPath(); ctx.moveTo(0, ry + rowH); ctx.lineTo(W, ry + rowH); ctx.stroke();
-    let sx = tglW;
-    GROUPS.forEach(g => {
-      if (g.key === 'base') return;
-      g.cols.forEach(c => {
-        sx += c.width;
-        ctx.strokeStyle = '#f0f0f0';
-        ctx.beginPath(); ctx.moveTo(sx, ry); ctx.lineTo(sx, ry + rowH); ctx.stroke();
-      });
-    });
-    ry += rowH;
-  });
-
-  // FOOTER JUMLAH
-  ctx.fillStyle = '#1a1a18'; ctx.fillRect(0, ry, W, footRowH);
-  txt('Jumlah', tglW/2, ry + footRowH/2, { b: 1, s: 11, c: '#ffffff', a: 'center' });
-  let fx = tglW;
-  GROUPS.forEach(g => {
-    if (g.key === 'base') return;
-    g.cols.forEach(c => {
-      let text = '';
-      if (c.isPercent) text = fmtPct(totals[c.key]);
-      else if (c.isInt) text = Math.round(totals[c.key] || 0).toLocaleString('id-ID');
-      else text = (totals[c.key] || 0).toFixed(2);
-      txt(text, fx + c.width/2, ry + footRowH/2, { b: 1, s: 10.5, c: '#ffffff', a: 'center' });
-      fx += c.width;
-    });
-  });
-  ry += footRowH;
-
-  // FOOTER RATA-RATA
-  ctx.fillStyle = '#4b5563'; ctx.fillRect(0, ry, W, footRowH);
-  txt('Rata-rata', tglW/2, ry + footRowH/2, { b: 1, s: 11, c: '#ffffff', a: 'center' });
-  fx = tglW;
-  GROUPS.forEach(g => {
-    if (g.key === 'base') return;
-    g.cols.forEach(c => {
-      let text = '';
-      if (c.isPercent) text = fmtPct(averages[c.key]);
-      else if (c.isInt) text = Math.round(averages[c.key] || 0).toLocaleString('id-ID');
-      else text = (averages[c.key] || 0).toFixed(2);
-      txt(text, fx + c.width/2, ry + footRowH/2, { b: 1, s: 10.5, c: '#ffffff', a: 'center' });
-      fx += c.width;
-    });
-  });
-  ry += footRowH;
-
-  // Outer border
-  ctx.strokeStyle = '#2d5016'; ctx.lineWidth = 2;
-  ctx.strokeRect(1, 1, W - 2, ry - 2);
-
-  cv.toBlob(blob => {
-    if (!blob) { showToast('Gagal membuat gambar', 'error'); return; }
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    const [yy, mm] = bulan.split('-');
-    link.download = `Rekap_Harian_${ghLabel.replace(/\s/g, '')}_${yy}-${mm}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(link.href), 4000);
-    showToast('📸 Screenshot tersimpan');
-  }, 'image/png');
 }
 
 // ========== SCREENSHOT: PERBANDINGAN BULANAN ==========
@@ -1764,51 +1366,113 @@ function renderRejectTrendChart() {
 }
 
 // ========== RENDER DATA DETAIL REJECT ==========
+function setDetailRejectPreset(mode) {
+  const dariEl = document.getElementById('detail-reject-dari');
+  const sampaiEl = document.getElementById('detail-reject-sampai');
+  if (!dariEl || !sampaiEl) return;
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  if (mode === 'bulan-ini') {
+    dariEl.value = formatYMD(new Date(y, m, 1));
+    sampaiEl.value = formatYMD(new Date(y, m + 1, 0));
+  } else if (mode === 'bulan-lalu') {
+    dariEl.value = formatYMD(new Date(y, m - 1, 1));
+    sampaiEl.value = formatYMD(new Date(y, m, 0));
+  } else if (mode === '30') {
+    const d = new Date(now); d.setDate(d.getDate() - 30);
+    dariEl.value = formatYMD(d);
+    sampaiEl.value = formatYMD(now);
+  } else if (mode === 'semua') {
+    const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+    const tgls = db.map(x => x.tgl).filter(Boolean).sort();
+    dariEl.value = tgls.length ? tgls[0] : formatYMD(now);
+    sampaiEl.value = tgls.length ? tgls[tgls.length - 1] : formatYMD(now);
+  }
+  renderDetailReject();
+}
+
 function renderDetailReject() {
   const tbody = document.getElementById('detail-reject-body');
+  const tfoot = document.getElementById('detail-reject-foot');
+  const infoEl = document.getElementById('detail-reject-info');
   if (!tbody) return;
 
   const dari = document.getElementById('detail-reject-dari').value;
   const sampai = document.getElementById('detail-reject-sampai').value;
-  if (!dari || !sampai) return;
-
-  const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
-  const filtered = db.filter(x => x.tgl >= dari && x.tgl <= sampai).sort((a, b) => new Date(b.tgl) - new Date(a.tgl));
-
-  if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#999;">Tidak ada data pada periode ini</td></tr>';
+  if (tfoot) tfoot.innerHTML = '';
+  if (!dari || !sampai) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#999;">Pilih tanggal dulu</td></tr>';
+    if (infoEl) infoEl.textContent = '-';
+    return;
+  }
+  if (dari > sampai) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#dc2626;">Tanggal "Dari" harus sebelum "Sampai"</td></tr>';
+    if (infoEl) infoEl.textContent = '-';
     return;
   }
 
-  tbody.innerHTML = filtered.map(item => {
-    const isGlobal = item.gh === 'GLOBAL';
-    
-    const crack = (item.rk_crack || 0) + (item.rp_crack || 0);
-    const poli = (item.rk_poli || 0) + (item.rp_poli || 0);
-    const hpt = (item.rk_hpt || 0) + (item.rp_hpt || 0);
-    const bruise = item.rp_bruise || 0;
-    const overripe = item.rp_overripe || 0;
-    const kuning = item.rp_kuning || 0;
-    const frozen = item.rp_frozen || 0;
-    const totalReject = crack + poli + hpt + bruise + overripe + kuning + frozen;
-    
-    const totalPanen = (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
-    const rejRate = totalPanen > 0 ? (totalReject / totalPanen * 100) : 0;
+  const fmtTgl = t => t.split('-').reverse().join('/');
+  if (infoEl) infoEl.innerHTML = `Data reject: <b>${fmtTgl(dari)}</b> s/d <b>${fmtTgl(sampai)}</b>`;
 
-    const fmt = n => n > 0 ? n.toFixed(2) : '-';
+  const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+  const rows = db
+    .filter(x => x.tgl && x.tgl >= dari && x.tgl <= sampai)
+    .map(item => {
+      const crack = (item.rk_crack || 0) + (item.rp_crack || 0);
+      const poli = (item.rk_poli || 0) + (item.rp_poli || 0);
+      const hpt = (item.rk_hpt || 0) + (item.rp_hpt || 0);
+      const bruise = item.rp_bruise || 0;
+      const overripe = item.rp_overripe || 0;
+      const kuning = item.rp_kuning || 0;
+      const frozen = item.rp_frozen || 0;
+      const total = crack + poli + hpt + bruise + overripe + kuning + frozen;
+      const panen = (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
+      return { tgl: item.tgl, gh: item.gh, crack, poli, hpt, bruise, overripe, kuning, frozen, total, panen };
+    })
+    .filter(r => r.total > 0)
+    .sort((a, b) => b.tgl.localeCompare(a.tgl) || String(a.gh).localeCompare(String(b.gh)));
 
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#999;">Tidak ada data reject pada periode ini</td></tr>';
+    return;
+  }
+
+  const fmt = n => n > 0 ? n.toFixed(2) : '-';
+  const T = { crack: 0, poli: 0, hpt: 0, bruise: 0, overripe: 0, kuning: 0, frozen: 0, total: 0, panen: 0 };
+
+  tbody.innerHTML = rows.map(r => {
+    Object.keys(T).forEach(k => { T[k] += r[k]; });
+    const isGlobal = r.gh === 'GLOBAL';
+    const rate = r.panen > 0 ? (r.total / r.panen * 100) : null;
     return `<tr>
-      <td style="text-align:center;">${item.tgl}</td>
-      <td style="text-align:center; font-weight:bold; color:${isGlobal ? '#9333ea' : '#2d5016'};">${isGlobal ? '🌐 Global' : item.gh}</td>
-      <td class="text-right" style="color:#dc2626;">${fmt(crack)}</td>
-      <td class="text-right" style="color:#dc2626;">${fmt(poli)}</td>
-      <td class="text-right" style="color:#dc2626;">${fmt(hpt)}</td>
-      <td class="text-right" style="color:#dc2626;">${fmt(bruise)}</td>
-      <td class="text-right" style="color:#dc2626;">${fmt(overripe)}</td>
-      <td class="text-right" style="color:#dc2626;">${fmt(kuning)}</td>
-      <td class="text-right" style="color:#dc2626;">${fmt(frozen)}</td>
-      <td class="text-right" style="font-weight:bold; color:#dc2626;">${fmt(totalReject)}</td>
-      <td class="text-right" style="font-weight:bold; color:#ea580c;">${rejRate.toFixed(2)}%</td>
+      <td style="text-align:center;">${fmtTgl(r.tgl)}</td>
+      <td style="text-align:center; font-weight:bold; color:${isGlobal ? '#9333ea' : '#2d5016'};">${isGlobal ? '🌐 Global' : (r.gh || 'GH 1')}</td>
+      <td class="text-right" style="color:#dc2626;">${fmt(r.crack)}</td>
+      <td class="text-right" style="color:#dc2626;">${fmt(r.poli)}</td>
+      <td class="text-right" style="color:#dc2626;">${fmt(r.hpt)}</td>
+      <td class="text-right" style="color:#dc2626;">${fmt(r.bruise)}</td>
+      <td class="text-right" style="color:#dc2626;">${fmt(r.overripe)}</td>
+      <td class="text-right" style="color:#dc2626;">${fmt(r.kuning)}</td>
+      <td class="text-right" style="color:#dc2626;">${fmt(r.frozen)}</td>
+      <td class="text-right" style="font-weight:bold; color:#dc2626;">${fmt(r.total)}</td>
+      <td class="text-right" style="font-weight:bold; color:#ea580c;">${rate === null ? '-' : rate.toFixed(2) + '%'}</td>
     </tr>`;
   }).join('');
+
+  if (tfoot) {
+    const tRate = T.panen > 0 ? (T.total / T.panen * 100) : null;
+    const cell = 'background:#2d5016;color:#fff;font-weight:bold;text-align:right;';
+    tfoot.innerHTML = `<tr>
+      <td colspan="2" style="${cell}text-align:center;">TOTAL</td>
+      <td style="${cell}">${T.crack.toFixed(2)}</td>
+      <td style="${cell}">${T.poli.toFixed(2)}</td>
+      <td style="${cell}">${T.hpt.toFixed(2)}</td>
+      <td style="${cell}">${T.bruise.toFixed(2)}</td>
+      <td style="${cell}">${T.overripe.toFixed(2)}</td>
+      <td style="${cell}">${T.kuning.toFixed(2)}</td>
+      <td style="${cell}">${T.frozen.toFixed(2)}</td>
+      <td style="${cell}">${T.total.toFixed(2)}</td>
+      <td style="${cell}">${tRate === null ? '-' : tRate.toFixed(2) + '%'}</td>
+    </tr>`;
+  }
 }

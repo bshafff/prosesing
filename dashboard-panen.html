@@ -194,8 +194,8 @@
     <div class="chart-scroll" id="chart-reject-trend" style="margin-top:1rem; min-height:320px;"></div>
   </div>
 
-    <div class="card" style="margin-top:1.5rem;">
-    <div class="card-title">📋 Data Detail Reject</div>
+  <div class="card" style="margin-top:1.5rem;">
+    <div class="card-title">📋 Data Reject</div>
     <div class="row-3" style="align-items:flex-end; margin-bottom:1rem;">
       <div class="input-group" style="margin-bottom:0;">
         <label>Dari Tanggal</label>
@@ -207,6 +207,13 @@
       </div>
       <button class="btn btn-primary" onclick="renderDetailReject()">Tampilkan Data</button>
     </div>
+    <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.75rem;">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailRejectPreset('bulan-ini')">Bulan Ini</button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailRejectPreset('bulan-lalu')">Bulan Lalu</button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailRejectPreset('30')">30 Hari</button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailRejectPreset('semua')">Semua Data</button>
+    </div>
+    <div class="info-box" style="margin-bottom:0.75rem;" id="detail-reject-info">-</div>
     <div class="recap-wrap">
       <table class="recap-table" style="min-width: 1000px;">
         <thead>
@@ -230,6 +237,7 @@
         <tbody id="detail-reject-body">
           <tr><td colspan="11" style="text-align:center;color:#999;">Belum ada data</td></tr>
         </tbody>
+        <tfoot id="detail-reject-foot"></tfoot>
       </table>
     </div>
   </div>
