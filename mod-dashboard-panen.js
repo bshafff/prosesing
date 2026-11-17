@@ -1391,6 +1391,8 @@ function setDetailRejectPreset(mode) {
   renderDetailReject();
 }
 
+let detailRejectExport = null;
+
 function renderDetailReject() {
   const tbody = document.getElementById('detail-reject-body');
   const tfoot = document.getElementById('detail-reject-foot');
@@ -1400,6 +1402,7 @@ function renderDetailReject() {
   const dari = document.getElementById('detail-reject-dari').value;
   const sampai = document.getElementById('detail-reject-sampai').value;
   if (tfoot) tfoot.innerHTML = '';
+  detailRejectExport = null;
   if (!dari || !sampai) {
     tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#999;">Pilih tanggal dulu</td></tr>';
     if (infoEl) infoEl.textContent = '-';
@@ -1459,6 +1462,8 @@ function renderDetailReject() {
     </tr>`;
   }).join('');
 
+  detailRejectExport = { dari, sampai, rows, totals: T };
+
   if (tfoot) {
     const tRate = T.panen > 0 ? (T.total / T.panen * 100) : null;
     const cell = 'background:#2d5016;color:#fff;font-weight:bold;text-align:right;';
@@ -1475,4 +1480,87 @@ function renderDetailReject() {
       <td style="${cell}">${tRate === null ? '-' : tRate.toFixed(2) + '%'}</td>
     </tr>`;
   }
+}
+
+
+// ========== EXPORT DATA REJECT KE EXCEL (.xlsx) ==========
+async function exportDetailRejectExcel() {
+  const d = detailRejectExport;
+  if (!d || !d.rows.length) { showToast('Tidak ada data reject untuk di-export', 'error'); return; }
+  try { await loadExcelJS(); } catch (e) { showToast(e.message, 'error'); return; }
+
+  const fmtTgl = t => t.split('-').reverse().join('/');
+  const thin = { style: 'thin', color: { argb: 'FFCBD5E1' } };
+  const border = { top: thin, left: thin, bottom: thin, right: thin };
+  const fill = argb => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
+  const rd = v => (typeof v === 'number' ? Math.round(v * 100) / 100 : v);
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Data Reject');
+  const NCOL = 11;
+
+  ws.mergeCells(1, 1, 1, NCOL);
+  ws.getCell(1, 1).value = 'Data Reject Panen (Kebun + Processing) — PT. Agri Wangi Berry';
+  ws.getCell(1, 1).font = { bold: true, size: 14, color: { argb: 'FF2D5016' } };
+  ws.mergeCells(2, 1, 2, NCOL);
+  ws.getCell(2, 1).value = `Periode: ${fmtTgl(d.dari)} s/d ${fmtTgl(d.sampai)}`;
+  ws.getCell(2, 1).font = { size: 11, color: { argb: 'FF475569' } };
+
+  const heads = ['Tanggal', 'GH', 'Crack (Kg)', 'Polinasi (Kg)', 'HPT (Kg)', 'Bruise (Kg)', 'Overripe (Kg)', 'Kuning (Kg)', 'Frozen (Kg)', 'Total Reject (Kg)', 'Reject Rate'];
+  const hr = ws.getRow(4);
+  heads.forEach((h, i) => {
+    const c = hr.getCell(i + 1);
+    c.value = h;
+    c.fill = fill(i < 2 ? 'FF2D5016' : 'FFEA580C');
+    c.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
+    c.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    c.border = border;
+  });
+  hr.height = 28;
+
+  let r = 5;
+  d.rows.forEach(x => {
+    const vals = [fmtTgl(x.tgl), x.gh === 'GLOBAL' ? 'Global' : (x.gh || 'GH 1'),
+      x.crack, x.poli, x.hpt, x.bruise, x.overripe, x.kuning, x.frozen, x.total,
+      x.panen > 0 ? x.total / x.panen : null];
+    vals.forEach((v, i) => {
+      const c = ws.getCell(r, i + 1);
+      c.value = (i >= 2 && i < 10) ? rd(v) : v;
+      c.border = border;
+      if (i < 2) c.alignment = { horizontal: 'center' };
+      else if (i === 10) { c.numFmt = '0.00%'; c.alignment = { horizontal: 'right' }; }
+      else { c.numFmt = '0.00;;-'; c.alignment = { horizontal: 'right' }; }
+      if (i === 9) c.font = { bold: true, color: { argb: 'FFDC2626' } };
+    });
+    r++;
+  });
+
+  const T = d.totals;
+  const tot = ['TOTAL', '', T.crack, T.poli, T.hpt, T.bruise, T.overripe, T.kuning, T.frozen, T.total, T.panen > 0 ? T.total / T.panen : null];
+  tot.forEach((v, i) => {
+    const c = ws.getCell(r, i + 1);
+    c.value = (i >= 2 && i < 10) ? rd(v) : v;
+    c.fill = fill('FF2D5016');
+    c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    c.border = border;
+    c.alignment = { horizontal: i < 2 ? 'center' : 'right' };
+    if (i === 10) c.numFmt = '0.00%'; else if (i >= 2) c.numFmt = '0.00';
+  });
+  ws.mergeCells(r, 1, r, 2);
+
+  ws.getColumn(1).width = 13;
+  ws.getColumn(2).width = 10;
+  for (let c = 3; c <= NCOL; c++) ws.getColumn(c).width = 14;
+  ws.views = [{ state: 'frozen', ySplit: 4, xSplit: 2 }];
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `Data_Reject_${d.dari}_sd_${d.sampai}.xlsx`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(link.href), 3000);
+  showToast('✅ File Excel berhasil diunduh!');
 }
