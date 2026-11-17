@@ -1,5 +1,5 @@
 {
-  "version": "1.9.5",
+  "version": "1.9.6",
   "released": "2026-11-17",
   "notes": "Dashboard panen: perbaikan error render, data reject per periode, hapus rekap harian & estimasi mingguan"
 }
