@@ -65,15 +65,19 @@ async function initApp() {
   setVal('minggu-bulan', today.substring(0, 7));
   setVal('laporan-harian-tgl', today);
 
-  // --- TAMBAHAN UNTUK DEFAULT GRAFIK TREN REJECT ---
+   // --- TAMBAHAN UNTUK DEFAULT GRAFIK TREN REJECT ---
   // Menghitung tanggal 30 hari yang lalu
   const date30DaysAgo = new Date();
   date30DaysAgo.setDate(date30DaysAgo.getDate() - 30);
   const ymd30 = date30DaysAgo.toISOString().split('T')[0];
   
-  // Isi otomatis filter dari & sampai
+  // Isi otomatis filter dari & sampai untuk Grafik Tren Reject
   setVal('reject-chart-dari', ymd30);
   setVal('reject-chart-sampai', today);
+
+  // Isi otomatis filter dari & sampai untuk Tabel Detail Reject (BARU)
+  setVal('detail-reject-dari', ymd30);
+  setVal('detail-reject-sampai', today);
 
   // 3. Init render data
   try { renderTableLks(); } catch (e) { console.warn('renderTableLks:', e); }
@@ -87,8 +91,10 @@ async function initApp() {
   try { autoFillFromPanen(true); } catch (e) { console.warn('autoFillFromPanen:', e); }
   
   try { renderKemasanTables(); } catch (e) { console.warn('renderKemasanTables:', e); }
+  
+  // Ini akan otomatis merender Dashboard beserta Tabel Detail Reject di dalamnya
   try { updateDashboard(); } catch (e) { console.warn('updateDashboard:', e); }
-
+  
   // 4. Sync & version
   updateSyncStatus();
   migrateExistingLocalData();
