@@ -298,7 +298,8 @@ function updateDashboard() {
   renderMonthlyComparison();
   renderWeeklyPanen();
   renderRejectBreakdown(); 
-  renderRejectTrendChart(); // <--- TAMBAHKAN INI JUGA
+  renderRejectTrendChart();
+ renderDetailReject(); // <--- TAMBAHKAN INI
 }
 
 // ========== REKAP PERBANDINGAN BULANAN ==========
