@@ -61,7 +61,7 @@ function updateDashboard() {
   const T = {
     p_hatsu: 0, p_gradea: 0, p_gradeb: 0, rk_total: 0, panen_total: 0,
     rk_crack: 0, rk_poli: 0, rk_hpt: 0,
-    rp_crack: 0, rp_poli: 0, rp_hpt: 0, rp_bruise: 0, rp_overripe: 0, rp_kuning: 0, rp_frozen: 0, rej_total: 0,
+    rp_crack: 0, rp_poli: 0, rp_hpt: 0, rp_bruise: 0, rp_overripe: 0, rp_kuning: 0, rp_frozen: 0, rp_albino: 0, rej_total: 0,
     k_hatsu: 0, k_a11: 0, k_a15: 0, k_frozen: 0, kirim_total: 0,
     m_hatsu: 0, m_a11: 0, m_a15: 0, mika_total: 0,
     // Khusus GLOBAL
@@ -70,7 +70,7 @@ function updateDashboard() {
 
   list.forEach(item => {
     const rk = (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
-    const rp = (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0) + (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_kuning || 0) + (item.rp_frozen || 0);
+    const rp = (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0) + (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_kuning || 0) + (item.rp_frozen || 0) + (item.rp_albino || 0);
     
     // Alokasi Frozen
     const alokasiFrozen = getFrozenAlokasi(item);
@@ -90,6 +90,7 @@ function updateDashboard() {
     T.rp_overripe += item.rp_overripe || 0;
     T.rp_kuning += item.rp_kuning || 0;
     T.rp_frozen += item.rp_frozen || 0;
+    T.rp_albino += item.rp_albino || 0;
     T.rej_total += rk + rp;
     
     T.k_hatsu += item.k_hatsu || 0;
@@ -149,7 +150,7 @@ function updateDashboard() {
     if (!item.tgl || !item.tgl.startsWith(prevMonth) || item.gh === 'GLOBAL') return; // Skip global for base panen
     if (parseInt(item.tgl.substring(8, 10), 10) > cutoffDay) return;
     const rk = (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
-    const rp = (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0) + (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_kuning || 0) + (item.rp_frozen || 0);
+    const rp = (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0) + (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_kuning || 0) + (item.rp_frozen || 0) + (item.rp_albino || 0);
     pPanen += (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + rk;
     pRej += rk + rp;
     pCount++;
@@ -239,7 +240,7 @@ function renderMonthlyComparison() {
     }
     const m = byMonth.get(ym);
     const rk = (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
-    const rp = (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0) + (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_kuning || 0) + (item.rp_frozen || 0);
+    const rp = (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0) + (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_kuning || 0) + (item.rp_frozen || 0) + (item.rp_albino || 0);
     m.p_hatsu += item.p_hatsu || 0;
     m.p_gradea += item.p_gradea || 0;
     m.p_gradeb += item.p_gradeb || 0;
@@ -354,7 +355,8 @@ function renderChartRejectPie(T) {
     { label: 'Bruise', value: T.rp_bruise, color: '#84cc16' },
     { label: 'Overripe', value: T.rp_overripe, color: '#0891b2' },
     { label: 'Buah Kuning <80%', value: T.rp_kuning, color: '#eab308' },
-    { label: 'Frozen', value: T.rp_frozen, color: '#7c3aed' }
+    { label: 'Frozen', value: T.rp_frozen, color: '#7c3aed' },
+    { label: 'Albino', value: T.rp_albino, color: '#db2777' }
   ].filter(s => s.value > 0)
     .sort((a, b) => b.value - a.value);
 
@@ -839,7 +841,7 @@ function generateLaporanGabungan() {
     tgl: start === end ? start : `${start}_sd_${end}`, // Penanda
     p_hatsu: 0, p_gradea: 0, p_gradeb: 0,
     rk_crack: 0, rk_poli: 0, rk_hpt: 0,
-    rp_crack: 0, rp_poli: 0, rp_hpt: 0, rp_bruise: 0, rp_overripe: 0, rp_kuning: 0, rp_frozen: 0,
+    rp_crack: 0, rp_poli: 0, rp_hpt: 0, rp_bruise: 0, rp_overripe: 0, rp_kuning: 0, rp_frozen: 0, rp_albino: 0,
     k_hatsu: 0, k_a11: 0, k_a15: 0, 
     k_frozen: 0, k_rfresh: 0,
     m_hatsu: 0, m_a11: 0, m_a15: 0
@@ -859,6 +861,7 @@ function generateLaporanGabungan() {
     merged.rp_overripe += (item.rp_overripe || 0);
     merged.rp_kuning += (item.rp_kuning || 0);
     merged.rp_frozen += (item.rp_frozen || 0);
+    merged.rp_albino += (item.rp_albino || 0);
     merged.k_hatsu += (item.k_hatsu || 0);
     merged.k_a11 += (item.k_a11 || 0);
     merged.k_a15 += (item.k_a15 || 0);
@@ -1008,7 +1011,8 @@ function renderCanvasLaporanGabungan(item, titleText) {
     { label: 'Bruise', v: item.rp_bruise||0, c: '#84cc16' },
     { label: 'Overripe', v: item.rp_overripe||0, c: '#0891b2' },
     { label: 'Buah Kuning', v: item.rp_kuning||0, c: '#eab308' },
-    { label: 'Frozen (Reject)', v: item.rp_frozen||0, c: '#7c3aed' }
+    { label: 'Frozen (Reject)', v: item.rp_frozen||0, c: '#7c3aed' },
+    { label: 'Albino', v: item.rp_albino||0, c: '#db2777' }
   ].filter(r => r.v > 0);
   
   const totalReject = rejects.reduce((a, r) => a + r.v, 0);
@@ -1034,7 +1038,7 @@ function renderCanvasLaporanGabungan(item, titleText) {
   roundRect(smX, smY, smW, smH, 12, '#ffffff');
   text('Ringkasan Reject & Rate', smX + 30, smY + 35, 18, '#2d5016', 'left', true);
 
-  const rpTotal = (item.rp_crack||0) + (item.rp_poli||0) + (item.rp_hpt||0) + (item.rp_bruise||0) + (item.rp_overripe||0) + (item.rp_kuning||0) + (item.rp_frozen||0);
+  const rpTotal = (item.rp_crack||0) + (item.rp_poli||0) + (item.rp_hpt||0) + (item.rp_bruise||0) + (item.rp_overripe||0) + (item.rp_kuning||0) + (item.rp_frozen||0) + (item.rp_albino||0);
   const totalPanenAsli = item.p_hatsu + item.p_gradea + item.p_gradeb + rkTotal;
   const rateReject = totalPanenAsli > 0 ? (totalReject / totalPanenAsli * 100) : 0;
 
@@ -1076,7 +1080,7 @@ function renderRejectBreakdown() {
     if (!byMonthGh.has(key)) {
       byMonthGh.set(key, {
         ym: ym, gh: gh,
-        crack: 0, poli: 0, hpt: 0, bruise: 0, overripe: 0, kuning: 0, frozen: 0,
+        crack: 0, poli: 0, hpt: 0, bruise: 0, overripe: 0, kuning: 0, frozen: 0, albino: 0,
         total: 0
       });
     }
@@ -1089,10 +1093,11 @@ function renderRejectBreakdown() {
     const overripe = item.rp_overripe || 0;
     const kuning = item.rp_kuning || 0;
     const frozen = item.rp_frozen || 0;
+    const albino = item.rp_albino || 0;
 
     m.crack += crack; m.poli += poli; m.hpt += hpt; m.bruise += bruise;
-    m.overripe += overripe; m.kuning += kuning; m.frozen += frozen;
-    m.total += (crack + poli + hpt + bruise + overripe + kuning + frozen);
+    m.overripe += overripe; m.kuning += kuning; m.frozen += frozen; m.albino += albino;
+    m.total += (crack + poli + hpt + bruise + overripe + kuning + frozen + albino);
   });
 
   // 2. Urutkan: Bulan terbaru di atas, lalu urutkan GH 1 lalu GH 2
@@ -1124,7 +1129,8 @@ function renderRejectBreakdown() {
       { name: 'Bruise', val: m.bruise },
       { name: 'Overripe', val: m.overripe },
       { name: 'Buah Kuning <80%', val: m.kuning },
-      { name: 'Frozen <11 gr', val: m.frozen }
+      { name: 'Frozen <11 gr', val: m.frozen },
+      { name: 'Albino', val: m.albino }
     ].sort((a, b) => b.val - a.val);
 
     const top1 = categories[0];
@@ -1219,7 +1225,7 @@ function renderRejectTrendChart() {
   const dashMapGh = { 'GH 1': '0', 'GH 2': '6,4' }; // GH1 solid, GH2 putus-putus
   const labelMap = { 
     all: 'Total Reject (Keseluruhan)', poli: 'Polinasi', crack: 'Cracking', hpt: 'HPT', 
-    overripe: 'Overripe', bruise: 'Bruise', kuning: 'Buah Kuning', frozen: 'Frozen' 
+    overripe: 'Overripe', bruise: 'Bruise', kuning: 'Buah Kuning', frozen: 'Frozen', albino: 'Albino' 
   };
 
   // Siapkan wadah grid untuk grafik-grafik kecil
@@ -1255,7 +1261,7 @@ function renderRejectTrendChart() {
         if (ds.gh !== gh) return;
         let rejVal = 0;
         
-        if (jenis === 'all') rejVal = rkTotal + (item.rp_crack||0) + (item.rp_poli||0) + (item.rp_hpt||0) + (item.rp_bruise||0) + (item.rp_overripe||0) + (item.rp_kuning||0) + (item.rp_frozen||0);
+        if (jenis === 'all') rejVal = rkTotal + (item.rp_crack||0) + (item.rp_poli||0) + (item.rp_hpt||0) + (item.rp_bruise||0) + (item.rp_overripe||0) + (item.rp_kuning||0) + (item.rp_frozen||0) + (item.rp_albino||0);
         else if (jenis === 'crack') rejVal = (item.rk_crack || 0) + (item.rp_crack || 0);
         else if (jenis === 'poli') rejVal = (item.rk_poli || 0) + (item.rp_poli || 0);
         else if (jenis === 'hpt') rejVal = (item.rk_hpt || 0) + (item.rp_hpt || 0);
@@ -1263,6 +1269,7 @@ function renderRejectTrendChart() {
         else if (jenis === 'overripe') rejVal = item.rp_overripe || 0;
         else if (jenis === 'kuning') rejVal = item.rp_kuning || 0;
         else if (jenis === 'frozen') rejVal = item.rp_frozen || 0;
+        else if (jenis === 'albino') rejVal = item.rp_albino || 0;
 
         ds.data[d].rej += rejVal;
         ds.data[d].panen += panenTotal;
@@ -1428,20 +1435,21 @@ function renderDetailReject() {
       const overripe = item.rp_overripe || 0;
       const kuning = item.rp_kuning || 0;
       const frozen = item.rp_frozen || 0;
-      const total = crack + poli + hpt + bruise + overripe + kuning + frozen;
+      const albino = item.rp_albino || 0;
+      const total = crack + poli + hpt + bruise + overripe + kuning + frozen + albino;
       const panen = (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
-      return { tgl: item.tgl, gh: item.gh, crack, poli, hpt, bruise, overripe, kuning, frozen, total, panen };
+      return { tgl: item.tgl, gh: item.gh, crack, poli, hpt, bruise, overripe, kuning, frozen, albino, total, panen };
     })
     .filter(r => r.total > 0)
     .sort((a, b) => b.tgl.localeCompare(a.tgl) || String(a.gh).localeCompare(String(b.gh)));
 
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#999;">Tidak ada data reject pada periode ini</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#999;">Tidak ada data reject pada periode ini</td></tr>';
     return;
   }
 
   const fmt = n => n > 0 ? n.toFixed(2) : '-';
-  const T = { crack: 0, poli: 0, hpt: 0, bruise: 0, overripe: 0, kuning: 0, frozen: 0, total: 0, panen: 0 };
+  const T = { crack: 0, poli: 0, hpt: 0, bruise: 0, overripe: 0, kuning: 0, frozen: 0, albino: 0, total: 0, panen: 0 };
 
   tbody.innerHTML = rows.map(r => {
     Object.keys(T).forEach(k => { T[k] += r[k]; });
@@ -1457,6 +1465,7 @@ function renderDetailReject() {
       <td class="text-right" style="color:#dc2626;">${fmt(r.overripe)}</td>
       <td class="text-right" style="color:#dc2626;">${fmt(r.kuning)}</td>
       <td class="text-right" style="color:#dc2626;">${fmt(r.frozen)}</td>
+      <td class="text-right" style="color:#dc2626;">${fmt(r.albino)}</td>
       <td class="text-right" style="font-weight:bold; color:#dc2626;">${fmt(r.total)}</td>
       <td class="text-right" style="font-weight:bold; color:#ea580c;">${rate === null ? '-' : rate.toFixed(2) + '%'}</td>
     </tr>`;
@@ -1476,6 +1485,7 @@ function renderDetailReject() {
       <td style="${cell}">${T.overripe.toFixed(2)}</td>
       <td style="${cell}">${T.kuning.toFixed(2)}</td>
       <td style="${cell}">${T.frozen.toFixed(2)}</td>
+      <td style="${cell}">${T.albino.toFixed(2)}</td>
       <td style="${cell}">${T.total.toFixed(2)}</td>
       <td style="${cell}">${tRate === null ? '-' : tRate.toFixed(2) + '%'}</td>
     </tr>`;
@@ -1497,7 +1507,7 @@ async function exportDetailRejectExcel() {
 
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Data Reject');
-  const NCOL = 11;
+  const NCOL = 12;
 
   ws.mergeCells(1, 1, 1, NCOL);
   ws.getCell(1, 1).value = 'Data Reject Panen (Kebun + Processing) — PT. Agri Wangi Berry';
@@ -1506,7 +1516,7 @@ async function exportDetailRejectExcel() {
   ws.getCell(2, 1).value = `Periode: ${fmtTgl(d.dari)} s/d ${fmtTgl(d.sampai)}`;
   ws.getCell(2, 1).font = { size: 11, color: { argb: 'FF475569' } };
 
-  const heads = ['Tanggal', 'GH', 'Crack (Kg)', 'Polinasi (Kg)', 'HPT (Kg)', 'Bruise (Kg)', 'Overripe (Kg)', 'Kuning (Kg)', 'Frozen (Kg)', 'Total Reject (Kg)', 'Reject Rate'];
+  const heads = ['Tanggal', 'GH', 'Crack (Kg)', 'Polinasi (Kg)', 'HPT (Kg)', 'Bruise (Kg)', 'Overripe (Kg)', 'Kuning (Kg)', 'Frozen (Kg)', 'Albino (Kg)', 'Total Reject (Kg)', 'Reject Rate'];
   const hr = ws.getRow(4);
   heads.forEach((h, i) => {
     const c = hr.getCell(i + 1);
@@ -1521,30 +1531,30 @@ async function exportDetailRejectExcel() {
   let r = 5;
   d.rows.forEach(x => {
     const vals = [fmtTgl(x.tgl), x.gh === 'GLOBAL' ? 'Global' : (x.gh || 'GH 1'),
-      x.crack, x.poli, x.hpt, x.bruise, x.overripe, x.kuning, x.frozen, x.total,
+      x.crack, x.poli, x.hpt, x.bruise, x.overripe, x.kuning, x.frozen, x.albino, x.total,
       x.panen > 0 ? x.total / x.panen : null];
     vals.forEach((v, i) => {
       const c = ws.getCell(r, i + 1);
-      c.value = (i >= 2 && i < 10) ? rd(v) : v;
+      c.value = (i >= 2 && i < 11) ? rd(v) : v;
       c.border = border;
       if (i < 2) c.alignment = { horizontal: 'center' };
-      else if (i === 10) { c.numFmt = '0.00%'; c.alignment = { horizontal: 'right' }; }
+      else if (i === 11) { c.numFmt = '0.00%'; c.alignment = { horizontal: 'right' }; }
       else { c.numFmt = '0.00;;-'; c.alignment = { horizontal: 'right' }; }
-      if (i === 9) c.font = { bold: true, color: { argb: 'FFDC2626' } };
+      if (i === 10) c.font = { bold: true, color: { argb: 'FFDC2626' } };
     });
     r++;
   });
 
   const T = d.totals;
-  const tot = ['TOTAL', '', T.crack, T.poli, T.hpt, T.bruise, T.overripe, T.kuning, T.frozen, T.total, T.panen > 0 ? T.total / T.panen : null];
+  const tot = ['TOTAL', '', T.crack, T.poli, T.hpt, T.bruise, T.overripe, T.kuning, T.frozen, T.albino, T.total, T.panen > 0 ? T.total / T.panen : null];
   tot.forEach((v, i) => {
     const c = ws.getCell(r, i + 1);
-    c.value = (i >= 2 && i < 10) ? rd(v) : v;
+    c.value = (i >= 2 && i < 11) ? rd(v) : v;
     c.fill = fill('FF2D5016');
     c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     c.border = border;
     c.alignment = { horizontal: i < 2 ? 'center' : 'right' };
-    if (i === 10) c.numFmt = '0.00%'; else if (i >= 2) c.numFmt = '0.00';
+    if (i === 11) c.numFmt = '0.00%'; else if (i >= 2) c.numFmt = '0.00';
   });
   ws.mergeCells(r, 1, r, 2);
 

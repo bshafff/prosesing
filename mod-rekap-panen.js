@@ -12,7 +12,7 @@ function getValP(id) {
 // Tiap tab hanya menulis field miliknya ke record (tgl + GH) yang sama.
 const PN_FIELDS = {
   panen: ['p_hatsu', 'p_gradea', 'p_gradeb', 'rk_crack', 'rk_poli', 'rk_hpt'],
-  proc:  ['rp_crack', 'rp_poli', 'rp_hpt', 'rp_bruise', 'rp_overripe', 'rp_kuning', 'rp_frozen',
+  proc:  ['rp_crack', 'rp_poli', 'rp_hpt', 'rp_bruise', 'rp_overripe', 'rp_kuning', 'rp_frozen', 'rp_albino',
           'k_hatsu', 'k_a11', 'k_a15', 'm_hatsu', 'm_a11', 'm_a15'],
   procGlobal: ['k_frozen', 'k_rfresh'],
   tamu:  ['t_curah', 't_hatsu', 't_a11', 't_a15']
@@ -102,7 +102,7 @@ function hitungAllPanen() {
   setTxt('calc-total-panen', kg(totalPanen));
 
   // --- TAB 2: Reject Processing (per GH + gabungan) ---
-  const rpKeys = ['rp-crack', 'rp-poli', 'rp-hpt', 'rp-bruise', 'rp-overripe', 'rp-kuning', 'rp-frozen'];
+  const rpKeys = ['rp-crack', 'rp-poli', 'rp-hpt', 'rp-bruise', 'rp-overripe', 'rp-kuning', 'rp-frozen', 'rp-albino'];
   const rp1 = sumKeys(rpKeys, 'gh1'), rp2 = sumKeys(rpKeys, 'gh2');
   const totRPros = rp1 + rp2;
   setTxt('sum-rp-gh1', kg(rp1));
@@ -280,7 +280,7 @@ function renderTablePanen() {
     const totKirim = (item.k_hatsu || 0) + (item.k_a11 || 0) + (item.k_a15 || 0) + (item.k_frozen || 0);
     const grandReject = (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0)
       + (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0)
-      + (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_kuning || 0) + (item.rp_frozen || 0);
+      + (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_kuning || 0) + (item.rp_frozen || 0) + (item.rp_albino || 0);
     const rejRate = totPanen > 0 ? (grandReject / totPanen * 100) : 0;
     const totMika = (item.m_hatsu || 0) + (item.m_a11 || 0) + (item.m_a15 || 0);
 
@@ -381,7 +381,8 @@ function generateWATextFromItem(item) {
   const rp_overripe = parseFloat(item.rp_overripe) || 0;
   const rp_kuning = parseFloat(item.rp_kuning) || 0;
   const rp_frozen = parseFloat(item.rp_frozen) || 0;
-  const rpTotal = rp_crack + rp_poli + rp_hpt + rp_bruise + rp_overripe + rp_kuning + rp_frozen;
+  const rp_albino = parseFloat(item.rp_albino) || 0;
+  const rpTotal = rp_crack + rp_poli + rp_hpt + rp_bruise + rp_overripe + rp_kuning + rp_frozen + rp_albino;
 
   let t = '';
   
@@ -425,7 +426,8 @@ function generateWATextFromItem(item) {
   t += `Bruise : ${fmtKg(rp_bruise)} kg\n`;
   t += `Overripe : ${fmtKg(rp_overripe)} kg\n`;
   t += `Buah Kuning (<80%) : ${fmtKg(rp_kuning)} kg\n`;
-  t += `Frozen (<11 gr) : ${fmtKg(rp_frozen)} kg\n\n`;
+  t += `Frozen (<11 gr) : ${fmtKg(rp_frozen)} kg\n`;
+  t += `Albino : ${fmtKg(rp_albino)} kg\n\n`;
   t += `*Total Reject* : ${fmtKg(rpTotal)} kg`;
 
   return t;
@@ -446,7 +448,7 @@ function generateWAText() {
         p_hatsu: getValP(`p-hatsu-${ghStr}`), p_gradea: getValP(`p-gradea-${ghStr}`), p_gradeb: getValP(`p-gradeb-${ghStr}`),
         rk_crack: getValP(`rk-crack-${ghStr}`), rk_poli: getValP(`rk-poli-${ghStr}`), rk_hpt: getValP(`rk-hpt-${ghStr}`),
         rp_crack: getValP(`rp-crack-${ghStr}`), rp_poli: getValP(`rp-poli-${ghStr}`), rp_hpt: getValP(`rp-hpt-${ghStr}`),
-        rp_bruise: getValP(`rp-bruise-${ghStr}`), rp_overripe: getValP(`rp-overripe-${ghStr}`), rp_kuning: getValP(`rp-kuning-${ghStr}`), rp_frozen: getValP(`rp-frozen-${ghStr}`),
+        rp_bruise: getValP(`rp-bruise-${ghStr}`), rp_overripe: getValP(`rp-overripe-${ghStr}`), rp_kuning: getValP(`rp-kuning-${ghStr}`), rp_frozen: getValP(`rp-frozen-${ghStr}`), rp_albino: getValP(`rp-albino-${ghStr}`),
         k_hatsu: getValP(`k-hatsu-${ghStr}`), k_a11: getValP(`k-a11-${ghStr}`), k_a15: getValP(`k-a15-${ghStr}`), k_frozen: 0,
         m_hatsu: getValP(`m-hatsu-${ghStr}`), m_a11: getValP(`m-a11-${ghStr}`), m_a15: getValP(`m-a15-${ghStr}`)
       };
@@ -523,7 +525,7 @@ function openGraphicModal() {
     p_hatsu: getValP(`p-hatsu-${ghStr}`), p_gradea: getValP(`p-gradea-${ghStr}`), p_gradeb: getValP(`p-gradeb-${ghStr}`),
     rk_crack: getValP(`rk-crack-${ghStr}`), rk_poli: getValP(`rk-poli-${ghStr}`), rk_hpt: getValP(`rk-hpt-${ghStr}`),
     rp_crack: getValP(`rp-crack-${ghStr}`), rp_poli: getValP(`rp-poli-${ghStr}`), rp_hpt: getValP(`rp-hpt-${ghStr}`),
-    rp_bruise: getValP(`rp-bruise-${ghStr}`), rp_overripe: getValP(`rp-overripe-${ghStr}`), rp_kuning: getValP(`rp-kuning-${ghStr}`), rp_frozen: getValP(`rp-frozen-${ghStr}`),
+    rp_bruise: getValP(`rp-bruise-${ghStr}`), rp_overripe: getValP(`rp-overripe-${ghStr}`), rp_kuning: getValP(`rp-kuning-${ghStr}`), rp_frozen: getValP(`rp-frozen-${ghStr}`), rp_albino: getValP(`rp-albino-${ghStr}`),
     k_hatsu: getValP(`k-hatsu-${ghStr}`), k_a11: getValP(`k-a11-${ghStr}`), k_a15: getValP(`k-a15-${ghStr}`),
     m_hatsu: getValP(`m-hatsu-${ghStr}`), m_a11: getValP(`m-a11-${ghStr}`), m_a15: getValP(`m-a15-${ghStr}`)
   };
@@ -647,7 +649,8 @@ function generateGraphicCanvas(item) {
     { label: 'Bruise', v: item.rp_bruise||0, c: '#84cc16' },
     { label: 'Overripe', v: item.rp_overripe||0, c: '#0891b2' },
     { label: 'Buah Kuning', v: item.rp_kuning||0, c: '#eab308' },
-    { label: 'Frozen', v: item.rp_frozen||0, c: '#7c3aed' }
+    { label: 'Frozen', v: item.rp_frozen||0, c: '#7c3aed' },
+    { label: 'Albino', v: item.rp_albino||0, c: '#db2777' }
   ].filter(r => r.v > 0);
   
   const totalReject = rejects.reduce((a, r) => a + r.v, 0);
@@ -673,7 +676,7 @@ function generateGraphicCanvas(item) {
   text('Ringkasan Reject & Rate', smX + 20, smY + 30, 16, '#2d5016', 'left', true);
 
   const rkTotal = (item.rk_crack||0) + (item.rk_poli||0) + (item.rk_hpt||0);
-  const rpTotal = (item.rp_crack||0) + (item.rp_poli||0) + (item.rp_hpt||0) + (item.rp_bruise||0) + (item.rp_overripe||0) + (item.rp_kuning||0) + (item.rp_frozen||0);
+  const rpTotal = (item.rp_crack||0) + (item.rp_poli||0) + (item.rp_hpt||0) + (item.rp_bruise||0) + (item.rp_overripe||0) + (item.rp_kuning||0) + (item.rp_frozen||0) + (item.rp_albino||0);
   const totalPanenAsli = sumP + rkTotal;
   const rateReject = totalPanenAsli > 0 ? (totalReject / totalPanenAsli * 100) : 0;
 
@@ -735,6 +738,7 @@ function editDataPanen(id) {
       <div class="input-group"><label>Overripe (Kg)</label><input type="number" step="0.01" id="edit-rp-overripe" value="${item.rp_overripe || 0}"></div>
       <div class="input-group"><label>Buah Kuning <80% (Kg)</label><input type="number" step="0.01" id="edit-rp-kuning" value="${item.rp_kuning || 0}"></div>
       <div class="input-group"><label>Frozen <11 gr (Kg)</label><input type="number" step="0.01" id="edit-rp-frozen" value="${item.rp_frozen || 0}"></div>
+      <div class="input-group"><label>Albino (Kg)</label><input type="number" step="0.01" id="edit-rp-albino" value="${item.rp_albino || 0}"></div>
 
       <hr style="border:0;border-top:2px solid #e5e7eb;margin:1rem 0;">
       <div style="font-size:0.75rem;font-weight:800;color:#2d5016;text-transform:uppercase;margin-bottom:0.75rem;">📦 Berat Pengiriman</div>
@@ -805,6 +809,7 @@ function saveEditPanen() {
     rp_overripe: isGlobal ? 0 : g('edit-rp-overripe'),
     rp_kuning: isGlobal ? 0 : g('edit-rp-kuning'),
     rp_frozen: isGlobal ? 0 : g('edit-rp-frozen'),
+    rp_albino: isGlobal ? 0 : g('edit-rp-albino'),
     k_hatsu: isGlobal ? 0 : g('edit-k-hatsu'),
     k_a11: isGlobal ? 0 : g('edit-k-a11'),
     k_a15: isGlobal ? 0 : g('edit-k-a15'),

@@ -188,6 +188,9 @@
         <label style="display:flex;align-items:center;gap:0.4rem;font-weight:normal;cursor:pointer;">
           <input type="checkbox" value="frozen" class="rej-chk" onchange="handleRejectCheck(this)"> Frozen
         </label>
+        <label style="display:flex;align-items:center;gap:0.4rem;font-weight:normal;cursor:pointer;">
+          <input type="checkbox" value="albino" class="rej-chk" onchange="handleRejectCheck(this)"> Albino
+        </label>
       </div>
     </div>
 
@@ -221,7 +224,7 @@
           <tr>
             <th class="th-base" rowspan="2">Tanggal</th>
             <th class="th-base" rowspan="2">GH</th>
-            <th class="th-reject" colspan="7">Rincian Reject (Kg)</th>
+            <th class="th-reject" colspan="8">Rincian Reject (Kg)</th>
             <th class="th-reject" rowspan="2">Total Reject (Kg)</th>
             <th class="th-reject" rowspan="2">Reject Rate</th>
           </tr>
@@ -233,10 +236,11 @@
             <th class="th-reject">Overripe</th>
             <th class="th-reject">Kuning</th>
             <th class="th-reject">Frozen</th>
+            <th class="th-reject">Albino</th>
           </tr>
         </thead>
         <tbody id="detail-reject-body">
-          <tr><td colspan="11" style="text-align:center;color:#999;">Belum ada data</td></tr>
+          <tr><td colspan="12" style="text-align:center;color:#999;">Belum ada data</td></tr>
         </tbody>
         <tfoot id="detail-reject-foot"></tfoot>
       </table>
