@@ -198,7 +198,7 @@
   </div>
 
   <div class="card" style="margin-top:1.5rem;">
-    <div class="card-title">📋 Data Reject</div>
+    <div class="card-title">📋 Data Rekap (Pilih Data & GH)</div>
     <div class="row-3" style="align-items:flex-end; margin-bottom:1rem;">
       <div class="input-group" style="margin-bottom:0;">
         <label>Dari Tanggal</label>
@@ -208,7 +208,15 @@
         <label>Sampai Tanggal</label>
         <input type="date" id="detail-reject-sampai" onchange="renderDetailReject()">
       </div>
-      <button class="btn btn-primary" onclick="renderDetailReject()">Tampilkan Data</button>
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Greenhouse</label>
+        <select id="detail-gh" onchange="drSavePref(); renderDetailReject()">
+          <option value="pisah">GH 1 & GH 2 (terpisah)</option>
+          <option value="gabung">Gabungan GH 1 + GH 2</option>
+          <option value="gh1">GH 1 saja</option>
+          <option value="gh2">GH 2 saja</option>
+        </select>
+      </div>
     </div>
     <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.75rem;">
       <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailRejectPreset('bulan-ini')">Bulan Ini</button>
@@ -217,30 +225,24 @@
       <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailRejectPreset('semua')">Semua Data</button>
       <button type="button" class="btn btn-primary btn-sm" onclick="exportDetailRejectExcel()" style="margin-left:auto;">📥 Download Excel</button>
     </div>
+    <div style="margin-bottom:0.75rem;">
+      <button type="button" class="btn btn-secondary btn-sm" id="detail-cols-toggle" onclick="toggleDetailColsPanel()">▼ Pilih data yang ditampilkan</button>
+      <div id="detail-cols-wrap" style="display:none; margin-top:0.75rem;">
+        <div style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-bottom:0.6rem;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailColsPreset('reject')">Reject saja</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailColsPreset('ringkas')">Ringkas (total)</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailColsPreset('semua')">Semua data</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailColsPreset('kosong')">Kosongkan</button>
+        </div>
+        <div id="detail-cols-panel"></div>
+      </div>
+    </div>
     <div class="info-box" style="margin-bottom:0.75rem;" id="detail-reject-info">-</div>
     <div class="recap-wrap">
-      <table class="recap-table" style="min-width: 1000px;">
-        <thead>
-          <tr>
-            <th class="th-base" rowspan="2">Tanggal</th>
-            <th class="th-base" rowspan="2">GH</th>
-            <th class="th-reject" colspan="8">Rincian Reject (Kg)</th>
-            <th class="th-reject" rowspan="2">Total Reject (Kg)</th>
-            <th class="th-reject" rowspan="2">Reject Rate</th>
-          </tr>
-          <tr>
-            <th class="th-reject">Crack</th>
-            <th class="th-reject">Polinasi</th>
-            <th class="th-reject">HPT</th>
-            <th class="th-reject">Bruise</th>
-            <th class="th-reject">Overripe</th>
-            <th class="th-reject">Kuning</th>
-            <th class="th-reject">Frozen</th>
-            <th class="th-reject">Albino</th>
-          </tr>
-        </thead>
+      <table class="recap-table" style="min-width: 600px;">
+        <thead id="detail-reject-head"></thead>
         <tbody id="detail-reject-body">
-          <tr><td colspan="12" style="text-align:center;color:#999;">Belum ada data</td></tr>
+          <tr><td style="text-align:center;color:#999;">Belum ada data</td></tr>
         </tbody>
         <tfoot id="detail-reject-foot"></tfoot>
       </table>

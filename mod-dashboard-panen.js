@@ -1372,7 +1372,146 @@ function renderRejectTrendChart() {
   el.innerHTML = htmlOutput;
 }
 
-// ========== RENDER DATA DETAIL REJECT ==========
+// ========== DATA REKAP FLEKSIBEL (pilih data & GH) ==========
+// Kolom dikelompokkan per jenis data. Tiap kolom punya fungsi get(row) dari baris hasil agregasi.
+const DR_GROUPS = [
+  { id: 'panen',   label: '🍓 Panen',            cls: 'th-panen', argb: 'FFDC2626' },
+  { id: 'reject',  label: '🗑️ Reject',           cls: 'th-reject', argb: 'FFEA580C' },
+  { id: 'kirim',   label: '📦 Kirim (Berat)',    cls: 'th-kirim', argb: 'FF2563EB' },
+  { id: 'pack',    label: '🧰 Pack (Pcs)',       cls: 'th-mika',  argb: 'FF9333EA' },
+  { id: 'rejkirim',label: '❄️ Reject Dikirim (Global)', cls: 'th-aks', argb: 'FF0D9488' },
+  { id: 'tamu',    label: '👥 Tamu (Global)',    cls: 'th-gdg',   argb: 'FF475569' }
+];
+
+const DR_COLS = [
+  { id: 'p_hatsu',     grp: 'panen',  label: 'Hatsuhana',   t: 'kg' },
+  { id: 'p_gradea',    grp: 'panen',  label: 'Grade A',     t: 'kg' },
+  { id: 'p_gradeb',    grp: 'panen',  label: 'Grade B',     t: 'kg' },
+  { id: 'rk_total',    grp: 'panen',  label: 'Reject Kebun',t: 'kg' },
+  { id: 'panen_total', grp: 'panen',  label: 'Total Panen', t: 'kg', bold: true },
+
+  { id: 'crack',       grp: 'reject', label: 'Crack',       t: 'kg' },
+  { id: 'poli',        grp: 'reject', label: 'Polinasi',    t: 'kg' },
+  { id: 'hpt',         grp: 'reject', label: 'HPT',         t: 'kg' },
+  { id: 'bruise',      grp: 'reject', label: 'Bruise',      t: 'kg' },
+  { id: 'overripe',    grp: 'reject', label: 'Overripe',    t: 'kg' },
+  { id: 'kuning',      grp: 'reject', label: 'Kuning',      t: 'kg' },
+  { id: 'frozen',      grp: 'reject', label: 'Frozen',      t: 'kg' },
+  { id: 'albino',      grp: 'reject', label: 'Albino',      t: 'kg' },
+  { id: 'rej_total',   grp: 'reject', label: 'Total Reject',t: 'kg', bold: true },
+  { id: 'rate',        grp: 'reject', label: 'Reject Rate', t: 'pct', bold: true },
+
+  { id: 'k_hatsu',     grp: 'kirim',  label: 'Hatsuhana',   t: 'kg' },
+  { id: 'k_a11',       grp: 'kirim',  label: 'Grade A',     t: 'kg' },
+  { id: 'k_a15',       grp: 'kirim',  label: 'Grade B',     t: 'kg' },
+  { id: 'kirim_total', grp: 'kirim',  label: 'Total Kirim', t: 'kg', bold: true },
+
+  { id: 'm_hatsu',     grp: 'pack',   label: 'Hatsuhana',   t: 'int' },
+  { id: 'm_a11',       grp: 'pack',   label: 'Grade A',     t: 'int' },
+  { id: 'm_a15',       grp: 'pack',   label: 'Grade B',     t: 'int' },
+  { id: 'm_total',     grp: 'pack',   label: 'Total Pack',  t: 'int', bold: true },
+
+  { id: 'k_frozen',    grp: 'rejkirim', label: 'Frozen Dikirim', t: 'kg' },
+  { id: 'k_rfresh',    grp: 'rejkirim', label: 'Fresh Dikirim',  t: 'kg' },
+
+  { id: 't_curah',     grp: 'tamu',   label: 'Curah (Kg)',  t: 'kg' },
+  { id: 't_hatsu',     grp: 'tamu',   label: 'Hatsu (Pcs)', t: 'int' },
+  { id: 't_a11',       grp: 'tamu',   label: 'A11 (Pcs)',   t: 'int' },
+  { id: 't_a15',       grp: 'tamu',   label: 'A15 (Pcs)',   t: 'int' },
+  { id: 't_ket',       grp: 'tamu',   label: 'Keterangan',  t: 'txt' }
+];
+
+const DR_GLOBAL_GROUPS = ['rejkirim', 'tamu'];
+const DR_PREF_KEY = 'awb_dash_rekap_pref_v1';
+const DR_DEFAULT_COLS = ['panen_total', 'crack', 'poli', 'hpt', 'bruise', 'overripe', 'kuning', 'frozen', 'albino', 'rej_total', 'rate'];
+
+let drSelected = null;      // Set id kolom terpilih
+let detailRejectExport = null;
+
+function drEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+function drLoadPref() {
+  let pref = null;
+  try { pref = JSON.parse(localStorage.getItem(DR_PREF_KEY) || 'null'); } catch (e) { pref = null; }
+  const valid = new Set(DR_COLS.map(c => c.id));
+  const cols = pref && Array.isArray(pref.cols) ? pref.cols.filter(id => valid.has(id)) : null;
+  drSelected = new Set(cols && cols.length ? cols : DR_DEFAULT_COLS);
+  const ghEl = document.getElementById('detail-gh');
+  if (ghEl && pref && pref.gh && ghEl.querySelector(`option[value="${pref.gh}"]`)) ghEl.value = pref.gh;
+}
+
+function drSavePref() {
+  try {
+    const ghEl = document.getElementById('detail-gh');
+    localStorage.setItem(DR_PREF_KEY, JSON.stringify({ cols: [...drSelected], gh: ghEl ? ghEl.value : 'pisah' }));
+  } catch (e) { /* abaikan */ }
+}
+
+function buildDetailColsPanel() {
+  const panel = document.getElementById('detail-cols-panel');
+  if (!panel) return;
+  if (!drSelected) drLoadPref();
+  panel.innerHTML = DR_GROUPS.map(g => {
+    const cols = DR_COLS.filter(c => c.grp === g.id);
+    const allOn = cols.every(c => drSelected.has(c.id));
+    const items = cols.map(c => `
+      <label style="display:flex;align-items:center;gap:0.3rem;font-weight:normal;cursor:pointer;font-size:0.8rem;">
+        <input type="checkbox" class="dr-col-chk" data-grp="${g.id}" value="${c.id}" ${drSelected.has(c.id) ? 'checked' : ''} onchange="onDetailColToggle(this)"> ${drEsc(c.label)}
+      </label>`).join('');
+    return `
+      <div style="border:1px solid #e5e7eb;border-radius:8px;padding:0.5rem 0.75rem;margin-bottom:0.5rem;">
+        <label style="display:flex;align-items:center;gap:0.4rem;font-weight:700;cursor:pointer;margin-bottom:0.35rem;">
+          <input type="checkbox" id="dr-grp-${g.id}" ${allOn ? 'checked' : ''} onchange="onDetailGroupToggle('${g.id}', this.checked)"> ${g.label}
+        </label>
+        <div style="display:flex;flex-wrap:wrap;gap:0.4rem 1rem;">${items}</div>
+      </div>`;
+  }).join('');
+  panel.dataset.ready = '1';
+}
+
+function drSyncGroupBoxes() {
+  DR_GROUPS.forEach(g => {
+    const box = document.getElementById('dr-grp-' + g.id);
+    if (!box) return;
+    box.checked = DR_COLS.filter(c => c.grp === g.id).every(c => drSelected.has(c.id));
+  });
+}
+
+function onDetailColToggle(el) {
+  if (el.checked) drSelected.add(el.value); else drSelected.delete(el.value);
+  drSyncGroupBoxes();
+  drSavePref();
+  renderDetailReject();
+}
+
+function onDetailGroupToggle(grpId, on) {
+  DR_COLS.filter(c => c.grp === grpId).forEach(c => { if (on) drSelected.add(c.id); else drSelected.delete(c.id); });
+  document.querySelectorAll(`.dr-col-chk[data-grp="${grpId}"]`).forEach(chk => { chk.checked = on; });
+  drSavePref();
+  renderDetailReject();
+}
+
+function setDetailColsPreset(mode) {
+  if (mode === 'semua') drSelected = new Set(DR_COLS.map(c => c.id));
+  else if (mode === 'kosong') drSelected = new Set();
+  else if (mode === 'ringkas') drSelected = new Set(['panen_total', 'rej_total', 'rate', 'kirim_total', 'm_total']);
+  else if (mode === 'reject') drSelected = new Set(DR_DEFAULT_COLS);
+  buildDetailColsPanel();
+  drSavePref();
+  renderDetailReject();
+}
+
+function toggleDetailColsPanel() {
+  const wrap = document.getElementById('detail-cols-wrap');
+  const btn = document.getElementById('detail-cols-toggle');
+  if (!wrap) return;
+  const show = wrap.style.display === 'none';
+  wrap.style.display = show ? 'block' : 'none';
+  if (btn) btn.textContent = show ? '▲ Sembunyikan pilihan data' : '▼ Pilih data yang ditampilkan';
+}
+
 function setDetailRejectPreset(mode) {
   const dariEl = document.getElementById('detail-reject-dari');
   const sampaiEl = document.getElementById('detail-reject-sampai');
@@ -1398,105 +1537,170 @@ function setDetailRejectPreset(mode) {
   renderDetailReject();
 }
 
-let detailRejectExport = null;
+// Field mentah yang dijumlahkan saat agregasi
+const DR_RAW = ['p_hatsu', 'p_gradea', 'p_gradeb', 'rk_crack', 'rk_poli', 'rk_hpt',
+  'rp_crack', 'rp_poli', 'rp_hpt', 'rp_bruise', 'rp_overripe', 'rp_kuning', 'rp_frozen', 'rp_albino',
+  'k_hatsu', 'k_a11', 'k_a15', 'k_frozen', 'k_rfresh', 'm_hatsu', 'm_a11', 'm_a15',
+  't_curah', 't_hatsu', 't_a11', 't_a15'];
+
+function drNewRow(tgl, gh) {
+  const r = { tgl, gh, t_ket: '' };
+  DR_RAW.forEach(k => r[k] = 0);
+  return r;
+}
+
+function drDerive(r) {
+  r.rk_total = r.rk_crack + r.rk_poli + r.rk_hpt;
+  r.panen_total = r.p_hatsu + r.p_gradea + r.p_gradeb + r.rk_total;
+  r.crack = r.rk_crack + r.rp_crack;
+  r.poli = r.rk_poli + r.rp_poli;
+  r.hpt = r.rk_hpt + r.rp_hpt;
+  r.bruise = r.rp_bruise;
+  r.overripe = r.rp_overripe;
+  r.kuning = r.rp_kuning;
+  r.frozen = r.rp_frozen;
+  r.albino = r.rp_albino;
+  r.rej_total = r.crack + r.poli + r.hpt + r.bruise + r.overripe + r.kuning + r.frozen + r.albino;
+  r.rate = r.panen_total > 0 ? (r.rej_total / r.panen_total * 100) : null;
+  r.kirim_total = r.k_hatsu + r.k_a11 + r.k_a15;
+  r.m_total = r.m_hatsu + r.m_a11 + r.m_a15;
+  return r;
+}
+
+function drFmt(col, v) {
+  if (col.t === 'txt') return drEsc(v || '');
+  if (col.t === 'pct') return v === null || v === undefined ? '-' : v.toFixed(2) + '%';
+  if (!v) return '-';
+  return col.t === 'int' ? String(Math.round(v)) : v.toFixed(2);
+}
+
+function drBuildRows(dari, sampai, ghMode, cols) {
+  const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
+  const needGlobal = cols.some(c => DR_GLOBAL_GROUPS.includes(c.grp));
+  const map = new Map();
+
+  db.forEach(item => {
+    if (!item.tgl || item.tgl < dari || item.tgl > sampai) return;
+    const isGlobal = item.gh === 'GLOBAL';
+    if (isGlobal && !needGlobal) return;
+    if (!isGlobal) {
+      if (ghMode === 'gh1' && item.gh !== 'GH 1') return;
+      if (ghMode === 'gh2' && item.gh !== 'GH 2') return;
+    }
+    let ghLabel = isGlobal ? 'GLOBAL' : (item.gh || 'GH 1');
+    if (ghMode === 'gabung') ghLabel = 'GH 1+2';
+    const key = item.tgl + '|' + ghLabel;
+    if (!map.has(key)) map.set(key, drNewRow(item.tgl, ghLabel));
+    const r = map.get(key);
+    DR_RAW.forEach(k => { r[k] += Number(item[k]) || 0; });
+    if (item.t_ket) r.t_ket = r.t_ket ? (r.t_ket + '; ' + item.t_ket) : String(item.t_ket);
+  });
+
+  const numCols = cols.filter(c => c.t !== 'pct');
+  return [...map.values()].map(drDerive)
+    .filter(r => numCols.some(c => c.t === 'txt' ? !!r[c.id] : (r[c.id] || 0) > 0))
+    .sort((a, b) => b.tgl.localeCompare(a.tgl) || String(a.gh).localeCompare(String(b.gh)));
+}
+
+function drTotals(rows) {
+  const T = {};
+  DR_COLS.forEach(c => { if (c.t === 'kg' || c.t === 'int') T[c.id] = rows.reduce((a, r) => a + (r[c.id] || 0), 0); });
+  const panen = rows.reduce((a, r) => a + (r.panen_total || 0), 0);
+  const rej = rows.reduce((a, r) => a + (r.rej_total || 0), 0);
+  T.rate = panen > 0 ? rej / panen * 100 : null;
+  return T;
+}
+
+const DR_GH_LABEL = { pisah: 'GH 1 & GH 2 (terpisah)', gabung: 'Gabungan GH 1 + GH 2', gh1: 'GH 1 saja', gh2: 'GH 2 saja' };
 
 function renderDetailReject() {
+  const head = document.getElementById('detail-reject-head');
   const tbody = document.getElementById('detail-reject-body');
   const tfoot = document.getElementById('detail-reject-foot');
   const infoEl = document.getElementById('detail-reject-info');
-  if (!tbody) return;
+  if (!tbody || !head) return;
+
+  const panel = document.getElementById('detail-cols-panel');
+  if (!drSelected) drLoadPref();
+  if (panel && !panel.dataset.ready) buildDetailColsPanel();
 
   const dari = document.getElementById('detail-reject-dari').value;
   const sampai = document.getElementById('detail-reject-sampai').value;
+  const ghEl = document.getElementById('detail-gh');
+  const ghMode = ghEl ? ghEl.value : 'pisah';
+  const cols = DR_COLS.filter(c => drSelected.has(c.id));
+
   if (tfoot) tfoot.innerHTML = '';
+  head.innerHTML = '';
   detailRejectExport = null;
-  if (!dari || !sampai) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#999;">Pilih tanggal dulu</td></tr>';
+
+  const msg = (txt, color) => {
+    tbody.innerHTML = `<tr><td style="text-align:center;color:${color || '#999'};">${txt}</td></tr>`;
     if (infoEl) infoEl.textContent = '-';
-    return;
-  }
-  if (dari > sampai) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#dc2626;">Tanggal "Dari" harus sebelum "Sampai"</td></tr>';
-    if (infoEl) infoEl.textContent = '-';
-    return;
-  }
+  };
+  if (!dari || !sampai) return msg('Pilih tanggal dulu');
+  if (dari > sampai) return msg('Tanggal "Dari" harus sebelum "Sampai"', '#dc2626');
+  if (!cols.length) return msg('Pilih minimal satu data yang mau ditampilkan', '#dc2626');
 
   const fmtTgl = t => t.split('-').reverse().join('/');
-  if (infoEl) infoEl.innerHTML = `Data reject: <b>${fmtTgl(dari)}</b> s/d <b>${fmtTgl(sampai)}</b>`;
+  const rows = drBuildRows(dari, sampai, ghMode, cols);
+  const T = drTotals(rows);
 
-  const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
-  const rows = db
-    .filter(x => x.tgl && x.tgl >= dari && x.tgl <= sampai)
-    .map(item => {
-      const crack = (item.rk_crack || 0) + (item.rp_crack || 0);
-      const poli = (item.rk_poli || 0) + (item.rp_poli || 0);
-      const hpt = (item.rk_hpt || 0) + (item.rp_hpt || 0);
-      const bruise = item.rp_bruise || 0;
-      const overripe = item.rp_overripe || 0;
-      const kuning = item.rp_kuning || 0;
-      const frozen = item.rp_frozen || 0;
-      const albino = item.rp_albino || 0;
-      const total = crack + poli + hpt + bruise + overripe + kuning + frozen + albino;
-      const panen = (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
-      return { tgl: item.tgl, gh: item.gh, crack, poli, hpt, bruise, overripe, kuning, frozen, albino, total, panen };
-    })
-    .filter(r => r.total > 0)
-    .sort((a, b) => b.tgl.localeCompare(a.tgl) || String(a.gh).localeCompare(String(b.gh)));
+  if (infoEl) {
+    const needGlobal = cols.some(c => DR_GLOBAL_GROUPS.includes(c.grp));
+    infoEl.innerHTML = `Periode: <b>${fmtTgl(dari)}</b> s/d <b>${fmtTgl(sampai)}</b> · ${DR_GH_LABEL[ghMode] || ''} · <b>${cols.length}</b> kolom data`
+      + (needGlobal ? '<br><small>Reject Dikirim & Tamu bersifat global (tidak per GH): tampil di baris 🌐 Global, atau digabung ke baris tanggal jika mode Gabungan.</small>' : '');
+  }
 
+  // Header 2 baris: kelompok + kolom
+  const grpsUsed = DR_GROUPS.filter(g => cols.some(c => c.grp === g.id));
+  let h1 = '<tr><th class="th-base" rowspan="2">Tanggal</th><th class="th-base" rowspan="2">GH</th>';
+  grpsUsed.forEach(g => {
+    h1 += `<th class="${g.cls}" colspan="${cols.filter(c => c.grp === g.id).length}">${g.label}</th>`;
+  });
+  h1 += '</tr><tr>' + cols.map(c => `<th class="${DR_GROUPS.find(g => g.id === c.grp).cls}">${drEsc(c.label)}</th>`).join('') + '</tr>';
+  head.innerHTML = h1;
+
+  const nCol = cols.length + 2;
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#999;">Tidak ada data reject pada periode ini</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="${nCol}" style="text-align:center;color:#999;">Tidak ada data pada periode ini</td></tr>`;
     return;
   }
 
-  const fmt = n => n > 0 ? n.toFixed(2) : '-';
-  const T = { crack: 0, poli: 0, hpt: 0, bruise: 0, overripe: 0, kuning: 0, frozen: 0, albino: 0, total: 0, panen: 0 };
-
   tbody.innerHTML = rows.map(r => {
-    Object.keys(T).forEach(k => { T[k] += r[k]; });
     const isGlobal = r.gh === 'GLOBAL';
-    const rate = r.panen > 0 ? (r.total / r.panen * 100) : null;
+    const tds = cols.map(c => {
+      const style = c.bold ? 'font-weight:bold;' : '';
+      const left = c.t === 'txt' ? 'text-align:left;white-space:normal;min-width:140px;' : '';
+      return `<td class="text-right" style="${style}${left}">${drFmt(c, r[c.id])}</td>`;
+    }).join('');
     return `<tr>
       <td style="text-align:center;">${fmtTgl(r.tgl)}</td>
-      <td style="text-align:center; font-weight:bold; color:${isGlobal ? '#9333ea' : '#2d5016'};">${isGlobal ? '🌐 Global' : (r.gh || 'GH 1')}</td>
-      <td class="text-right" style="color:#dc2626;">${fmt(r.crack)}</td>
-      <td class="text-right" style="color:#dc2626;">${fmt(r.poli)}</td>
-      <td class="text-right" style="color:#dc2626;">${fmt(r.hpt)}</td>
-      <td class="text-right" style="color:#dc2626;">${fmt(r.bruise)}</td>
-      <td class="text-right" style="color:#dc2626;">${fmt(r.overripe)}</td>
-      <td class="text-right" style="color:#dc2626;">${fmt(r.kuning)}</td>
-      <td class="text-right" style="color:#dc2626;">${fmt(r.frozen)}</td>
-      <td class="text-right" style="color:#dc2626;">${fmt(r.albino)}</td>
-      <td class="text-right" style="font-weight:bold; color:#dc2626;">${fmt(r.total)}</td>
-      <td class="text-right" style="font-weight:bold; color:#ea580c;">${rate === null ? '-' : rate.toFixed(2) + '%'}</td>
+      <td style="text-align:center; font-weight:bold; color:${isGlobal ? '#9333ea' : '#2d5016'};">${isGlobal ? '🌐 Global' : r.gh}</td>
+      ${tds}
     </tr>`;
   }).join('');
 
-  detailRejectExport = { dari, sampai, rows, totals: T };
-
   if (tfoot) {
-    const tRate = T.panen > 0 ? (T.total / T.panen * 100) : null;
     const cell = 'background:#2d5016;color:#fff;font-weight:bold;text-align:right;';
-    tfoot.innerHTML = `<tr>
-      <td colspan="2" style="${cell}text-align:center;">TOTAL</td>
-      <td style="${cell}">${T.crack.toFixed(2)}</td>
-      <td style="${cell}">${T.poli.toFixed(2)}</td>
-      <td style="${cell}">${T.hpt.toFixed(2)}</td>
-      <td style="${cell}">${T.bruise.toFixed(2)}</td>
-      <td style="${cell}">${T.overripe.toFixed(2)}</td>
-      <td style="${cell}">${T.kuning.toFixed(2)}</td>
-      <td style="${cell}">${T.frozen.toFixed(2)}</td>
-      <td style="${cell}">${T.albino.toFixed(2)}</td>
-      <td style="${cell}">${T.total.toFixed(2)}</td>
-      <td style="${cell}">${tRate === null ? '-' : tRate.toFixed(2) + '%'}</td>
-    </tr>`;
+    tfoot.innerHTML = `<tr><td colspan="2" style="${cell}text-align:center;">TOTAL</td>`
+      + cols.map(c => {
+        let v = '';
+        if (c.t === 'pct') v = T.rate === null ? '-' : T.rate.toFixed(2) + '%';
+        else if (c.t === 'int') v = String(Math.round(T[c.id] || 0));
+        else if (c.t === 'kg') v = (T[c.id] || 0).toFixed(2);
+        return `<td style="${cell}">${v}</td>`;
+      }).join('')
+      + '</tr>';
   }
+
+  detailRejectExport = { dari, sampai, ghMode, cols, rows, totals: T };
 }
 
-
-// ========== EXPORT DATA REJECT KE EXCEL (.xlsx) ==========
+// ========== EXPORT DATA REKAP KE EXCEL (.xlsx) ==========
 async function exportDetailRejectExcel() {
   const d = detailRejectExport;
-  if (!d || !d.rows.length) { showToast('Tidak ada data reject untuk di-export', 'error'); return; }
+  if (!d || !d.rows.length) { showToast('Tidak ada data untuk di-export', 'error'); return; }
   try { await loadExcelJS(); } catch (e) { showToast(e.message, 'error'); return; }
 
   const fmtTgl = t => t.split('-').reverse().join('/');
@@ -1504,70 +1708,88 @@ async function exportDetailRejectExcel() {
   const border = { top: thin, left: thin, bottom: thin, right: thin };
   const fill = argb => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
   const rd = v => (typeof v === 'number' ? Math.round(v * 100) / 100 : v);
+  const cols = d.cols;
+  const NCOL = cols.length + 2;
+  const grpOf = c => DR_GROUPS.find(g => g.id === c.grp);
 
   const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet('Data Reject');
-  const NCOL = 12;
+  const ws = wb.addWorksheet('Data Rekap');
 
   ws.mergeCells(1, 1, 1, NCOL);
-  ws.getCell(1, 1).value = 'Data Reject Panen (Kebun + Processing) — PT. Agri Wangi Berry';
+  ws.getCell(1, 1).value = 'Data Rekap Panen — PT. Agri Wangi Berry';
   ws.getCell(1, 1).font = { bold: true, size: 14, color: { argb: 'FF2D5016' } };
   ws.mergeCells(2, 1, 2, NCOL);
-  ws.getCell(2, 1).value = `Periode: ${fmtTgl(d.dari)} s/d ${fmtTgl(d.sampai)}`;
+  ws.getCell(2, 1).value = `Periode: ${fmtTgl(d.dari)} s/d ${fmtTgl(d.sampai)} · ${DR_GH_LABEL[d.ghMode] || ''}`;
   ws.getCell(2, 1).font = { size: 11, color: { argb: 'FF475569' } };
 
-  const heads = ['Tanggal', 'GH', 'Crack (Kg)', 'Polinasi (Kg)', 'HPT (Kg)', 'Bruise (Kg)', 'Overripe (Kg)', 'Kuning (Kg)', 'Frozen (Kg)', 'Albino (Kg)', 'Total Reject (Kg)', 'Reject Rate'];
-  const hr = ws.getRow(4);
-  heads.forEach((h, i) => {
-    const c = hr.getCell(i + 1);
-    c.value = h;
-    c.fill = fill(i < 2 ? 'FF2D5016' : 'FFEA580C');
-    c.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
-    c.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-    c.border = border;
+  // Header kelompok (baris 4) + kolom (baris 5)
+  const hdr = (cell, text, argb) => {
+    cell.value = text;
+    cell.fill = fill(argb);
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    cell.border = border;
+  };
+  ['Tanggal', 'GH'].forEach((t, i) => {
+    ws.mergeCells(4, i + 1, 5, i + 1);
+    hdr(ws.getCell(4, i + 1), t, 'FF2D5016');
+    ws.getCell(5, i + 1).border = border;
   });
-  hr.height = 28;
+  let start = 3;
+  DR_GROUPS.forEach(g => {
+    const gc = cols.filter(c => c.grp === g.id);
+    if (!gc.length) return;
+    if (gc.length > 1) ws.mergeCells(4, start, 4, start + gc.length - 1);
+    hdr(ws.getCell(4, start), g.label.replace(/^[^\p{L}]+/u, ''), g.argb);
+    gc.forEach((c, j) => hdr(ws.getCell(5, start + j), c.label, g.argb));
+    start += gc.length;
+  });
+  ws.getRow(5).height = 28;
 
-  let r = 5;
+  const putVal = (c, ci, cell, v) => {
+    if (c.t === 'txt') { cell.value = v || ''; cell.alignment = { horizontal: 'left', wrapText: true }; }
+    else if (c.t === 'pct') { cell.value = v === null || v === undefined ? null : v / 100; cell.numFmt = '0.00%'; cell.alignment = { horizontal: 'right' }; }
+    else { cell.value = rd(v || 0); cell.numFmt = c.t === 'int' ? '#,##0;;-' : '0.00;;-'; cell.alignment = { horizontal: 'right' }; }
+  };
+
+  let r = 6;
   d.rows.forEach(x => {
-    const vals = [fmtTgl(x.tgl), x.gh === 'GLOBAL' ? 'Global' : (x.gh || 'GH 1'),
-      x.crack, x.poli, x.hpt, x.bruise, x.overripe, x.kuning, x.frozen, x.albino, x.total,
-      x.panen > 0 ? x.total / x.panen : null];
-    vals.forEach((v, i) => {
-      const c = ws.getCell(r, i + 1);
-      c.value = (i >= 2 && i < 11) ? rd(v) : v;
-      c.border = border;
-      if (i < 2) c.alignment = { horizontal: 'center' };
-      else if (i === 11) { c.numFmt = '0.00%'; c.alignment = { horizontal: 'right' }; }
-      else { c.numFmt = '0.00;;-'; c.alignment = { horizontal: 'right' }; }
-      if (i === 10) c.font = { bold: true, color: { argb: 'FFDC2626' } };
+    const c1 = ws.getCell(r, 1), c2 = ws.getCell(r, 2);
+    c1.value = fmtTgl(x.tgl); c2.value = x.gh === 'GLOBAL' ? 'Global' : x.gh;
+    [c1, c2].forEach(c => { c.border = border; c.alignment = { horizontal: 'center' }; });
+    cols.forEach((c, i) => {
+      const cell = ws.getCell(r, i + 3);
+      putVal(c, i, cell, x[c.id]);
+      cell.border = border;
+      if (c.bold) cell.font = { bold: true };
     });
     r++;
   });
 
   const T = d.totals;
-  const tot = ['TOTAL', '', T.crack, T.poli, T.hpt, T.bruise, T.overripe, T.kuning, T.frozen, T.albino, T.total, T.panen > 0 ? T.total / T.panen : null];
-  tot.forEach((v, i) => {
-    const c = ws.getCell(r, i + 1);
-    c.value = (i >= 2 && i < 11) ? rd(v) : v;
-    c.fill = fill('FF2D5016');
-    c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    c.border = border;
-    c.alignment = { horizontal: i < 2 ? 'center' : 'right' };
-    if (i === 11) c.numFmt = '0.00%'; else if (i >= 2) c.numFmt = '0.00';
-  });
   ws.mergeCells(r, 1, r, 2);
+  [1, 2].forEach(i => { const c = ws.getCell(r, i); c.fill = fill('FF2D5016'); c.border = border; });
+  ws.getCell(r, 1).value = 'TOTAL';
+  ws.getCell(r, 1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  ws.getCell(r, 1).alignment = { horizontal: 'center' };
+  cols.forEach((c, i) => {
+    const cell = ws.getCell(r, i + 3);
+    if (c.t !== 'txt') putVal(c, i, cell, T[c.id]);
+    cell.fill = fill('FF2D5016');
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.border = border;
+  });
 
   ws.getColumn(1).width = 13;
   ws.getColumn(2).width = 10;
-  for (let c = 3; c <= NCOL; c++) ws.getColumn(c).width = 14;
-  ws.views = [{ state: 'frozen', ySplit: 4, xSplit: 2 }];
+  cols.forEach((c, i) => { ws.getColumn(i + 3).width = c.t === 'txt' ? 28 : 14; });
+  ws.views = [{ state: 'frozen', ySplit: 5, xSplit: 2 }];
 
   const buf = await wb.xlsx.writeBuffer();
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = `Data_Reject_${d.dari}_sd_${d.sampai}.xlsx`;
+  link.download = `Data_Rekap_${d.dari}_sd_${d.sampai}.xlsx`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
