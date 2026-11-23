@@ -1,5 +1,5 @@
 {
-  "version": "1.9.8",
-  "released": "2026-11-19",
-  "notes": "Dashboard panen: Data Rekap fleksibel (pilih data panen/reject/kirim/pack/tamu + filter GH, export Excel ikut pilihan)"
+  "version": "1.10.0",
+  "released": "2026-11-23",
+  "notes": "Menu baru: Diterima Hyoshii (bobot, pack, reject sampel/QC, selisih vs kirim) + import Excel + gabung ke Data Rekap Dashboard Panen"
 }

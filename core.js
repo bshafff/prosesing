@@ -2,9 +2,10 @@
 const LKS_STORAGE_KEY = 'lks_awb_v1';
 const PANEN_STORAGE_KEY = 'panen_awb_v1';
 const KEMASAN_STORAGE_KEY = 'kemasan_awb_v1';
+const HYOSHII_STORAGE_KEY = 'hyoshii_awb_v1';
 
 // ========== KONFIGURASI ==========
-const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyIDEcwqyXqyfB6cuJGer5bcphJ4bCWDBRAMBd432Nalz_uXEMWwphLNduxkKgDOtZq_A/exec';
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwAKinQvQF4Twvj9_2aWq9Q0j8bxrq8JfwlZIsKd1zXV3AMZrx5F806CRCO5Vp_Rx5u/exec';
 const APP_VERSION_KEY = 'awb_app_version_v1';
 const WELCOMED_KEY = 'awb_welcomed_v1';
 
@@ -239,6 +240,7 @@ function syncTypeFromKey(key) {
   if (key === LKS_STORAGE_KEY) return 'lks';
   if (key === PANEN_STORAGE_KEY) return 'panen';
   if (key === KEMASAN_STORAGE_KEY) return 'kemasan';
+  if (key === HYOSHII_STORAGE_KEY) return 'hyoshii';
   return null;
 }
 
@@ -403,7 +405,8 @@ async function pullFromSheet(silent) {
     if (!result || !result.ok) throw new Error(result && result.error ? result.error : 'Gagal pull.');
     suppressSync = true;
     Object.entries(result.data || {}).forEach(([type, records]) => {
-      const key = type === 'lks' ? LKS_STORAGE_KEY : type === 'panen' ? PANEN_STORAGE_KEY : KEMASAN_STORAGE_KEY;
+      const key = type === 'lks' ? LKS_STORAGE_KEY : type === 'panen' ? PANEN_STORAGE_KEY : type === 'kemasan' ? KEMASAN_STORAGE_KEY : type === 'hyoshii' ? HYOSHII_STORAGE_KEY : null;
+      if (!key) return;
       nativeStorage.setItem(key, JSON.stringify(Array.isArray(records) ? records : []));
     });
     suppressSync = false;
@@ -412,6 +415,7 @@ async function pullFromSheet(silent) {
     
     renderTableLks(); 
     renderTablePanen();
+    try { if (typeof renderHyoshii === 'function') { renderHyoshii(); hyLoadForm(); } } catch (e) { console.warn('renderHyoshii:', e); }
     recalculateStockKemasan(); 
     
     // --- PENGAMAN: Jangan render ulang form kemasan jika user sedang di halaman kemasan ---
@@ -434,7 +438,7 @@ async function pullFromSheet(silent) {
 
 function migrateExistingLocalData() {
   if (nativeStorage.getItem(SYNC_MIGRATION_KEY)) return;
-  const sources = [['lks', LKS_STORAGE_KEY], ['panen', PANEN_STORAGE_KEY], ['kemasan', KEMASAN_STORAGE_KEY]];
+  const sources = [['lks', LKS_STORAGE_KEY], ['panen', PANEN_STORAGE_KEY], ['kemasan', KEMASAN_STORAGE_KEY], ['hyoshii', HYOSHII_STORAGE_KEY]];
   const all = [];
   sources.forEach(([type, key]) => {
     readArrayRaw(nativeStorage.getItem(key)).forEach(record => {
@@ -762,12 +766,13 @@ function openImportModal(type) {
   document.getElementById('import-file').value = '';
   document.getElementById('import-clear').checked = false;
   document.getElementById('import-preview').innerHTML = '';
-  const titles = { lks: '📝 LKS', panen: '🌾 Panen', kemasan: '📦 Kemasan' };
-  document.getElementById('import-title').textContent = '📥 Import CSV — ' + titles[type];
+  const titles = { lks: '📝 LKS', panen: '🌾 Panen', kemasan: '📦 Kemasan', hyoshii: '🏭 Diterima Hyoshii' };
+  document.getElementById('import-title').textContent = '📥 Import — ' + titles[type];
   const infos = {
     lks: `<b>Format kolom:</b> <code>tanggal, nama, grade, kegiatan, material, jobTambahan, perbantuan, jenisPerbantuan, keterangan</code><br>Multi-kegiatan/material dipisah dengan <b>|</b> (pipe).`,
     panen: `<b>Format kolom:</b> <code>tgl, p_hatsu, p_gradea, p_gradeb, rk_*, rp_*, k_*, m_*, t_*</code><br>1 baris = 1 tanggal. Kolom kosong = 0.`,
-    kemasan: `<b>Kolom utama:</b> <code>tgl, name, masuk, bongkarDus, aktualPcs, kirim, tamu, reject, ketTamu, ketReject</code>`
+    kemasan: `<b>Kolom utama:</b> <code>tgl, name, masuk, bongkarDus, aktualPcs, kirim, tamu, reject, ketTamu, ketReject</code>`,
+    hyoshii: `Pilih file <b>Excel (.xlsx)</b> atau CSV. Bisa pakai <b>template</b> (tombol Download Template) atau langsung file rekap Hyoshii yang punya judul grup <b>“...YANG DITERIMA HYOSHII”</b> (bobot &amp; pack) dengan kolom Hatsuhana / Grade A / Grade B / Frozen. Kolom <b>Tanggal</b> wajib; kolom <b>GH</b> opsional (kosong = gabungan GH 1+2). Frozen otomatis dipisah jadi data Global.<br>Format CSV: <code>tgl, gh, hk_hatsu, hk_a11, hk_a15, hk_frozen, hp_hatsu, hp_a11, hp_a15, hr_sampel, hr_qc, hr_lain, h_ket</code>`
   };
   document.getElementById('import-info').innerHTML = infos[type];
   document.getElementById('modal-import').classList.add('show');
@@ -780,6 +785,7 @@ function closeImportModal() {
 
 function downloadTemplate() {
   const t = importState.type;
+  if (t === 'hyoshii') { hyDownloadTemplate(); return; }
   let csv = '', filename = '';
   if (t === 'panen') {
     csv = 'tgl,p_hatsu,p_gradea,p_gradeb,rk_crack,rk_poli,rk_hpt,rp_crack,rp_poli,rp_hpt,rp_bruise,rp_overripe,rp_kuning,rp_frozen,rp_albino,k_hatsu,k_a11,k_a15,k_frozen,m_hatsu,m_a11,m_a15,t_curah,t_hatsu,t_a11,t_a15,t_ket,gh\n';
@@ -804,38 +810,56 @@ function downloadTemplate() {
   showToast('📄 Template didownload');
 }
 
-function previewImport() {
+function xlsxSheetToObjects(ws) {
+  const grid = xlsxToGrid(ws);
+  const headers = (grid[0] || []).map(h => String(h).trim());
+  return grid.slice(1).filter(r => r.some(c => c !== '')).map(r => {
+    const o = {}; headers.forEach((h, i) => { if (h) o[h] = String(r[i] ?? '').trim(); }); return o;
+  });
+}
+
+async function previewImport() {
   const file = document.getElementById('import-file').files[0];
+  const prev = document.getElementById('import-preview');
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const text = String(ev.target.result).replace(/^\ufeff/, '');
-    const rows = parseCSV(text);
-    if (rows.length < 2) {
-      document.getElementById('import-preview').innerHTML = '<div class="warn-box">File kosong.</div>';
-      importState.rows = [];
-      return;
+  let headers = [];
+  try {
+    if (/\.xlsx$/i.test(file.name)) {
+      prev.innerHTML = '<div class="info-box">⏳ Membaca file Excel...</div>';
+      await loadExcelJS();
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.load(await file.arrayBuffer());
+      const ws = wb.worksheets[0];
+      if (!ws) throw new Error('Sheet tidak ditemukan.');
+      importState.rows = importState.type === 'hyoshii' ? hyParseSheet(ws) : xlsxSheetToObjects(ws);
+      headers = importState.rows.length ? Object.keys(importState.rows[0]) : [];
+    } else {
+      const text = String(await file.text()).replace(/^\ufeff/, '');
+      const rows = parseCSV(text);
+      if (rows.length < 2) { prev.innerHTML = '<div class="warn-box">File kosong.</div>'; importState.rows = []; return; }
+      headers = rows[0].map(h => h.trim());
+      importState.rows = rows.slice(1).filter(r => r.some(c => String(c).trim() !== '')).map(r => {
+        const o = {}; headers.forEach((h, i) => o[h] = String(r[i] ?? '').trim()); return o;
+      });
     }
-    const headers = rows[0].map(h => h.trim());
-    const dataRows = rows.slice(1).filter(r => r.some(c => String(c).trim() !== ''));
-    importState.rows = dataRows.map(r => {
-      const o = {};
-      headers.forEach((h, i) => o[h] = String(r[i] ?? '').trim());
-      return o;
-    });
-    let html = `<div class="info-box"><b>${importState.rows.length} baris</b> siap di-import. Preview 5 baris pertama:</div>`;
-    html += '<div style="overflow-x:auto;font-size:0.75rem;"><table style="width:100%;"><thead><tr>';
-    headers.forEach(h => html += `<th style="padding:4px;font-size:0.7rem;background:#2d5016;">${h}</th>`);
-    html += '</tr></thead><tbody>';
-    importState.rows.slice(0, 5).forEach(r => {
-      html += '<tr>';
-      headers.forEach(h => html += `<td style="padding:4px;font-size:0.7rem;white-space:nowrap;">${r[h] || ''}</td>`);
-      html += '</tr>';
-    });
-    html += '</tbody></table></div>';
-    document.getElementById('import-preview').innerHTML = html;
-  };
-  reader.readAsText(file);
+  } catch (err) {
+    importState.rows = [];
+    prev.innerHTML = '<div class="warn-box">' + String(err.message || err) + '</div>';
+    return;
+  }
+  if (!importState.rows.length) { prev.innerHTML = '<div class="warn-box">Tidak ada baris data yang terbaca.</div>'; return; }
+  let html = importState.type === 'hyoshii' ? hyPreviewInfo() : '';
+  html += `<div class="info-box"><b>${importState.rows.length} baris</b> terbaca. Preview 5 baris pertama:</div>`;
+  html += '<div style="overflow-x:auto;font-size:0.75rem;"><table style="width:100%;"><thead><tr>';
+  headers.forEach(h => html += `<th style="padding:4px;font-size:0.7rem;background:#2d5016;">${h}</th>`);
+  html += '</tr></thead><tbody>';
+  importState.rows.slice(0, 5).forEach(r => {
+    html += '<tr>';
+    headers.forEach(h => html += `<td style="padding:4px;font-size:0.7rem;white-space:nowrap;">${r[h] ?? ''}</td>`);
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  prev.innerHTML = html;
 }
 
 function buildPanenRecord(r) {
@@ -890,8 +914,9 @@ function emptyKemasanItem(name, std) {
 }
 
 function executeImport() {
-  if (!importState.rows.length) { showToast('Pilih file CSV dulu!', 'error'); return; }
+  if (!importState.rows.length) { showToast('Pilih file dulu!', 'error'); return; }
   const type = importState.type;
+  if (type === 'hyoshii') { hyExecuteImport(); return; }
   const key = type === 'lks' ? LKS_STORAGE_KEY : type === 'panen' ? PANEN_STORAGE_KEY : KEMASAN_STORAGE_KEY;
   const shouldClear = document.getElementById('import-clear').checked;
   let db = readArrayRaw(nativeStorage.getItem(key));

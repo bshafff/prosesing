@@ -1380,7 +1380,13 @@ const DR_GROUPS = [
   { id: 'kirim',   label: '📦 Kirim (Berat)',    cls: 'th-kirim', argb: 'FF2563EB' },
   { id: 'pack',    label: '🧰 Pack (Pcs)',       cls: 'th-mika',  argb: 'FF9333EA' },
   { id: 'rejkirim',label: '❄️ Reject Dikirim (Global)', cls: 'th-aks', argb: 'FF0D9488' },
-  { id: 'tamu',    label: '👥 Tamu (Global)',    cls: 'th-gdg',   argb: 'FF475569' }
+  { id: 'tamu',    label: '👥 Tamu (Global)',    cls: 'th-gdg',   argb: 'FF475569' },
+  { id: 'hykg',    label: '🏭 Terima Hyoshii (Berat)',        cls: 'th-hy',    argb: 'FF4F46E5' },
+  { id: 'hysel',   label: '⚖️ Selisih Berat (Terima − Kirim)', cls: 'th-hysel', argb: 'FFE11D48' },
+  { id: 'hypk',    label: '🏭 Terima Hyoshii (Pack)',         cls: 'th-hy',    argb: 'FF4F46E5' },
+  { id: 'hysp',    label: '⚖️ Selisih Pack (Terima − Kirim)', cls: 'th-hysel', argb: 'FFE11D48' },
+  { id: 'hyrej',   label: '🚫 Reject Hyoshii (Pack)',         cls: 'th-hyrej', argb: 'FFB45309' },
+  { id: 'hyfz',    label: '❄️ Frozen Hyoshii (Global)',       cls: 'th-aks',   argb: 'FF0D9488' }
 ];
 
 const DR_COLS = [
@@ -1418,10 +1424,39 @@ const DR_COLS = [
   { id: 't_hatsu',     grp: 'tamu',   label: 'Hatsu (Pcs)', t: 'int' },
   { id: 't_a11',       grp: 'tamu',   label: 'A11 (Pcs)',   t: 'int' },
   { id: 't_a15',       grp: 'tamu',   label: 'A15 (Pcs)',   t: 'int' },
-  { id: 't_ket',       grp: 'tamu',   label: 'Keterangan',  t: 'txt' }
+  { id: 't_ket',       grp: 'tamu',   label: 'Keterangan',  t: 'txt' },
+
+  { id: 'hk_hatsu',    grp: 'hykg',   label: 'Hatsuhana',   t: 'kg' },
+  { id: 'hk_a11',      grp: 'hykg',   label: 'Grade A',     t: 'kg' },
+  { id: 'hk_a15',      grp: 'hykg',   label: 'Grade B',     t: 'kg' },
+  { id: 'hk_total',    grp: 'hykg',   label: 'Total Terima', t: 'kg', bold: true },
+
+  { id: 'sel_hatsu',   grp: 'hysel',  label: 'Hatsuhana',   t: 'kg', signed: true },
+  { id: 'sel_a11',     grp: 'hysel',  label: 'Grade A',     t: 'kg', signed: true },
+  { id: 'sel_a15',     grp: 'hysel',  label: 'Grade B',     t: 'kg', signed: true },
+  { id: 'sel_total',   grp: 'hysel',  label: 'Total Selisih', t: 'kg', signed: true, bold: true },
+
+  { id: 'hp_hatsu',    grp: 'hypk',   label: 'Hatsuhana',   t: 'int' },
+  { id: 'hp_a11',      grp: 'hypk',   label: 'Grade A',     t: 'int' },
+  { id: 'hp_a15',      grp: 'hypk',   label: 'Grade B',     t: 'int' },
+  { id: 'hp_total',    grp: 'hypk',   label: 'Total Pack Terima', t: 'int', bold: true },
+
+  { id: 'sp_hatsu',    grp: 'hysp',   label: 'Hatsuhana',   t: 'int', signed: true },
+  { id: 'sp_a11',      grp: 'hysp',   label: 'Grade A',     t: 'int', signed: true },
+  { id: 'sp_a15',      grp: 'hysp',   label: 'Grade B',     t: 'int', signed: true },
+  { id: 'sp_total',    grp: 'hysp',   label: 'Total Selisih Pack', t: 'int', signed: true, bold: true },
+
+  { id: 'hr_sampel',   grp: 'hyrej',  label: 'Sampel',      t: 'int' },
+  { id: 'hr_qc',       grp: 'hyrej',  label: 'Tidak Lolos QC', t: 'int' },
+  { id: 'hr_lain',     grp: 'hyrej',  label: 'Lainnya',     t: 'int' },
+  { id: 'hr_total',    grp: 'hyrej',  label: 'Total Reject Pack', t: 'int', bold: true },
+  { id: 'h_ket',       grp: 'hyrej',  label: 'Keterangan Hyoshii', t: 'txt' },
+
+  { id: 'hk_frozen',   grp: 'hyfz',   label: 'Frozen Diterima (kg)', t: 'kg' },
+  { id: 'sel_frozen',  grp: 'hyfz',   label: 'Selisih Frozen (kg)',  t: 'kg', signed: true }
 ];
 
-const DR_GLOBAL_GROUPS = ['rejkirim', 'tamu'];
+const DR_GLOBAL_GROUPS = ['rejkirim', 'tamu', 'hyfz'];
 const DR_PREF_KEY = 'awb_dash_rekap_pref_v1';
 const DR_DEFAULT_COLS = ['panen_total', 'crack', 'poli', 'hpt', 'bruise', 'overripe', 'kuning', 'frozen', 'albino', 'rej_total', 'rate'];
 
@@ -1498,6 +1533,7 @@ function setDetailColsPreset(mode) {
   else if (mode === 'kosong') drSelected = new Set();
   else if (mode === 'ringkas') drSelected = new Set(['panen_total', 'rej_total', 'rate', 'kirim_total', 'm_total']);
   else if (mode === 'reject') drSelected = new Set(DR_DEFAULT_COLS);
+  else if (mode === 'hyoshii') drSelected = new Set(['kirim_total', 'hk_total', 'sel_total', 'm_total', 'hp_total', 'sp_total', 'hr_sampel', 'hr_qc', 'hr_lain', 'hr_total', 'hk_frozen', 'sel_frozen']);
   buildDetailColsPanel();
   drSavePref();
   renderDetailReject();
@@ -1541,10 +1577,11 @@ function setDetailRejectPreset(mode) {
 const DR_RAW = ['p_hatsu', 'p_gradea', 'p_gradeb', 'rk_crack', 'rk_poli', 'rk_hpt',
   'rp_crack', 'rp_poli', 'rp_hpt', 'rp_bruise', 'rp_overripe', 'rp_kuning', 'rp_frozen', 'rp_albino',
   'k_hatsu', 'k_a11', 'k_a15', 'k_frozen', 'k_rfresh', 'm_hatsu', 'm_a11', 'm_a15',
-  't_curah', 't_hatsu', 't_a11', 't_a15'];
+  't_curah', 't_hatsu', 't_a11', 't_a15',
+  'hk_hatsu', 'hk_a11', 'hk_a15', 'hk_frozen', 'hp_hatsu', 'hp_a11', 'hp_a15', 'hr_sampel', 'hr_qc', 'hr_lain'];
 
 function drNewRow(tgl, gh) {
-  const r = { tgl, gh, t_ket: '' };
+  const r = { tgl, gh, t_ket: '', h_ket: '', _hy: false, _selOk: true };
   DR_RAW.forEach(k => r[k] = 0);
   return r;
 }
@@ -1564,6 +1601,20 @@ function drDerive(r) {
   r.rate = r.panen_total > 0 ? (r.rej_total / r.panen_total * 100) : null;
   r.kirim_total = r.k_hatsu + r.k_a11 + r.k_a15;
   r.m_total = r.m_hatsu + r.m_a11 + r.m_a15;
+  // Hyoshii: total + selisih (terima - kirim); selisih hanya dihitung kalau ada data Hyoshii di baris itu
+  r.hk_total = r.hk_hatsu + r.hk_a11 + r.hk_a15;
+  r.hp_total = r.hp_hatsu + r.hp_a11 + r.hp_a15;
+  r.hr_total = r.hr_sampel + r.hr_qc + r.hr_lain;
+  const ok = r._hy && r._selOk;
+  r.sel_hatsu = ok ? r.hk_hatsu - r.k_hatsu : 0;
+  r.sel_a11 = ok ? r.hk_a11 - r.k_a11 : 0;
+  r.sel_a15 = ok ? r.hk_a15 - r.k_a15 : 0;
+  r.sel_total = ok ? r.hk_total - r.kirim_total : 0;
+  r.sp_hatsu = ok ? r.hp_hatsu - r.m_hatsu : 0;
+  r.sp_a11 = ok ? r.hp_a11 - r.m_a11 : 0;
+  r.sp_a15 = ok ? r.hp_a15 - r.m_a15 : 0;
+  r.sp_total = ok ? r.hp_total - r.m_total : 0;
+  r.sel_frozen = ok && r.hk_frozen ? r.hk_frozen - (r.k_frozen + r.k_rfresh) : 0;
   return r;
 }
 
@@ -1571,13 +1622,41 @@ function drFmt(col, v) {
   if (col.t === 'txt') return drEsc(v || '');
   if (col.t === 'pct') return v === null || v === undefined ? '-' : v.toFixed(2) + '%';
   if (!v) return '-';
-  return col.t === 'int' ? String(Math.round(v)) : v.toFixed(2);
+  const txt = col.t === 'int' ? String(Math.round(v)) : v.toFixed(2);
+  if (col.signed) {
+    const color = v < 0 ? '#dc2626' : '#16a34a';
+    return `<span style="color:${color};">${v > 0 ? '+' : ''}${txt}</span>`;
+  }
+  return txt;
 }
 
 function drBuildRows(dari, sampai, ghMode, cols) {
   const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
   const needGlobal = cols.some(c => DR_GLOBAL_GROUPS.includes(c.grp));
   const map = new Map();
+  const needHy = cols.some(c => c.grp.startsWith('hy'));
+
+  const hyRows = needHy ? readArrayRaw(nativeStorage.getItem(HYOSHII_STORAGE_KEY)) : [];
+  hyRows.forEach(item => {
+    if (!item.tgl || item.tgl < dari || item.tgl > sampai) return;
+    const isGlobal = item.gh === 'GLOBAL';
+    const isCombined = item.gh === 'GH 1+2';
+    if (isGlobal && !needGlobal) return;
+    if (!isGlobal) {
+      if (ghMode === 'gh1' && item.gh !== 'GH 1') return;
+      if (ghMode === 'gh2' && item.gh !== 'GH 2') return;
+    }
+    let ghLabel = isGlobal ? 'GLOBAL' : (item.gh || 'GH 1');
+    if (ghMode === 'gabung') ghLabel = 'GH 1+2';
+    const key = item.tgl + '|' + ghLabel;
+    if (!map.has(key)) map.set(key, drNewRow(item.tgl, ghLabel));
+    const r = map.get(key);
+    ['hk_hatsu', 'hk_a11', 'hk_a15', 'hk_frozen', 'hp_hatsu', 'hp_a11', 'hp_a15', 'hr_sampel', 'hr_qc', 'hr_lain'].forEach(k => { r[k] += Number(item[k]) || 0; });
+    if (item.h_ket) r.h_ket = r.h_ket ? (r.h_ket + '; ' + item.h_ket) : String(item.h_ket);
+    r._hy = true;
+    // data gabungan GH 1+2 tidak bisa dibandingkan dengan kirim per GH
+    if (isCombined && ghMode !== 'gabung') r._selOk = false;
+  });
 
   db.forEach(item => {
     if (!item.tgl || item.tgl < dari || item.tgl > sampai) return;
@@ -1598,7 +1677,7 @@ function drBuildRows(dari, sampai, ghMode, cols) {
 
   const numCols = cols.filter(c => c.t !== 'pct');
   return [...map.values()].map(drDerive)
-    .filter(r => numCols.some(c => c.t === 'txt' ? !!r[c.id] : (r[c.id] || 0) > 0))
+    .filter(r => numCols.some(c => c.t === 'txt' ? !!r[c.id] : Math.abs(r[c.id] || 0) > 0))
     .sort((a, b) => b.tgl.localeCompare(a.tgl) || String(a.gh).localeCompare(String(b.gh)));
 }
 
@@ -1749,7 +1828,7 @@ async function exportDetailRejectExcel() {
   const putVal = (c, ci, cell, v) => {
     if (c.t === 'txt') { cell.value = v || ''; cell.alignment = { horizontal: 'left', wrapText: true }; }
     else if (c.t === 'pct') { cell.value = v === null || v === undefined ? null : v / 100; cell.numFmt = '0.00%'; cell.alignment = { horizontal: 'right' }; }
-    else { cell.value = rd(v || 0); cell.numFmt = c.t === 'int' ? '#,##0;;-' : '0.00;;-'; cell.alignment = { horizontal: 'right' }; }
+    else { cell.value = rd(v || 0); cell.numFmt = c.signed ? (c.t === 'int' ? '+#,##0;-#,##0;-' : '+0.00;-0.00;-') : (c.t === 'int' ? '#,##0;;-' : '0.00;;-'); cell.alignment = { horizontal: 'right' }; }
   };
 
   let r = 6;

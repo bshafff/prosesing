@@ -1,0 +1,86 @@
+<div id="hyoshii" class="view">
+  <div class="view-toolbar">
+    <button class="btn btn-sm btn-home" onclick="goHome()">← Menu</button>
+    <span class="view-title">🏭 Diterima Hyoshii</span>
+    <button class="btn btn-sm" onclick="openImportModal('hyoshii')" style="margin-left:auto;flex:none;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;">📥 Import</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📅 Input Data Diterima Hyoshii <span id="hy-status" class="pn-status empty"></span></div>
+    <div class="row-2">
+      <div class="input-group">
+        <label>Tanggal Kirim</label>
+        <input type="date" id="hy-tgl" onchange="hyOnKeyChange()">
+      </div>
+      <div class="input-group">
+        <label>Greenhouse</label>
+        <select id="hy-gh" onchange="hyOnKeyChange()">
+          <option value="GH 1">GH 1</option>
+          <option value="GH 2">GH 2</option>
+          <option value="GH 1+2">GH 1+2 (gabungan)</option>
+          <option value="GLOBAL">🌐 Frozen (Global)</option>
+        </select>
+      </div>
+    </div>
+    <small style="color:#666;display:block;margin-bottom:0.75rem;">Kolom “Kita Kirim” di bawah otomatis diambil dari Rekap Panen tanggal &amp; GH yang sama.</small>
+
+    <div id="hy-fresh-wrap">
+      <div class="sub-title">Bobot Diterima Hyoshii (kg)</div>
+      <div class="row-3">
+        <div class="input-group"><label>Hatsuhana</label><input type="number" step="0.01" inputmode="decimal" id="hy-hk-hatsu" oninput="hyUpdateCompare()"></div>
+        <div class="input-group"><label>Grade A</label><input type="number" step="0.01" inputmode="decimal" id="hy-hk-a11" oninput="hyUpdateCompare()"></div>
+        <div class="input-group"><label>Grade B</label><input type="number" step="0.01" inputmode="decimal" id="hy-hk-a15" oninput="hyUpdateCompare()"></div>
+      </div>
+      <div class="sub-title">Pack Diterima Hyoshii</div>
+      <div class="row-3">
+        <div class="input-group"><label>Hatsuhana</label><input type="number" step="1" inputmode="numeric" id="hy-hp-hatsu" oninput="hyUpdateCompare()"></div>
+        <div class="input-group"><label>Grade A</label><input type="number" step="1" inputmode="numeric" id="hy-hp-a11" oninput="hyUpdateCompare()"></div>
+        <div class="input-group"><label>Grade B</label><input type="number" step="1" inputmode="numeric" id="hy-hp-a15" oninput="hyUpdateCompare()"></div>
+      </div>
+      <div class="sub-title">Pack Reject oleh Hyoshii (alasan)</div>
+      <div class="row-3">
+        <div class="input-group"><label>Sampel</label><input type="number" step="1" inputmode="numeric" id="hy-hr-sampel" oninput="hyUpdateCompare()"></div>
+        <div class="input-group"><label>Tidak Lolos QC</label><input type="number" step="1" inputmode="numeric" id="hy-hr-qc" oninput="hyUpdateCompare()"></div>
+        <div class="input-group"><label>Lainnya</label><input type="number" step="1" inputmode="numeric" id="hy-hr-lain" oninput="hyUpdateCompare()"></div>
+      </div>
+    </div>
+
+    <div id="hy-frozen-wrap" style="display:none;">
+      <div class="sub-title">Frozen Diterima Hyoshii (kg)</div>
+      <div class="input-group"><label>Frozen (kg)</label><input type="number" step="0.01" inputmode="decimal" id="hy-hk-frozen" oninput="hyUpdateCompare()"></div>
+    </div>
+
+    <div class="input-group">
+      <label>Keterangan</label>
+      <input type="text" id="hy-ket" placeholder="mis. 2 pack dipakai sampel Hyoshii">
+    </div>
+
+    <div id="hy-compare" style="margin-bottom:0.75rem;"></div>
+
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="hySimpan()">💾 Simpan</button>
+      <button class="btn btn-danger" id="hy-btn-del" style="display:none;" onclick="hyHapusForm()">🗑️ Hapus</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1rem;">
+    <div class="card-title">📜 History Diterima Hyoshii</div>
+    <div class="input-group" style="max-width:220px;">
+      <label>Bulan</label>
+      <input type="month" id="hy-hist-bulan" onchange="renderHyoshii()">
+    </div>
+    <small style="color:#666;display:block;margin-bottom:0.5rem;">Selisih = diterima − kita kirim. Merah = Hyoshii menerima lebih sedikit.</small>
+    <div class="recap-wrap">
+      <table class="recap-table" style="min-width:760px;">
+        <thead><tr>
+          <th class="th-base">Aksi</th><th class="th-base">Tanggal</th><th class="th-base">GH</th>
+          <th class="th-hy">Terima (kg)</th><th class="th-hysel">Selisih (kg)</th>
+          <th class="th-hy">Terima (pack)</th><th class="th-hysel">Selisih (pack)</th>
+          <th class="th-hyrej">Reject Pack</th><th class="th-aks">Frozen (kg)</th>
+        </tr></thead>
+        <tbody id="hy-hist-body"><tr><td colspan="9" style="text-align:center;color:#999;">Belum ada data</td></tr></tbody>
+        <tfoot id="hy-hist-foot"></tfoot>
+      </table>
+    </div>
+  </div>
+</div>

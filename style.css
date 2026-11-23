@@ -282,6 +282,9 @@ tr:hover { background: #f9fafb; }
 .recap-table thead th.th-base { background: #2d5016; }
 .recap-table thead th.th-stok { background: #2563eb; }
 .recap-table thead th.th-aks { background: #0d9488; }
+.recap-table thead th.th-hy { background: #4f46e5; }
+.recap-table thead th.th-hysel { background: #e11d48; }
+.recap-table thead th.th-hyrej { background: #b45309; }
 .recap-table thead th.th-gdg { background: #475569; }
 .recap-table thead th.th-mut { background: #ea580c; }
 .recap-table td.row-awal { background: #f1f5f9; font-style: italic; color: #475569; }
