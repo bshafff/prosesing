@@ -1379,14 +1379,12 @@ const DR_GROUPS = [
   { id: 'reject',  label: '🗑️ Reject',           cls: 'th-reject', argb: 'FFEA580C' },
   { id: 'kirim',   label: '📦 Kirim (Berat)',    cls: 'th-kirim', argb: 'FF2563EB' },
   { id: 'pack',    label: '🧰 Pack (Pcs)',       cls: 'th-mika',  argb: 'FF9333EA' },
-  { id: 'rejkirim',label: '❄️ Reject Dikirim (Global)', cls: 'th-aks', argb: 'FF0D9488' },
   { id: 'tamu',    label: '👥 Tamu (Global)',    cls: 'th-gdg',   argb: 'FF475569' },
   { id: 'hykg',    label: '🏭 Terima Hyoshii (Berat)',        cls: 'th-hy',    argb: 'FF4F46E5' },
   { id: 'hysel',   label: '⚖️ Selisih Berat (Terima − Kirim)', cls: 'th-hysel', argb: 'FFE11D48' },
   { id: 'hypk',    label: '🏭 Terima Hyoshii (Pack)',         cls: 'th-hy',    argb: 'FF4F46E5' },
   { id: 'hysp',    label: '⚖️ Selisih Pack (Terima − Kirim)', cls: 'th-hysel', argb: 'FFE11D48' },
-  { id: 'hyrej',   label: '🚫 Reject Hyoshii (Pack)',         cls: 'th-hyrej', argb: 'FFB45309' },
-  { id: 'hyfz',    label: '❄️ Frozen Hyoshii (Global)',       cls: 'th-aks',   argb: 'FF0D9488' }
+  { id: 'hyrej',   label: '🚫 Reject Hyoshii (Pack)',         cls: 'th-hyrej', argb: 'FFB45309' }
 ];
 
 const DR_COLS = [
@@ -1410,15 +1408,14 @@ const DR_COLS = [
   { id: 'k_hatsu',     grp: 'kirim',  label: 'Hatsuhana',   t: 'kg' },
   { id: 'k_a11',       grp: 'kirim',  label: 'Grade A',     t: 'kg' },
   { id: 'k_a15',       grp: 'kirim',  label: 'Grade B',     t: 'kg' },
-  { id: 'kirim_total', grp: 'kirim',  label: 'Total Kirim', t: 'kg', bold: true },
+  { id: 'k_rfresh',    grp: 'kirim',  label: 'Reject Fresh', t: 'kg', global: true },
+  { id: 'k_frozen',    grp: 'kirim',  label: 'Reject Frozen', t: 'kg', global: true },
+  { id: 'kirim_total', grp: 'kirim',  label: 'Total Kirim', t: 'kg', bold: true, global: true },
 
   { id: 'm_hatsu',     grp: 'pack',   label: 'Hatsuhana',   t: 'int' },
   { id: 'm_a11',       grp: 'pack',   label: 'Grade A',     t: 'int' },
   { id: 'm_a15',       grp: 'pack',   label: 'Grade B',     t: 'int' },
   { id: 'm_total',     grp: 'pack',   label: 'Total Pack',  t: 'int', bold: true },
-
-  { id: 'k_frozen',    grp: 'rejkirim', label: 'Frozen Dikirim', t: 'kg' },
-  { id: 'k_rfresh',    grp: 'rejkirim', label: 'Fresh Dikirim',  t: 'kg' },
 
   { id: 't_curah',     grp: 'tamu',   label: 'Curah (Kg)',  t: 'kg' },
   { id: 't_hatsu',     grp: 'tamu',   label: 'Hatsu (Pcs)', t: 'int' },
@@ -1426,37 +1423,38 @@ const DR_COLS = [
   { id: 't_a15',       grp: 'tamu',   label: 'A15 (Pcs)',   t: 'int' },
   { id: 't_ket',       grp: 'tamu',   label: 'Keterangan',  t: 'txt' },
 
-  { id: 'hk_hatsu',    grp: 'hykg',   label: 'Hatsuhana',   t: 'kg' },
-  { id: 'hk_a11',      grp: 'hykg',   label: 'Grade A',     t: 'kg' },
-  { id: 'hk_a15',      grp: 'hykg',   label: 'Grade B',     t: 'kg' },
-  { id: 'hk_total',    grp: 'hykg',   label: 'Total Terima', t: 'kg', bold: true },
+  { id: 'hk_hatsu', grp: 'hykg', label: 'Hatsuhana', t: 'kg' },
+  { id: 'hk_a11', grp: 'hykg', label: 'Grade A', t: 'kg' },
+  { id: 'hk_a15', grp: 'hykg', label: 'Grade B', t: 'kg' },
+  { id: 'hk_rfresh', grp: 'hykg', label: 'Reject Fresh', t: 'kg' },
+  { id: 'hk_frozen', grp: 'hykg', label: 'Reject Frozen', t: 'kg' },
+  { id: 'hk_total', grp: 'hykg', label: 'Total Terima', t: 'kg', bold: true },
 
-  { id: 'sel_hatsu',   grp: 'hysel',  label: 'Hatsuhana',   t: 'kg', signed: true },
-  { id: 'sel_a11',     grp: 'hysel',  label: 'Grade A',     t: 'kg', signed: true },
-  { id: 'sel_a15',     grp: 'hysel',  label: 'Grade B',     t: 'kg', signed: true },
-  { id: 'sel_total',   grp: 'hysel',  label: 'Total Selisih', t: 'kg', signed: true, bold: true },
+  { id: 'sel_hatsu', grp: 'hysel', label: 'Hatsuhana', t: 'kg', signed: true },
+  { id: 'sel_a11', grp: 'hysel', label: 'Grade A', t: 'kg', signed: true },
+  { id: 'sel_a15', grp: 'hysel', label: 'Grade B', t: 'kg', signed: true },
+  { id: 'sel_rfresh', grp: 'hysel', label: 'Reject Fresh', t: 'kg', signed: true },
+  { id: 'sel_frozen', grp: 'hysel', label: 'Reject Frozen', t: 'kg', signed: true },
+  { id: 'sel_total', grp: 'hysel', label: 'Total Selisih', t: 'kg', signed: true, bold: true },
 
-  { id: 'hp_hatsu',    grp: 'hypk',   label: 'Hatsuhana',   t: 'int' },
-  { id: 'hp_a11',      grp: 'hypk',   label: 'Grade A',     t: 'int' },
-  { id: 'hp_a15',      grp: 'hypk',   label: 'Grade B',     t: 'int' },
-  { id: 'hp_total',    grp: 'hypk',   label: 'Total Pack Terima', t: 'int', bold: true },
+  { id: 'hp_hatsu', grp: 'hypk', label: 'Hatsuhana', t: 'int' },
+  { id: 'hp_a11', grp: 'hypk', label: 'Grade A', t: 'int' },
+  { id: 'hp_a15', grp: 'hypk', label: 'Grade B', t: 'int' },
+  { id: 'hp_total', grp: 'hypk', label: 'Total Pack Terima', t: 'int', bold: true },
 
-  { id: 'sp_hatsu',    grp: 'hysp',   label: 'Hatsuhana',   t: 'int', signed: true },
-  { id: 'sp_a11',      grp: 'hysp',   label: 'Grade A',     t: 'int', signed: true },
-  { id: 'sp_a15',      grp: 'hysp',   label: 'Grade B',     t: 'int', signed: true },
-  { id: 'sp_total',    grp: 'hysp',   label: 'Total Selisih Pack', t: 'int', signed: true, bold: true },
+  { id: 'sp_hatsu', grp: 'hysp', label: 'Hatsuhana', t: 'int', signed: true },
+  { id: 'sp_a11', grp: 'hysp', label: 'Grade A', t: 'int', signed: true },
+  { id: 'sp_a15', grp: 'hysp', label: 'Grade B', t: 'int', signed: true },
+  { id: 'sp_total', grp: 'hysp', label: 'Total Selisih Pack', t: 'int', signed: true, bold: true },
 
-  { id: 'hr_sampel',   grp: 'hyrej',  label: 'Sampel',      t: 'int' },
-  { id: 'hr_qc',       grp: 'hyrej',  label: 'Tidak Lolos QC', t: 'int' },
-  { id: 'hr_lain',     grp: 'hyrej',  label: 'Lainnya',     t: 'int' },
-  { id: 'hr_total',    grp: 'hyrej',  label: 'Total Reject Pack', t: 'int', bold: true },
-  { id: 'h_ket',       grp: 'hyrej',  label: 'Keterangan Hyoshii', t: 'txt' },
-
-  { id: 'hk_frozen',   grp: 'hyfz',   label: 'Frozen Diterima (kg)', t: 'kg' },
-  { id: 'sel_frozen',  grp: 'hyfz',   label: 'Selisih Frozen (kg)',  t: 'kg', signed: true }
+  { id: 'hr_sampel', grp: 'hyrej', label: 'Sampel', t: 'int' },
+  { id: 'hr_qc', grp: 'hyrej', label: 'Tidak Lolos QC', t: 'int' },
+  { id: 'hr_lain', grp: 'hyrej', label: 'Lainnya', t: 'int' },
+  { id: 'hr_total', grp: 'hyrej', label: 'Total Reject Pack', t: 'int', bold: true },
+  { id: 'h_ket', grp: 'hyrej', label: 'Keterangan Hyoshii', t: 'txt' }
 ];
 
-const DR_GLOBAL_GROUPS = ['rejkirim', 'tamu', 'hyfz'];
+const DR_GLOBAL_GROUPS = ['tamu'];
 const DR_PREF_KEY = 'awb_dash_rekap_pref_v1';
 const DR_DEFAULT_COLS = ['panen_total', 'crack', 'poli', 'hpt', 'bruise', 'overripe', 'kuning', 'frozen', 'albino', 'rej_total', 'rate'];
 
@@ -1533,7 +1531,7 @@ function setDetailColsPreset(mode) {
   else if (mode === 'kosong') drSelected = new Set();
   else if (mode === 'ringkas') drSelected = new Set(['panen_total', 'rej_total', 'rate', 'kirim_total', 'm_total']);
   else if (mode === 'reject') drSelected = new Set(DR_DEFAULT_COLS);
-  else if (mode === 'hyoshii') drSelected = new Set(['kirim_total', 'hk_total', 'sel_total', 'm_total', 'hp_total', 'sp_total', 'hr_sampel', 'hr_qc', 'hr_lain', 'hr_total', 'hk_frozen', 'sel_frozen']);
+  else if (mode === 'hyoshii') drSelected = new Set(['kirim_total', 'hk_total', 'sel_total', 'm_total', 'hp_total', 'sp_total', 'hr_sampel', 'hr_qc', 'hr_lain', 'hr_total']);
   buildDetailColsPanel();
   drSavePref();
   renderDetailReject();
@@ -1578,10 +1576,10 @@ const DR_RAW = ['p_hatsu', 'p_gradea', 'p_gradeb', 'rk_crack', 'rk_poli', 'rk_hp
   'rp_crack', 'rp_poli', 'rp_hpt', 'rp_bruise', 'rp_overripe', 'rp_kuning', 'rp_frozen', 'rp_albino',
   'k_hatsu', 'k_a11', 'k_a15', 'k_frozen', 'k_rfresh', 'm_hatsu', 'm_a11', 'm_a15',
   't_curah', 't_hatsu', 't_a11', 't_a15',
-  'hk_hatsu', 'hk_a11', 'hk_a15', 'hk_frozen', 'hp_hatsu', 'hp_a11', 'hp_a15', 'hr_sampel', 'hr_qc', 'hr_lain'];
+  'hk_hatsu', 'hk_a11', 'hk_a15', 'hk_rfresh', 'hk_frozen', 'hp_hatsu', 'hp_a11', 'hp_a15', 'hr_sampel', 'hr_qc', 'hr_lain'];
 
 function drNewRow(tgl, gh) {
-  const r = { tgl, gh, t_ket: '', h_ket: '', _hy: false, _selOk: true };
+  const r = { tgl, gh, t_ket: '', h_ket: '', _hy: false, ds: null };
   DR_RAW.forEach(k => r[k] = 0);
   return r;
 }
@@ -1599,22 +1597,20 @@ function drDerive(r) {
   r.albino = r.rp_albino;
   r.rej_total = r.crack + r.poli + r.hpt + r.bruise + r.overripe + r.kuning + r.frozen + r.albino;
   r.rate = r.panen_total > 0 ? (r.rej_total / r.panen_total * 100) : null;
-  r.kirim_total = r.k_hatsu + r.k_a11 + r.k_a15;
+  r.kirim_total = r.k_hatsu + r.k_a11 + r.k_a15 + r.k_rfresh + r.k_frozen;
   r.m_total = r.m_hatsu + r.m_a11 + r.m_a15;
-  // Hyoshii: total + selisih (terima - kirim); selisih hanya dihitung kalau ada data Hyoshii di baris itu
-  r.hk_total = r.hk_hatsu + r.hk_a11 + r.hk_a15;
+  // Hyoshii: satu kesatuan per tanggal; selisih = diterima - TOTAL kirim hari itu (semua GH + reject)
+  r.hk_total = r.hk_hatsu + r.hk_a11 + r.hk_a15 + r.hk_rfresh + r.hk_frozen;
   r.hp_total = r.hp_hatsu + r.hp_a11 + r.hp_a15;
   r.hr_total = r.hr_sampel + r.hr_qc + r.hr_lain;
-  const ok = r._hy && r._selOk;
-  r.sel_hatsu = ok ? r.hk_hatsu - r.k_hatsu : 0;
-  r.sel_a11 = ok ? r.hk_a11 - r.k_a11 : 0;
-  r.sel_a15 = ok ? r.hk_a15 - r.k_a15 : 0;
-  r.sel_total = ok ? r.hk_total - r.kirim_total : 0;
-  r.sp_hatsu = ok ? r.hp_hatsu - r.m_hatsu : 0;
-  r.sp_a11 = ok ? r.hp_a11 - r.m_a11 : 0;
-  r.sp_a15 = ok ? r.hp_a15 - r.m_a15 : 0;
-  r.sp_total = ok ? r.hp_total - r.m_total : 0;
-  r.sel_frozen = ok && r.hk_frozen ? r.hk_frozen - (r.k_frozen + r.k_rfresh) : 0;
+  const d = r._hy ? r.ds : null;
+  const z = k => (d ? r['hk_' + k] - d['k_' + k] : 0);
+  r.sel_hatsu = z('hatsu'); r.sel_a11 = z('a11'); r.sel_a15 = z('a15'); r.sel_rfresh = z('rfresh'); r.sel_frozen = z('frozen');
+  r.sel_total = d ? r.hk_total - (d.k_hatsu + d.k_a11 + d.k_a15 + d.k_rfresh + d.k_frozen) : 0;
+  r.sp_hatsu = d ? r.hp_hatsu - d.m_hatsu : 0;
+  r.sp_a11 = d ? r.hp_a11 - d.m_a11 : 0;
+  r.sp_a15 = d ? r.hp_a15 - d.m_a15 : 0;
+  r.sp_total = d ? r.hp_total - (d.m_hatsu + d.m_a11 + d.m_a15) : 0;
   return r;
 }
 
@@ -1632,31 +1628,29 @@ function drFmt(col, v) {
 
 function drBuildRows(dari, sampai, ghMode, cols) {
   const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
-  const needGlobal = cols.some(c => DR_GLOBAL_GROUPS.includes(c.grp));
+  const needGlobal = cols.some(c => c.global || DR_GLOBAL_GROUPS.includes(c.grp));
   const map = new Map();
   const needHy = cols.some(c => c.grp.startsWith('hy'));
 
-  const hyRows = needHy ? readArrayRaw(nativeStorage.getItem(HYOSHII_STORAGE_KEY)) : [];
-  hyRows.forEach(item => {
-    if (!item.tgl || item.tgl < dari || item.tgl > sampai) return;
-    const isGlobal = item.gh === 'GLOBAL';
-    const isCombined = item.gh === 'GH 1+2';
-    if (isGlobal && !needGlobal) return;
-    if (!isGlobal) {
-      if (ghMode === 'gh1' && item.gh !== 'GH 1') return;
-      if (ghMode === 'gh2' && item.gh !== 'GH 2') return;
-    }
-    let ghLabel = isGlobal ? 'GLOBAL' : (item.gh || 'GH 1');
-    if (ghMode === 'gabung') ghLabel = 'GH 1+2';
-    const key = item.tgl + '|' + ghLabel;
-    if (!map.has(key)) map.set(key, drNewRow(item.tgl, ghLabel));
-    const r = map.get(key);
-    ['hk_hatsu', 'hk_a11', 'hk_a15', 'hk_frozen', 'hp_hatsu', 'hp_a11', 'hp_a15', 'hr_sampel', 'hr_qc', 'hr_lain'].forEach(k => { r[k] += Number(item[k]) || 0; });
-    if (item.h_ket) r.h_ket = r.h_ket ? (r.h_ket + '; ' + item.h_ket) : String(item.h_ket);
-    r._hy = true;
-    // data gabungan GH 1+2 tidak bisa dibandingkan dengan kirim per GH
-    if (isCombined && ghMode !== 'gabung') r._selOk = false;
-  });
+  // Hyoshii = satu kesatuan per tanggal (tidak per GH): tampil di baris 'GH 1+2'
+  if (needHy && ghMode !== 'gh1' && ghMode !== 'gh2') {
+    const daily = {};
+    db.forEach(item => {
+      if (!item.tgl) return;
+      const d = daily[item.tgl] || (daily[item.tgl] = { k_hatsu: 0, k_a11: 0, k_a15: 0, k_rfresh: 0, k_frozen: 0, m_hatsu: 0, m_a11: 0, m_a15: 0 });
+      Object.keys(d).forEach(k => { d[k] += Number(item[k]) || 0; });
+    });
+    readArrayRaw(nativeStorage.getItem(HYOSHII_STORAGE_KEY)).forEach(item => {
+      if (!item.tgl || item.tgl < dari || item.tgl > sampai) return;
+      const key = item.tgl + '|GH 1+2';
+      if (!map.has(key)) map.set(key, drNewRow(item.tgl, 'GH 1+2'));
+      const r = map.get(key);
+      ['hk_hatsu', 'hk_a11', 'hk_a15', 'hk_rfresh', 'hk_frozen', 'hp_hatsu', 'hp_a11', 'hp_a15', 'hr_sampel', 'hr_qc', 'hr_lain'].forEach(k => { r[k] += Number(item[k]) || 0; });
+      if (item.h_ket) r.h_ket = r.h_ket ? (r.h_ket + '; ' + item.h_ket) : String(item.h_ket);
+      r._hy = true;
+      r.ds = daily[item.tgl] || { k_hatsu: 0, k_a11: 0, k_a15: 0, k_rfresh: 0, k_frozen: 0, m_hatsu: 0, m_a11: 0, m_a15: 0 };
+    });
+  }
 
   db.forEach(item => {
     if (!item.tgl || item.tgl < dari || item.tgl > sampai) return;
@@ -1726,9 +1720,10 @@ function renderDetailReject() {
   const T = drTotals(rows);
 
   if (infoEl) {
-    const needGlobal = cols.some(c => DR_GLOBAL_GROUPS.includes(c.grp));
+    const needGlobal = cols.some(c => c.global || DR_GLOBAL_GROUPS.includes(c.grp));
     infoEl.innerHTML = `Periode: <b>${fmtTgl(dari)}</b> s/d <b>${fmtTgl(sampai)}</b> · ${DR_GH_LABEL[ghMode] || ''} · <b>${cols.length}</b> kolom data`
-      + (needGlobal ? '<br><small>Reject Dikirim & Tamu bersifat global (tidak per GH): tampil di baris 🌐 Global, atau digabung ke baris tanggal jika mode Gabungan.</small>' : '');
+      + (cols.some(c => c.grp.startsWith('hy')) ? '<br><small>Data Hyoshii satu kesatuan per tanggal (tampil di baris GH 1+2; selisih = diterima − total kirim hari itu). Paling mudah dibaca di mode Gabungan.</small>' : '')
+      + (needGlobal ? '<br><small>Reject Fresh/Frozen & Tamu bersifat global (tidak per GH): tampil di baris 🌐 Global, atau digabung ke baris tanggal jika mode Gabungan.</small>' : '');
   }
 
   // Header 2 baris: kelompok + kolom

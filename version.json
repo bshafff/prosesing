@@ -1,5 +1,5 @@
 {
-  "version": "1.10.0",
+  "version": "1.10.1",
   "released": "2026-11-23",
-  "notes": "Menu baru: Diterima Hyoshii (bobot, pack, reject sampel/QC, selisih vs kirim) + import Excel + gabung ke Data Rekap Dashboard Panen"
+  "notes": "Diterima Hyoshii jadi satu kesatuan per tanggal; Reject Fresh/Frozen masuk Kirim (Berat) di Data Rekap"
 }
