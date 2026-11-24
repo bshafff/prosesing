@@ -5,77 +5,6 @@
     <button class="btn btn-sm" onclick="openModule('dash-mika')" style="margin-left:auto;flex:none;background:#faf5ff;color:#7e22ce;border:1px solid #e9d5ff;">🍓 Dashboard Mika</button>
   </div>
 
-  <!-- PENGATURAN (periode, GH, pembagian reject) -->
-  <div class="card" id="dash-settings" style="margin-bottom:1rem;">
-    <div class="card-title">⚙️ Pengaturan</div>
-    <div class="row-3" style="align-items:flex-end;">
-      <div class="input-group" style="margin-bottom:0;">
-        <label>Bulan</label>
-        <input type="month" id="dashboard-bulan" onchange="onDashboardMonthChange()">
-      </div>
-      <div class="input-group" style="margin-bottom:0;">
-        <label>Greenhouse</label>
-        <select id="dashboard-gh" onchange="updateDashboard()">
-          <option value="all">Semua GH</option>
-          <option value="GH 1">GH 1</option>
-          <option value="GH 2">GH 2</option>
-          <option value="GLOBAL">🌐 Global (Frozen/Tamu)</option>
-        </select>
-      </div>
-      <div class="input-group" style="margin-bottom:0;">
-        <label>Bagi reject kirim ke GH</label>
-        <select id="alok-basis" onchange="setAlokBasis(this.value)">
-          <option value="reject">Total reject GH</option>
-          <option value="panen">Total panen GH</option>
-          <option value="kirim">Kirim grade GH</option>
-        </select>
-      </div>
-    </div>
-    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.75rem;">
-      <button class="btn btn-sm btn-secondary" onclick="setDashboardBulanIni()">📌 Bulan Ini</button>
-      <button class="btn btn-sm btn-secondary" onclick="toggleAllDashCards()">↕ Buka / Tutup semua kartu</button>
-    </div>
-    <small style="color:#666;display:block;margin-top:0.5rem;">“Bagi reject kirim” = cara membagi Reject Fresh/Frozen yang tercampur GH 1 &amp; 2 (berlaku di Laporan per GH, Dashboard, Data Rekap; mode Gabungan tetap total asli). Klik judul kartu untuk melipat.</small>
-    <div class="info-box" style="margin-top:0.75rem;margin-bottom:0;" id="dashboard-period-info">
-      Menampilkan data: <b>-</b>
-    </div>
-  </div>
-
-  <div class="stats stats-3" id="dashboard-stats">
-    <div class="stat-card red">
-      <div class="stat-label">Total Panen</div>
-      <div class="stat-value" id="stat-panen">0.00</div>
-      <div class="stat-meta">Kg</div>
-      <div class="stat-delta" id="stat-panen-delta"></div>
-    </div>
-    <div class="stat-card blue">
-      <div class="stat-label">Total Dikirim</div>
-      <div class="stat-value" id="stat-dikirim">0.00</div>
-      <div class="stat-meta">Kg</div>
-    </div>
-    <div class="stat-card purple">
-      <div class="stat-label">Total Buah Terkirim</div>
-      <div class="stat-value" id="stat-kirim">0</div>
-      <div class="stat-meta">Pcs Mika</div>
-    </div>
-    <div class="stat-card green">
-      <div class="stat-label">Rate Kirim</div>
-      <div class="stat-value" id="stat-rate-kirim">0.00%</div>
-      <div class="stat-meta">Total dikirim ÷ total panen</div>
-    </div>
-    <div class="stat-card orange">
-      <div class="stat-label">Total Reject</div>
-      <div class="stat-value" id="stat-rej-total">0.00</div>
-      <div class="stat-meta" id="stat-rej-meta">Kg</div>
-    </div>
-    <div class="stat-card red">
-      <div class="stat-label">Reject Rate <span id="stat-rej-badge"></span></div>
-      <div class="stat-value" id="stat-rej-rate">0.00%</div>
-      <div class="stat-meta">Total reject ÷ total panen</div>
-      <div class="stat-delta" id="stat-rej-rate-delta"></div>
-    </div>
-  </div>
-
   <div class="card" style="border-left: 4px solid #2d5016; margin-bottom: 1rem;" data-collapse="laporan" data-open="1">
     <div class="card-title">🖼️ Cetak Laporan (Harian / Mingguan / Bulanan)</div>
     
@@ -122,88 +51,96 @@
     </div>
   </div>
 
-  <div class="chart-card" data-collapse="komposisi" data-open="1">
-    <div class="chart-title">🥧 Komposisi Reject Bulan Ini</div>
-    <div id="chart-reject"></div>
-  </div>
-
-  <div class="card" style="margin-top:1rem;" data-collapse="rekap" data-open="1">
-    <div class="card-title">📋 Data Rekap (Pilih Data & GH)</div>
-    <div class="row-3" style="align-items:flex-end; margin-bottom:1rem;">
-      <div class="input-group" style="margin-bottom:0;">
+  <!-- PENGATURAN PERIODE -->
+  <div class="card" id="dash-settings" style="margin-bottom:1rem;">
+    <div class="card-title">⚙️ Pengaturan</div>
+    <input type="month" id="dashboard-bulan" style="display:none;">
+    <div class="row-2">
+      <div class="input-group" style="margin-bottom:0.5rem;">
         <label>Dari Tanggal</label>
-        <input type="date" id="detail-reject-dari" onchange="renderDetailReject()">
+        <input type="date" id="dashboard-dari" onchange="onDashboardRangeChange()">
       </div>
-      <div class="input-group" style="margin-bottom:0;">
+      <div class="input-group" style="margin-bottom:0.5rem;">
         <label>Sampai Tanggal</label>
-        <input type="date" id="detail-reject-sampai" onchange="renderDetailReject()">
+        <input type="date" id="dashboard-sampai" onchange="onDashboardRangeChange()">
       </div>
+    </div>
+    <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+      <button class="btn btn-sm btn-secondary" onclick="setDashboardPreset('bulanini')">📌 Bulan Ini</button>
+      <button class="btn btn-sm btn-secondary" onclick="setDashboardPreset('bulanlalu')">Bulan Lalu</button>
+      <button class="btn btn-sm btn-secondary" onclick="setDashboardPreset('7')">7 Hari</button>
+      <button class="btn btn-sm btn-secondary" onclick="setDashboardPreset('30')">30 Hari</button>
+      <button class="btn btn-sm btn-secondary" onclick="setDashboardPreset('tahunini')">Tahun Ini</button>
+    </div>
+    <div class="row-2">
       <div class="input-group" style="margin-bottom:0;">
         <label>Greenhouse</label>
-        <select id="detail-gh" onchange="drSavePref(); renderDetailReject()">
-          <option value="pisah">GH 1 & GH 2 (terpisah)</option>
-          <option value="gabung">Gabungan GH 1 + GH 2</option>
-          <option value="gh1">GH 1 saja</option>
-          <option value="gh2">GH 2 saja</option>
+        <select id="dashboard-gh" onchange="updateDashboard()">
+          <option value="all">Semua GH</option>
+          <option value="GH 1">GH 1</option>
+          <option value="GH 2">GH 2</option>
+          <option value="GLOBAL">🌐 Global (Frozen/Tamu)</option>
+        </select>
+      </div>
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Bagi reject kirim ke GH</label>
+        <select id="alok-basis" onchange="setAlokBasis(this.value)">
+          <option value="reject">Total reject GH</option>
+          <option value="panen">Total panen GH</option>
+          <option value="kirim">Kirim grade GH</option>
         </select>
       </div>
     </div>
-    <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.75rem;">
-      <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailRejectPreset('bulan-ini')">Bulan Ini</button>
-      <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailRejectPreset('bulan-lalu')">Bulan Lalu</button>
-      <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailRejectPreset('30')">30 Hari</button>
-      <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailRejectPreset('semua')">Semua Data</button>
-      <button type="button" class="btn btn-primary btn-sm" onclick="exportDetailRejectExcel()" style="margin-left:auto;">📥 Download Excel</button>
+    <div style="margin-top:0.75rem;">
+      <button class="btn btn-sm btn-secondary" onclick="toggleAllDashCards()">↕ Buka / Tutup semua kartu</button>
     </div>
-    <div style="margin-bottom:0.75rem;">
-      <button type="button" class="btn btn-secondary btn-sm" id="detail-cols-toggle" onclick="toggleDetailColsPanel()">▼ Pilih data yang ditampilkan</button>
-      <div id="detail-cols-wrap" style="display:none; margin-top:0.75rem;">
-        <div style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-bottom:0.6rem;">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailColsPreset('reject')">Reject saja</button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailColsPreset('hyoshii')">🏭 Kirim vs Hyoshii</button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailColsPreset('ringkas')">Ringkas (total)</button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailColsPreset('semua')">Semua data</button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailColsPreset('kosong')">Kosongkan</button>
-        </div>
-        <div id="detail-cols-panel"></div>
-      </div>
-    </div>
-    <div class="info-box" style="margin-bottom:0.75rem;" id="detail-reject-info">-</div>
-    <div class="recap-wrap">
-      <table class="recap-table" style="min-width: 600px;">
-        <thead id="detail-reject-head"></thead>
-        <tbody id="detail-reject-body">
-          <tr><td style="text-align:center;color:#999;">Belum ada data</td></tr>
-        </tbody>
-        <tfoot id="detail-reject-foot"></tfoot>
-      </table>
+    <small style="color:#666;display:block;margin-top:0.5rem;">Periode ini berlaku untuk angka ringkasan &amp; Komposisi Reject. “Bagi reject kirim” = cara membagi Reject Fresh/Frozen yang tercampur GH 1 &amp; 2 (mode Gabungan tetap total asli). Klik judul kartu untuk melipat.</small>
+    <div class="info-box" style="margin-top:0.75rem;margin-bottom:0;" id="dashboard-period-info">
+      Menampilkan data: <b>-</b>
     </div>
   </div>
 
-  <div class="card" style="margin-top:1rem;" data-collapse="analisis" data-open="0">
-    <div class="card-title">📝 Analisis Breakdown Reject Bulanan (Per GH)</div>
-    <div class="info-box" style="margin-bottom:1rem;">
-      Menampilkan 2 masalah utama (reject tertinggi) pada setiap GH di tiap bulannya.
+  <div class="stats stats-3" id="dashboard-stats">
+    <div class="stat-card red">
+      <div class="stat-label">Total Panen</div>
+      <div class="stat-value" id="stat-panen">0.00</div>
+      <div class="stat-meta">Kg</div>
+      <div class="stat-delta" id="stat-panen-delta"></div>
     </div>
-    <div class="table-container">
-      <table class="recap-table" style="min-width: 700px;">
-        <thead>
-          <tr>
-            <th class="th-base" style="text-align:left; width:150px;">Bulan</th>
-            <th class="th-base">GH</th>
-            <th class="th-reject">Total Reject (Kg)</th>
-            <th class="th-reject" style="text-align:left;">Masalah Utama</th>
-            <th class="th-reject">Persentase</th>
-          </tr>
-        </thead>
-        <tbody id="reject-breakdown-body">
-          <tr><td colspan="5" style="text-align:center;color:#999;">Belum ada data</td></tr>
-        </tbody>
-      </table>
+    <div class="stat-card blue">
+      <div class="stat-label">Total Dikirim</div>
+      <div class="stat-value" id="stat-dikirim">0.00</div>
+      <div class="stat-meta">Kg</div>
+    </div>
+    <div class="stat-card purple">
+      <div class="stat-label">Total Buah Terkirim</div>
+      <div class="stat-value" id="stat-kirim">0</div>
+      <div class="stat-meta">Pcs Mika</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Rate Kirim</div>
+      <div class="stat-value" id="stat-rate-kirim">0.00%</div>
+      <div class="stat-meta">Total dikirim ÷ total panen</div>
+    </div>
+    <div class="stat-card orange">
+      <div class="stat-label">Total Reject</div>
+      <div class="stat-value" id="stat-rej-total">0.00</div>
+      <div class="stat-meta" id="stat-rej-meta">Kg</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">Reject Rate <span id="stat-rej-badge"></span></div>
+      <div class="stat-value" id="stat-rej-rate">0.00%</div>
+      <div class="stat-meta">Total reject ÷ total panen</div>
+      <div class="stat-delta" id="stat-rej-rate-delta"></div>
     </div>
   </div>
 
-  <div class="card" style="margin-top:1rem;" data-collapse="tren" data-open="0">
+  <div class="chart-card" data-collapse="komposisi" data-open="1">
+    <div class="chart-title">🥧 Komposisi Reject (periode terpilih)</div>
+    <div id="chart-reject"></div>
+  </div>
+
+  <div class="card" style="margin-top:1rem;" data-collapse="tren" data-open="1">
     <div class="card-title">📈 Tren Persentase Reject (Stand Alone)</div>
     <div class="row-3" style="align-items: flex-end; margin-bottom: 1rem;">
       <div class="input-group" style="margin-bottom:0;">
@@ -259,6 +196,97 @@
     </div>
 
     <div class="chart-scroll" id="chart-reject-trend" style="margin-top:1rem; min-height:320px;"></div>
+  </div>
+
+  <div class="card" style="margin-top:1rem;" data-collapse="analisis" data-open="1">
+    <div class="card-title">📝 Analisis Breakdown Reject Bulanan (Per GH)</div>
+    <div class="row-2" style="align-items:flex-end;margin-bottom:0.5rem;">
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Dari Bulan</label>
+        <input type="month" id="bd-dari" onchange="renderRejectBreakdown()">
+      </div>
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Sampai Bulan</label>
+        <input type="month" id="bd-sampai" onchange="renderRejectBreakdown()">
+      </div>
+    </div>
+    <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+      <button class="btn btn-sm btn-secondary" onclick="setBreakdownRange('3')">3 Bulan Terakhir</button>
+      <button class="btn btn-sm btn-secondary" onclick="setBreakdownRange('6')">6 Bulan Terakhir</button>
+      <button class="btn btn-sm btn-secondary" onclick="setBreakdownRange('tahun')">Tahun Ini</button>
+    </div>
+    <div class="info-box" style="margin-bottom:1rem;" id="bd-info">
+      Menampilkan 2 masalah utama (reject tertinggi) pada setiap GH di tiap bulannya.
+    </div>
+    <div class="table-container">
+      <table class="recap-table" style="min-width: 700px;">
+        <thead>
+          <tr>
+            <th class="th-base" style="text-align:left; width:150px;">Bulan</th>
+            <th class="th-base">GH</th>
+            <th class="th-reject">Total Reject (Kg)</th>
+            <th class="th-reject" style="text-align:left;">Masalah Utama</th>
+            <th class="th-reject">Persentase</th>
+          </tr>
+        </thead>
+        <tbody id="reject-breakdown-body">
+          <tr><td colspan="5" style="text-align:center;color:#999;">Belum ada data</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1rem;" data-collapse="rekap" data-open="1">
+    <div class="card-title">📋 Data Rekap (Pilih Data & GH)</div>
+    <div class="row-3" style="align-items:flex-end; margin-bottom:1rem;">
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Dari Tanggal</label>
+        <input type="date" id="detail-reject-dari" onchange="renderDetailReject()">
+      </div>
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Sampai Tanggal</label>
+        <input type="date" id="detail-reject-sampai" onchange="renderDetailReject()">
+      </div>
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Greenhouse</label>
+        <select id="detail-gh" onchange="drSavePref(); renderDetailReject()">
+          <option value="pisah">GH 1 & GH 2 (terpisah)</option>
+          <option value="gabung">Gabungan GH 1 + GH 2</option>
+          <option value="gh1">GH 1 saja</option>
+          <option value="gh2">GH 2 saja</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.75rem;">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailRejectPreset('bulan-ini')">Bulan Ini</button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailRejectPreset('bulan-lalu')">Bulan Lalu</button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailRejectPreset('30')">30 Hari</button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailRejectPreset('semua')">Semua Data</button>
+      <button type="button" class="btn btn-primary btn-sm" onclick="exportDetailRejectExcel()" style="margin-left:auto;">📥 Download Excel</button>
+    </div>
+    <div style="margin-bottom:0.75rem;">
+      <button type="button" class="btn btn-secondary btn-sm" id="detail-cols-toggle" onclick="toggleDetailColsPanel()">▼ Pilih data yang ditampilkan</button>
+      <div id="detail-cols-wrap" style="display:none; margin-top:0.75rem;">
+        <div style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-bottom:0.6rem;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailColsPreset('reject')">Reject saja</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailColsPreset('hyoshii')">🏭 Kirim vs Hyoshii</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailColsPreset('ringkas')">Ringkas (total)</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailColsPreset('semua')">Semua data</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="setDetailColsPreset('kosong')">Kosongkan</button>
+        </div>
+        <div id="detail-cols-panel"></div>
+      </div>
+    </div>
+    <div class="info-box" style="margin-bottom:0.75rem;" id="detail-reject-info">-</div>
+    <div class="recap-wrap">
+      <table class="recap-table" style="min-width: 600px;">
+        <thead id="detail-reject-head"></thead>
+        <tbody id="detail-reject-body">
+          <tr><td style="text-align:center;color:#999;">Belum ada data</td></tr>
+        </tbody>
+        <tfoot id="detail-reject-foot"></tfoot>
+      </table>
+    </div>
   </div>
 
   <div class="card" id="panen-bulan-compare-card" style="margin-top:1rem;" data-collapse="bandingbulan" data-open="0">

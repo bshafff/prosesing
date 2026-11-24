@@ -1,21 +1,45 @@
 // ========== DASHBOARD PANEN MODULE ==========
-function setDashboardBulanIni() {
-  const nowMonth = new Date().toISOString().substring(0, 7);
-  document.getElementById('dashboard-bulan').value = nowMonth;
-  const mg = document.getElementById('minggu-bulan');
-  if (mg) mg.value = nowMonth;
+function dashIso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function dashFmtTgl(t) { return String(t || '').split('-').reverse().join('/'); }
+
+function setDashboardPreset(mode) {
+  const now = new Date();
+  let dari, sampai = now;
+  if (mode === 'bulanlalu') { dari = new Date(now.getFullYear(), now.getMonth() - 1, 1); sampai = new Date(now.getFullYear(), now.getMonth(), 0); }
+  else if (mode === '7') { dari = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6); }
+  else if (mode === '30') { dari = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29); }
+  else if (mode === 'tahunini') { dari = new Date(now.getFullYear(), 0, 1); }
+  else { dari = new Date(now.getFullYear(), now.getMonth(), 1); }
+  document.getElementById('dashboard-dari').value = dashIso(dari);
+  document.getElementById('dashboard-sampai').value = dashIso(sampai);
+  onDashboardRangeChange();
+}
+
+function setDashboardBulanIni() { setDashboardPreset('bulanini'); }
+
+function onDashboardRangeChange() {
+  const dari = document.getElementById('dashboard-dari').value;
+  const sampai = document.getElementById('dashboard-sampai').value;
+  const bulan = (sampai || dari || '').substring(0, 7);
+  const hid = document.getElementById('dashboard-bulan'); if (hid && bulan) hid.value = bulan;
+  const mg = document.getElementById('minggu-bulan'); if (mg && bulan) mg.value = bulan;
   updateDashboard();
 }
 
-function onDashboardMonthChange() {
-  const v = document.getElementById('dashboard-bulan').value;
-  const mg = document.getElementById('minggu-bulan');
-  if (mg) mg.value = v;
-  updateDashboard();
+function onDashboardMonthChange() { onDashboardRangeChange(); }
+
+function setBreakdownRange(mode) {
+  const now = new Date();
+  const ym = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  const sampai = new Date(now.getFullYear(), now.getMonth(), 1);
+  let dari;
+  if (mode === 'tahun') dari = new Date(now.getFullYear(), 0, 1);
+  else dari = new Date(now.getFullYear(), now.getMonth() - (parseInt(mode, 10) - 1), 1);
+  document.getElementById('bd-dari').value = ym(dari);
+  document.getElementById('bd-sampai').value = ym(sampai);
+  renderRejectBreakdown();
 }
 
-// ========== PEMBAGIAN REJECT FRESH/FROZEN (GLOBAL) KE GH ==========
-// Reject Fresh/Frozen dikirim tercampur GH 1 & GH 2 (dicatat di record GLOBAL). Dibagi otomatis ke tiap GH per tanggal.
 function alokBasis() { return localStorage.getItem('awb_alok_basis') || 'reject'; }
 function setAlokBasis(v) { localStorage.setItem('awb_alok_basis', v); try { updateDashboard(); } catch (e) { /* abaikan */ } }
 function alokWeight(x, basis) {
@@ -85,17 +109,26 @@ function toggleAllDashCards() {
 function updateDashboard() {
   try { initDashCollapse(); } catch (e) { console.warn('collapse:', e); }
   const alokSel = document.getElementById('alok-basis'); if (alokSel) alokSel.value = alokBasis();
-  const bulanEl = document.getElementById('dashboard-bulan');
-  if (!bulanEl) return;
-  if (!bulanEl.value) bulanEl.value = new Date().toISOString().substring(0, 7);
-  const selectedMonth = bulanEl.value;
+  const dariEl = document.getElementById('dashboard-dari');
+  const sampaiEl = document.getElementById('dashboard-sampai');
+  if (!dariEl || !sampaiEl) return;
+  if (!dariEl.value || !sampaiEl.value) {
+    const n = new Date();
+    if (!dariEl.value) dariEl.value = dashIso(new Date(n.getFullYear(), n.getMonth(), 1));
+    if (!sampaiEl.value) sampaiEl.value = dashIso(n);
+  }
+  let dashDari = dariEl.value, dashSampai = sampaiEl.value;
+  if (dashDari > dashSampai) { const t = dashDari; dashDari = dashSampai; dashSampai = t; dariEl.value = dashDari; sampaiEl.value = dashSampai; }
+  const inRange = x => x.tgl && x.tgl >= dashDari && x.tgl <= dashSampai;
+  const selectedMonth = dashSampai.substring(0, 7);
+  const hidMonth = document.getElementById('dashboard-bulan'); if (hidMonth) hidMonth.value = selectedMonth;
   const infoEl = document.getElementById('dashboard-period-info');
-  if (infoEl) infoEl.innerHTML = `Menampilkan data: <b>${formatBulanIndo(selectedMonth)}</b> · <b>${ghLabelOf(dashGh())}</b>`;
+  if (infoEl) infoEl.innerHTML = `Menampilkan data: <b>${dashFmtTgl(dashDari)}</b> s/d <b>${dashFmtTgl(dashSampai)}</b> · <b>${ghLabelOf(dashGh())}</b>`;
   
   const allPanenDb = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
   
   // 1. Ambil semua data GLOBAL (Frozen) untuk bulan ini
-  const frozenDb = allPanenDb.filter(x => x.tgl && x.tgl.startsWith(selectedMonth) && x.gh === 'GLOBAL');
+  const frozenDb = allPanenDb.filter(x => inRange(x) && x.gh === 'GLOBAL');
   const frozenPerTgl = {};
   frozenDb.forEach(x => {
     frozenPerTgl[x.tgl] = (frozenPerTgl[x.tgl] || 0) + (gKirimOf(x) || 0);
@@ -103,14 +136,14 @@ function updateDashboard() {
 
   // 2. Hitung Total Kirim Grade (Hatsu+A11+A15) per tanggal untuk alokasi proporsional
   const allGradeKirimPerTgl = {};
-  allPanenDb.filter(x => x.tgl && x.tgl.startsWith(selectedMonth) && x.gh !== 'GLOBAL').forEach(x => {
+  allPanenDb.filter(x => inRange(x) && x.gh !== 'GLOBAL').forEach(x => {
     const totalG = (x.k_hatsu || 0) + (x.k_a11 || 0) + (x.k_a15 || 0);
     allGradeKirimPerTgl[x.tgl] = (allGradeKirimPerTgl[x.tgl] || 0) + totalG;
   });
 
   // 3. Ambil data sesuai filter GH (GH 1 / GH 2 / GLOBAL / All)
   const filtered = filterGh(allPanenDb, dashGh())
-    .filter(x => x.tgl && x.tgl.startsWith(selectedMonth))
+    .filter(inRange)
     .sort((a, b) => new Date(a.tgl) - new Date(b.tgl));
 
   // Alokasi reject Fresh/Frozen global ke GH (dasar pembagian bisa dipilih)
@@ -200,19 +233,18 @@ function updateDashboard() {
   document.getElementById('stat-rej-rate').textContent = rejectRate.toFixed(2) + '%';
   document.getElementById('stat-rej-badge').innerHTML = T.panen_total > 0 ? `<span class="notif-badge ${badgeClass}">${badgeMsg}</span>` : '';
 
-  // Delta Perbandingan Bulan Lalu
-  const [selY2, selM2] = selectedMonth.split('-').map(Number);
-  const prevDate = new Date(selY2, selM2 - 2, 1);
-  const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
-  const nowD = new Date();
-  const nowYM = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, '0')}`;
-  const cutoffDay = (selectedMonth === nowYM) ? nowD.getDate() : 31;
-  const cutoffLabel = (selectedMonth === nowYM) ? ` (s/d tgl ${cutoffDay})` : '';
-  
+  // Delta vs periode sebelumnya (panjang hari sama, tepat sebelum 'Dari Tanggal')
+  const msDay = 86400000;
+  const dDari = new Date(dashDari + 'T00:00:00'), dSampai = new Date(dashSampai + 'T00:00:00');
+  const lenDays = Math.round((dSampai - dDari) / msDay) + 1;
+  const prevSampaiD = new Date(dDari.getTime() - msDay);
+  const prevDariD = new Date(prevSampaiD.getTime() - (lenDays - 1) * msDay);
+  const prevDari = dashIso(prevDariD), prevSampai = dashIso(prevSampaiD);
+  const cutoffLabel = ` (${dashFmtTgl(prevDari)}–${dashFmtTgl(prevSampai)})`;
+
   let pPanen = 0, pRej = 0, pCount = 0;
   allPanenDb.filter(x => dashGh() === 'all' || x.gh === dashGh() || (dashGh() !== 'GLOBAL' && x.gh === 'GLOBAL')).forEach(item => {
-    if (!item.tgl || !item.tgl.startsWith(prevMonth) || item.gh === 'GLOBAL') return; // Skip global for base panen
-    if (parseInt(item.tgl.substring(8, 10), 10) > cutoffDay) return;
+    if (!item.tgl || item.tgl < prevDari || item.tgl > prevSampai || item.gh === 'GLOBAL') return; // Skip global for base panen
     const rk = (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
     const rp = (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0) + (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_kuning || 0) + (item.rp_frozen || 0) + (item.rp_albino || 0);
     pPanen += (item.p_hatsu || 0) + (item.p_gradea || 0) + (item.p_gradeb || 0) + rk;
@@ -223,22 +255,22 @@ function updateDashboard() {
   const dPanenEl = document.getElementById('stat-panen-delta');
   if (pCount === 0 || pPanen <= 0) {
     dPanenEl.className = 'stat-delta';
-    dPanenEl.textContent = '– belum ada data bulan lalu';
+    dPanenEl.textContent = '– belum ada data periode sebelumnya';
   } else {
     const pct = (T.panen_total - pPanen) / pPanen * 100;
     dPanenEl.className = 'stat-delta ' + (pct > 0 ? 'up' : pct < 0 ? 'down' : '');
-    dPanenEl.textContent = `${pct > 0 ? '▲' : pct < 0 ? '▼' : '='} ${Math.abs(pct).toFixed(1)}% vs bulan lalu${cutoffLabel}`;
+    dPanenEl.textContent = `${pct > 0 ? '▲' : pct < 0 ? '▼' : '='} ${Math.abs(pct).toFixed(1)}% vs periode sebelumnya${cutoffLabel}`;
   }
 
   const dRejEl = document.getElementById('stat-rej-rate-delta');
   if (pCount === 0 || pPanen <= 0) {
     dRejEl.className = 'stat-delta';
-    dRejEl.textContent = '– belum ada data bulan lalu';
+    dRejEl.textContent = '– belum ada data periode sebelumnya';
   } else {
     const pRate = pRej / pPanen * 100;
     const diff = rejectRate - pRate;
     dRejEl.className = 'stat-delta ' + (diff > 0 ? 'down' : diff < 0 ? 'up' : '');
-    dRejEl.textContent = `${diff > 0 ? '▲' : diff < 0 ? '▼' : '='} ${Math.abs(diff).toFixed(2)} poin vs bulan lalu (${pRate.toFixed(2)}%)${cutoffLabel}`;
+    dRejEl.textContent = `${diff > 0 ? '▲' : diff < 0 ? '▼' : '='} ${Math.abs(diff).toFixed(2)} poin vs periode sebelumnya (${pRate.toFixed(2)}%)${cutoffLabel}`;
   }
 
   renderChartRejectPie(T);
@@ -1134,6 +1166,18 @@ function renderRejectBreakdown() {
   const db = JSON.parse(localStorage.getItem(PANEN_STORAGE_KEY) || '[]');
   const byMonthGh = new Map();
 
+  // Rentang bulan (default 3 bulan terakhir)
+  const bdDariEl = document.getElementById('bd-dari'), bdSampaiEl = document.getElementById('bd-sampai');
+  if (bdDariEl && bdSampaiEl && (!bdDariEl.value || !bdSampaiEl.value)) {
+    const n = new Date(), ym = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    if (!bdSampaiEl.value) bdSampaiEl.value = ym(new Date(n.getFullYear(), n.getMonth(), 1));
+    if (!bdDariEl.value) bdDariEl.value = ym(new Date(n.getFullYear(), n.getMonth() - 2, 1));
+  }
+  let bdDari = bdDariEl ? bdDariEl.value : '', bdSampai = bdSampaiEl ? bdSampaiEl.value : '';
+  if (bdDari && bdSampai && bdDari > bdSampai) { const t = bdDari; bdDari = bdSampai; bdSampai = t; bdDariEl.value = bdDari; bdSampaiEl.value = bdSampai; }
+  const bdInfo = document.getElementById('bd-info');
+  if (bdInfo && bdDari && bdSampai) bdInfo.innerHTML = `Periode: <b>${formatBulanIndo(bdDari)}</b> s/d <b>${formatBulanIndo(bdSampai)}</b> · 2 masalah utama (reject tertinggi) pada setiap GH di tiap bulan.`;
+
   // 1. Akumulasi data reject per bulan & per GH
   db.forEach(item => {
     if (!item.tgl) return;
@@ -1141,6 +1185,7 @@ function renderRejectBreakdown() {
     if (gh === 'GLOBAL') return; // Global tidak punya data panen/reject kebun
 
     const ym = item.tgl.substring(0, 7); // Format YYYY-MM
+    if ((bdDari && ym < bdDari) || (bdSampai && ym > bdSampai)) return;
     const key = `${ym}_${gh}`;
 
     if (!byMonthGh.has(key)) {
@@ -1175,7 +1220,7 @@ function renderRejectBreakdown() {
     });
 
   if (!sorted.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;">Belum ada data reject</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;">Belum ada data reject pada rentang bulan ini</td></tr>';
     return;
   }
 
