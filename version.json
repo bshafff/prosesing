@@ -1,4 +1,4 @@
 {
-  "version": "1.11.0",
+  "version": "1.11.1",
   "released": "2026-11-24",
-  "notes": "Laporan Manajemen: ringkasan otomatis, KPI, GH 1 vs GH 2, tren, penyebab reject, kirim vs diterima Hyoshii; simpan gambar & layar penuh"}
+  "notes": "Perbaikan: data lama tanpa kolom GH dibaca sebagai GH 1; laporan & rekap menyesuaikan periode saat GH 2 belum ada"}

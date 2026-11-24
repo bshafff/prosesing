@@ -243,7 +243,7 @@ function updateDashboard() {
   const cutoffLabel = ` (${dashFmtTgl(prevDari)}–${dashFmtTgl(prevSampai)})`;
 
   let pPanen = 0, pRej = 0, pCount = 0;
-  allPanenDb.filter(x => dashGh() === 'all' || x.gh === dashGh() || (dashGh() !== 'GLOBAL' && x.gh === 'GLOBAL')).forEach(item => {
+  allPanenDb.filter(x => dashGh() === 'all' || ghOf(x) === dashGh() || (dashGh() !== 'GLOBAL' && x.gh === 'GLOBAL')).forEach(item => {
     if (!item.tgl || item.tgl < prevDari || item.tgl > prevSampai || item.gh === 'GLOBAL') return; // Skip global for base panen
     const rk = (item.rk_crack || 0) + (item.rk_poli || 0) + (item.rk_hpt || 0);
     const rp = (item.rp_crack || 0) + (item.rp_poli || 0) + (item.rp_hpt || 0) + (item.rp_bruise || 0) + (item.rp_overripe || 0) + (item.rp_kuning || 0) + (item.rp_frozen || 0) + (item.rp_albino || 0);
@@ -1770,10 +1770,10 @@ function drBuildRows(dari, sampai, ghMode, cols) {
     const isGlobal = item.gh === 'GLOBAL';
     if (isGlobal && !needGlobal) return;
     if (!isGlobal) {
-      if (ghMode === 'gh1' && item.gh !== 'GH 1') return;
-      if (ghMode === 'gh2' && item.gh !== 'GH 2') return;
+      if (ghMode === 'gh1' && ghOf(item) !== 'GH 1') return;
+      if (ghMode === 'gh2' && ghOf(item) !== 'GH 2') return;
     }
-    let ghLabel = isGlobal ? 'GLOBAL' : (item.gh || 'GH 1');
+    let ghLabel = isGlobal ? 'GLOBAL' : ghOf(item);
     if (ghMode === 'gabung') ghLabel = 'GH 1+2';
     const key = item.tgl + '|' + ghLabel;
     if (!map.has(key)) map.set(key, drNewRow(item.tgl, ghLabel));

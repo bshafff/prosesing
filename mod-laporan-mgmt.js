@@ -76,7 +76,8 @@ function mgMetrics(start, end) {
     const day = M.days[x.tgl] || (M.days[x.tgl] = { panen: 0, kirim: 0, rej: 0 });
     const own = (Number(x.k_frozen) || 0) + (Number(x.k_rfresh) || 0);
     if (x.gh === 'GLOBAL') { M.all.rejKirim += own; day.kirim += own; return; }
-    const key = x.gh === 'GH 2' ? 'g2' : (x.gh === 'GH 1' ? 'g1' : null);
+    const gk = ghOf(x); // data lama tanpa kolom GH dianggap GH 1 (sama seperti bagian lain aplikasi)
+    const key = gk === 'GH 2' ? 'g2' : (gk === 'GH 1' ? 'g1' : null);
     if (!key) return;
     const n = k => Number(x[k]) || 0;
     const rk = n('rk_crack') + n('rk_poli') + n('rk_hpt');
@@ -136,6 +137,17 @@ function mgHyoshii(start, end) {
   return { recv: R, sent: S, pct, ket, hari: dates.size };
 }
 
+// Tanggal pertama GH 2 mulai panen (sebelumnya hanya GH 1)
+function mgGh2Start() {
+  let first = '';
+  readArrayRaw(nativeStorage.getItem(PANEN_STORAGE_KEY)).forEach(x => {
+    if (x.gh === 'GLOBAL' || ghOf(x) !== 'GH 2' || !x.tgl) return;
+    const panen = (Number(x.p_hatsu) || 0) + (Number(x.p_gradea) || 0) + (Number(x.p_gradeb) || 0);
+    if (panen > 0 && (!first || x.tgl < first)) first = x.tgl;
+  });
+  return first;
+}
+
 // ---------- Komponen visual ----------
 function mgDelta(cur, prev, goodUp, unit) {
   if (prev === null || prev === undefined || !isFinite(prev) || prev === 0) return `<span style="color:${MG.MUTE};">belum ada pembanding</span>`;
@@ -176,7 +188,7 @@ function mgLineChart(labels, series, opts) {
     svg += `<text x="${L - 6}" y="${yy + 3}" font-size="9.5" fill="${MG.MUTE}" text-anchor="end">${mgN(v, opts.dec === undefined ? 0 : opts.dec)}</text>`;
   }
   const step = Math.max(1, Math.ceil(n / 8));
-  labels.forEach((lb, i) => { if (i % step === 0 || i === n - 1) svg += `<text x="${x(i)}" y="${H - 8}" font-size="9.5" fill="${MG.MUTE}" text-anchor="middle">${lb}</text>`; });
+  labels.forEach((lb, i) => { if (i % step === 0 || (i === n - 1 && (n - 1) % step >= step / 2)) svg += `<text x="${x(i)}" y="${H - 8}" font-size="9.5" fill="${MG.MUTE}" text-anchor="middle">${lb}</text>`; });
   if (opts.target) {
     const yt = y(opts.target);
     svg += `<line x1="${L}" y1="${yt}" x2="${W - R}" y2="${yt}" stroke="${MG.BAD}" stroke-width="1.5" stroke-dasharray="5 4"/>`;
@@ -239,17 +251,24 @@ function renderLaporanMgmt() {
   const bullets = [];
   const pctDiff = (c, p) => (p > 0 ? (c - p) / p * 100 : null);
   const dP = pctDiff(A.panen, PA.panen);
-  bullets.push(`Total panen <b>${mgN(A.panen)} kg</b>${dP === null ? '' : ` (${dP >= 0 ? 'naik' : 'turun'} ${mgN(Math.abs(dP), 1)}% dari periode sebelumnya)`}; terkirim <b>${mgP(A.rateKirim)}</b> dari panen.`);
+  bullets.push(`Total panen <b>${mgN(A.panen)} kg</b>${dP === null ? '' : (Math.abs(dP) < 0.05 ? ' (sama dengan periode sebelumnya)' : ` (${dP >= 0 ? 'naik' : 'turun'} ${mgN(Math.abs(dP), 1)}% dari periode sebelumnya)`)}; terkirim <b>${mgP(A.rateKirim)}</b> dari panen.`);
   const dRate = PA.panen > 0 ? rr - PA.rateRej : null;
-  bullets.push(`Reject rate <b>${mgP(rr, 2)}</b> — ${rr <= target ? 'masih di bawah' : 'di atas'} target ${mgN(target, 0)}%${dRate === null ? '' : `, ${dRate > 0 ? 'naik' : 'turun'} ${mgN(Math.abs(dRate), 2)} poin dari periode sebelumnya`}.`);
+  bullets.push(`Reject rate <b>${mgP(rr, 2)}</b> — ${rr <= target ? 'masih di bawah' : 'di atas'} target ${mgN(target, 0)}%${dRate === null ? '' : (Math.abs(dRate) < 0.005 ? ', sama dengan periode sebelumnya' : `, ${dRate > 0 ? 'naik' : 'turun'} ${mgN(Math.abs(dRate), 2)} poin dari periode sebelumnya`)}.`);
   const causes = MG_CAUSES.map(([k, nm]) => ({ nm, v: A.cause[k] })).filter(c => c.v > 0).sort((a, b) => b.v - a.v);
   if (causes.length && A.rej > 0) {
     const c2 = causes[1] ? ` dan ${causes[1].nm} (${mgP(causes[1].v / A.rej * 100, 0)})` : '';
     bullets.push(`Penyebab reject terbesar: <b>${causes[0].nm}</b> (${mgP(causes[0].v / A.rej * 100, 0)})${c2}.`);
   }
-  if (M.g1.panen > 0 && M.g2.panen > 0) {
+  const has1 = M.g1.panen > 0, has2 = M.g2.panen > 0;
+  if (has1 && has2) {
     const hi = M.g1.rateRej >= M.g2.rateRej ? ['GH 1', M.g1, 'GH 2', M.g2] : ['GH 2', M.g2, 'GH 1', M.g1];
     bullets.push(`Reject rate <b>${hi[0]}</b> lebih tinggi (${mgP(hi[1].rateRej, 2)} vs ${mgP(hi[3].rateRej, 2)} di ${hi[2]}).`);
+  }
+  const g2s = mgGh2Start();
+  if (has2 && PA.panen > 0 && P.g2.panen === 0 && g2s) {
+    bullets.push(`<span style="color:${MG.MUTE};">Catatan: GH 2 baru mulai panen sejak ${mgLong(g2s)}; periode pembanding hanya GH 1, jadi kenaikan panen sebagian karena penambahan GH 2.</span>`);
+  } else if (!has2 && has1) {
+    bullets.push(`<span style="color:${MG.MUTE};">Pada periode ini hanya GH 1 yang panen${g2s ? ` (GH 2 mulai ${mgLong(g2s)})` : ''}.</span>`);
   }
   if (hy) {
     const susut = hy.sent.total - hy.recv.total;
@@ -269,15 +288,20 @@ function renderLaporanMgmt() {
   const td = (t, b, c) => `<td style="padding:7px 8px;font-size:12.5px;text-align:right;border-bottom:1px solid ${MG.LINE};${b ? 'font-weight:800;' : ''}${c ? 'color:' + c + ';' : ''}">${t}</td>`;
   const tdl = t => `<td style="padding:7px 8px;font-size:12.5px;text-align:left;border-bottom:1px solid ${MG.LINE};color:${MG.MUTE};">${t}</td>`;
   const rrCol = v => (v <= target ? MG.OK : (v <= target * 1.25 ? MG.WARN : MG.BAD));
-  const ghRow = (lbl, f, bold, colorFn) => `<tr>${tdl(lbl)}${td(f(M.g1), bold, colorFn && colorFn(M.g1))}${td(f(M.g2), bold, colorFn && colorFn(M.g2))}${td(f(A), true, colorFn && colorFn(A))}</tr>`;
-  const ghTable = `<table style="width:100%;border-collapse:collapse;"><thead><tr>${th('', 'left')}${th('GH 1')}${th('GH 2')}${th('Gabungan')}</tr></thead><tbody>
+  const ghs = [];
+  if (has1) ghs.push(['GH 1', M.g1]);
+  if (has2) ghs.push(['GH 2', M.g2]);
+  if (ghs.length > 1) ghs.push(['Gabungan', A]);
+  const ghRow = (lbl, f, bold, colorFn) => `<tr>${tdl(lbl)}${ghs.map(([nm, t], i) => td(f(t), bold || i === ghs.length - 1 && ghs.length > 1, colorFn && colorFn(t))).join('')}</tr>`;
+  const ghTable = `<table style="width:100%;border-collapse:collapse;"><thead><tr>${th('', 'left')}${ghs.map(([nm]) => th(nm)).join('')}</tr></thead><tbody>
     ${ghRow('Panen (kg)', t => mgN(t.panen))}
     ${ghRow('Terkirim (kg)', t => mgN(t.kirim))}
     ${ghRow('% Terkirim', t => mgP(t.rateKirim))}
     ${ghRow('Reject (kg)', t => mgN(t.rej))}
     ${ghRow('Reject Rate', t => mgP(t.rateRej, 2), true, t => (t.panen > 0 ? rrCol(t.rateRej) : null))}
   </tbody></table>
-  <div style="font-size:10.5px;color:${MG.MUTE};margin-top:6px;">Reject Fresh/Frozen yang tercampur GH dibagi otomatis ke GH 1 &amp; GH 2.</div>`;
+  <div style="font-size:10.5px;color:${MG.MUTE};margin-top:6px;">Reject Fresh/Frozen yang tercampur GH dibagi otomatis ke GH yang panen pada hari itu.${has1 && !has2 ? ' GH 2 belum ada data pada periode ini.' : ''}</div>`;
+  const ghTitle = ghs.length > 1 ? 'Perbandingan GH 1 vs GH 2' : ('Ringkasan ' + (ghs[0] ? ghs[0][0] : 'GH'));
 
   // trend
   const bk = mgBuckets(M);
@@ -287,18 +311,22 @@ function renderLaporanMgmt() {
     <td style="width:50%;padding-right:10px;vertical-align:top;"><div style="font-size:12px;font-weight:700;color:${MG.INK};margin-bottom:4px;">Panen vs Terkirim${bk.weekly ? ' (per minggu)' : ' (per hari)'}</div>${chartPanen}</td>
     <td style="width:50%;padding-left:10px;vertical-align:top;"><div style="font-size:12px;font-weight:700;color:${MG.INK};margin-bottom:4px;">Reject Rate${bk.weekly ? ' (per minggu)' : ' (per hari)'}</div>${chartRate}</td></tr></table>`;
 
-  // causes
-  const maxShare = Math.max(1, ...MG_CAUSES.flatMap(([k]) => [M.g1.rej > 0 ? M.g1.cause[k] / M.g1.rej * 100 : 0, M.g2.rej > 0 ? M.g2.cause[k] / M.g2.rej * 100 : 0]));
+  // causes (hanya GH yang punya data pada periode)
+  const cg = [];
+  if (M.g1.rej > 0) cg.push(['GH 1', M.g1, MG.GH1]);
+  if (M.g2.rej > 0) cg.push(['GH 2', M.g2, MG.GH2]);
+  const maxShare = Math.max(1, ...MG_CAUSES.flatMap(([k]) => cg.map(([nm, t]) => t.cause[k] / t.rej * 100)));
   const bar = (v, tot, color) => {
     const share = tot > 0 ? v / tot * 100 : 0;
     return `<div style="margin:2px 0;"><span style="display:inline-block;height:11px;border-radius:3px;background:${color};width:${Math.max(share / maxShare * 62, v > 0 ? 1 : 0)}%;vertical-align:middle;"></span> <span style="font-size:11px;color:${MG.INK};vertical-align:middle;">${v > 0 ? mgN(v) + ' kg · ' + mgP(share, 0) : '–'}</span></div>`;
   };
-  const causeRows = MG_CAUSES.map(([k, nm]) => ({ k, nm, tot: M.g1.cause[k] + M.g2.cause[k] })).filter(c => c.tot > 0).sort((a, b) => b.tot - a.tot)
+  const causeRows = MG_CAUSES.map(([k, nm]) => ({ k, nm, tot: cg.reduce((a, [n, t]) => a + t.cause[k], 0) })).filter(c => c.tot > 0).sort((a, b) => b.tot - a.tot)
     .map(c => `<tr><td style="padding:5px 6px;font-size:12px;font-weight:700;color:${MG.INK};width:20%;border-bottom:1px solid ${MG.LINE};">${c.nm}</td>
-      <td style="padding:3px 6px;border-bottom:1px solid ${MG.LINE};">${bar(M.g1.cause[c.k], M.g1.rej, MG.GH1)}${bar(M.g2.cause[c.k], M.g2.rej, MG.GH2)}</td></tr>`).join('');
+      <td style="padding:3px 6px;border-bottom:1px solid ${MG.LINE};">${cg.map(([nm, t, col]) => bar(t.cause[c.k], t.rej, col)).join('')}</td></tr>`).join('');
   const causeHtml = causeRows
-    ? `<div style="font-size:11px;color:${MG.MUTE};margin-bottom:6px;"><span style="display:inline-block;width:10px;height:10px;background:${MG.GH1};border-radius:2px;margin-right:4px;"></span>GH 1 (${mgN(M.g1.rej)} kg)&nbsp;&nbsp;&nbsp;<span style="display:inline-block;width:10px;height:10px;background:${MG.GH2};border-radius:2px;margin-right:4px;"></span>GH 2 (${mgN(M.g2.rej)} kg) · persentase = porsi dari total reject tiap GH</div><table style="width:100%;border-collapse:collapse;">${causeRows}</table>`
+    ? `<div style="font-size:11px;color:${MG.MUTE};margin-bottom:6px;">${cg.map(([nm, t, col]) => `<span style="display:inline-block;width:10px;height:10px;background:${col};border-radius:2px;margin-right:4px;"></span>${nm} (${mgN(t.rej)} kg)`).join('&nbsp;&nbsp;&nbsp;')} · persentase = porsi dari total reject ${cg.length > 1 ? 'tiap GH' : cg[0][0]}</div><table style="width:100%;border-collapse:collapse;">${causeRows}</table>`
     : `<div style="color:${MG.MUTE};font-size:12px;">Belum ada data reject</div>`;
+  const causeTitle = cg.length > 1 ? 'Penyebab Reject per GH' : 'Penyebab Reject';
 
   // Hyoshii
   let hyHtml = '';
@@ -336,9 +364,9 @@ function renderLaporanMgmt() {
         <ul style="margin:0 0 0 18px;padding:0;font-size:13px;line-height:1.55;">${bullets.map(b => `<li style="margin:2px 0;">${b}</li>`).join('')}</ul>
       </div>
       <div style="margin-top:12px;">${kpis}</div>
-      ${mgSection('Perbandingan GH 1 vs GH 2', ghTable)}
+      ${mgSection(ghTitle, ghTable)}
       ${mgSection('Tren', trend)}
-      ${mgSection('Penyebab Reject per GH', causeHtml)}
+      ${mgSection(causeTitle, causeHtml)}
       ${mgSection('Pengiriman ke Hyoshii: Kirim vs Diterima', hyHtml)}
       <div style="text-align:center;font-size:10.5px;color:${MG.MUTE};margin-top:12px;">Dibuat otomatis oleh aplikasi Processing AWB · ${stamp} · pembanding: ${mgLong(rg.pstart)} – ${mgLong(rg.pend)}</div>
     </div></div>`;
