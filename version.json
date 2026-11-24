@@ -1,4 +1,4 @@
 {
-  "version": "1.10.7",
+  "version": "1.11.0",
   "released": "2026-11-24",
-  "notes": "Dashboard Panen dirapikan: pengaturan disatukan, kartu bisa dilipat, urutan diatur ulang"}
+  "notes": "Laporan Manajemen: ringkasan otomatis, KPI, GH 1 vs GH 2, tren, penyebab reject, kirim vs diterima Hyoshii; simpan gambar & layar penuh"}

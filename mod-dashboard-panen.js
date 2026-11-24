@@ -282,6 +282,7 @@ function updateDashboard() {
   renderRejectBreakdown(); 
   renderRejectTrendChart();
  renderDetailReject(); // <--- TAMBAHKAN INI
+  try { if (typeof renderLaporanMgmt === 'function') renderLaporanMgmt(); } catch (e) { console.warn('laporan mgmt:', e); }
 }
 
 // ========== REKAP PERBANDINGAN BULANAN ==========

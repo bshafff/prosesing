@@ -5,6 +5,47 @@
     <button class="btn btn-sm" onclick="openModule('dash-mika')" style="margin-left:auto;flex:none;background:#faf5ff;color:#7e22ce;border:1px solid #e9d5ff;">🍓 Dashboard Mika</button>
   </div>
 
+  <!-- LAPORAN MANAJEMEN -->
+  <div class="card" id="mgmt-card" style="margin-bottom:1rem;border-left:4px solid #2d5016;" data-collapse="mgmt" data-open="1">
+    <div class="card-title">📑 Laporan Manajemen</div>
+    <div class="row-3" style="align-items:flex-end;margin-bottom:0.75rem;">
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Periode</label>
+        <select id="mgmt-jenis" onchange="mgOnChange()">
+          <option value="mingguan">Mingguan (Senin–Sabtu)</option>
+          <option value="2mingguan">2 Mingguan</option>
+          <option value="bulanan">Bulanan</option>
+          <option value="custom">Pilih tanggal sendiri</option>
+        </select>
+      </div>
+      <div class="input-group" id="mgmt-w-tgl" style="margin-bottom:0;">
+        <label>Tanggal di minggu tsb</label>
+        <input type="date" id="mgmt-tgl" onchange="renderLaporanMgmt()">
+      </div>
+      <div class="input-group" id="mgmt-w-bulan" style="margin-bottom:0;display:none;">
+        <label>Bulan</label>
+        <input type="month" id="mgmt-bulan" onchange="renderLaporanMgmt()">
+      </div>
+      <div class="input-group" id="mgmt-w-dari" style="margin-bottom:0;display:none;">
+        <label>Dari Tanggal</label>
+        <input type="date" id="mgmt-dari" onchange="renderLaporanMgmt()">
+      </div>
+      <div class="input-group" id="mgmt-w-sampai" style="margin-bottom:0;display:none;">
+        <label>Sampai Tanggal</label>
+        <input type="date" id="mgmt-sampai" onchange="renderLaporanMgmt()">
+      </div>
+      <div class="input-group" style="margin-bottom:0;">
+        <label>Target Reject Rate (%)</label>
+        <input type="number" id="mgmt-target" step="0.5" min="0" inputmode="decimal" onchange="renderLaporanMgmt()">
+      </div>
+    </div>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+      <button class="btn btn-sm btn-primary" id="mgmt-btn-img" onclick="mgSaveImage()" style="background:#2d5016;">📸 Simpan / Kirim Gambar (WA)</button>
+      <button class="btn btn-sm btn-secondary" onclick="mgFullscreen()">🖥️ Layar Penuh (presentasi)</button>
+    </div>
+    <div id="mgmt-report-wrap"><div id="mgmt-report"></div></div>
+  </div>
+
   <div class="card" style="border-left: 4px solid #2d5016; margin-bottom: 1rem;" data-collapse="laporan" data-open="1">
     <div class="card-title">🖼️ Cetak Laporan (Harian / Mingguan / Bulanan)</div>
     

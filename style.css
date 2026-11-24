@@ -366,3 +366,7 @@ tr:hover { background: #f9fafb; }
 .dash-collapsible.collapsed > .card-title::after, .dash-collapsible.collapsed > .chart-title::after { content: '▸'; }
 .dash-collapsible.collapsed > :not(.card-title):not(.chart-title) { display: none !important; }
 .dash-collapsible.collapsed > .card-title, .dash-collapsible.collapsed > .chart-title { margin-bottom: 0; border-bottom: 0; padding-bottom: 0; }
+
+/* Laporan Manajemen: mode layar penuh */
+#mgmt-report-wrap:fullscreen { background: #f1f5f9; overflow: auto; padding: 12px; }
+#mgmt-canvas { max-width: 1000px; margin: 0 auto; }
