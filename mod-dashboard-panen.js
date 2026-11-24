@@ -14,7 +14,44 @@ function onDashboardMonthChange() {
   updateDashboard();
 }
 
+// ========== PEMBAGIAN REJECT FRESH/FROZEN (GLOBAL) KE GH ==========
+// Reject Fresh/Frozen dikirim tercampur GH 1 & GH 2 (dicatat di record GLOBAL). Dibagi otomatis ke tiap GH per tanggal.
+function alokBasis() { return localStorage.getItem('awb_alok_basis') || 'reject'; }
+function setAlokBasis(v) { localStorage.setItem('awb_alok_basis', v); try { updateDashboard(); } catch (e) { /* abaikan */ } }
+function alokWeight(x, basis) {
+  const rk = (x.rk_crack || 0) + (x.rk_poli || 0) + (x.rk_hpt || 0);
+  const rp = (x.rp_crack || 0) + (x.rp_poli || 0) + (x.rp_hpt || 0) + (x.rp_bruise || 0) + (x.rp_overripe || 0) + (x.rp_kuning || 0) + (x.rp_frozen || 0) + (x.rp_albino || 0);
+  if (basis === 'panen') return (x.p_hatsu || 0) + (x.p_gradea || 0) + (x.p_gradeb || 0) + rk;
+  if (basis === 'kirim') return (x.k_hatsu || 0) + (x.k_a11 || 0) + (x.k_a15 || 0);
+  return rk + rp; // total reject
+}
+// Mengembalikan fungsi alok(item) -> {k_frozen, k_rfresh} (porsi item GH) + alok.hasGh(tgl)
+function buildAlokasiGlobal(db) {
+  const basis = alokBasis();
+  const day = {};
+  db.forEach(x => {
+    if (!x.tgl) return;
+    const d = day[x.tgl] || (day[x.tgl] = { fz: 0, rf: 0, items: [] });
+    if (x.gh === 'GLOBAL') { d.fz += Number(x.k_frozen) || 0; d.rf += Number(x.k_rfresh) || 0; }
+    else d.items.push(x);
+  });
+  const share = new Map();
+  Object.keys(day).forEach(t => {
+    const d = day[t];
+    if (!d.items.length || (!d.fz && !d.rf)) return;
+    let w = d.items.map(x => alokWeight(x, basis));
+    if (w.reduce((a, b) => a + b, 0) <= 0) w = d.items.map(x => alokWeight(x, 'panen'));
+    let tot = w.reduce((a, b) => a + b, 0);
+    if (tot <= 0) { w = d.items.map(() => 1); tot = w.length; }
+    d.items.forEach((x, i) => share.set(x, { k_frozen: d.fz * w[i] / tot, k_rfresh: d.rf * w[i] / tot }));
+  });
+  const fn = item => share.get(item) || { k_frozen: 0, k_rfresh: 0 };
+  fn.hasGh = tgl => !!(day[tgl] && day[tgl].items.length && (day[tgl].fz || day[tgl].rf));
+  return fn;
+}
+
 function updateDashboard() {
+  const alokSel = document.getElementById('alok-basis'); if (alokSel) alokSel.value = alokBasis();
   const bulanEl = document.getElementById('dashboard-bulan');
   if (!bulanEl) return;
   if (!bulanEl.value) bulanEl.value = new Date().toISOString().substring(0, 7);
@@ -43,18 +80,12 @@ function updateDashboard() {
     .filter(x => x.tgl && x.tgl.startsWith(selectedMonth))
     .sort((a, b) => new Date(a.tgl) - new Date(b.tgl));
 
-  // Helper untuk alokasi Frozen proporsional
+  // Alokasi reject Fresh/Frozen global ke GH (dasar pembagian bisa dipilih)
+  const alokFn = buildAlokasiGlobal(allPanenDb);
   const getFrozenAlokasi = (item) => {
     if (item.gh === 'GLOBAL' || dashGh() === 'all') return 0; // tampilan 'Semua GH' pakai nilai global langsung (hindari hitung dobel)
-    const tgl = item.tgl;
-    const totalFrozenHariItu = frozenPerTgl[tgl] || 0;
-    if (totalFrozenHariItu === 0) return 0;
-
-    const gradeKirimGHIni = (item.k_hatsu || 0) + (item.k_a11 || 0) + (item.k_a15 || 0);
-    const gradeKirimSemua = allGradeKirimPerTgl[tgl] || 0;
-    
-    if (gradeKirimSemua === 0) return 0;
-    return (gradeKirimGHIni / gradeKirimSemua) * totalFrozenHariItu;
+    const a = alokFn(item);
+    return a.k_frozen + a.k_rfresh;
   };
 
   const accumulate = (list) => {
@@ -847,6 +878,8 @@ function generateLaporanGabungan() {
     m_hatsu: 0, m_a11: 0, m_a15: 0
   };
 
+  const alokLap = buildAlokasiGlobal(db);
+  merged._alok = ghFilter !== 'all';
   dailyData.forEach(item => {
     merged.p_hatsu += (item.p_hatsu || 0);
     merged.p_gradea += (item.p_gradea || 0);
@@ -865,8 +898,8 @@ function generateLaporanGabungan() {
     merged.k_hatsu += (item.k_hatsu || 0);
     merged.k_a11 += (item.k_a11 || 0);
     merged.k_a15 += (item.k_a15 || 0);
-    merged.k_frozen += (item.k_frozen || 0);
-    merged.k_rfresh += (item.k_rfresh || 0);
+    merged.k_frozen += (item.k_frozen || 0) + (ghFilter !== 'all' ? alokLap(item).k_frozen : 0);
+    merged.k_rfresh += (item.k_rfresh || 0) + (ghFilter !== 'all' ? alokLap(item).k_rfresh : 0);
     merged.m_hatsu += (item.m_hatsu || 0);
     merged.m_a11 += (item.m_a11 || 0);
     merged.m_a15 += (item.m_a15 || 0);
@@ -957,8 +990,8 @@ function renderCanvasLaporanGabungan(item, titleText) {
     { name: 'Grade A', p: item.p_gradea, k: item.k_a11, m: item.m_a11, color: '#15803d' },
     { name: 'Grade B', p: item.p_gradeb, k: item.k_a15, m: item.m_a15, color: '#b45309' },
     { name: 'Reject Kebun', p: rkTotal, k: 0, m: 0, color: '#dc2626' },
-    { name: 'Reject Frozen (Global)', p: 0, k: item.k_frozen, m: 0, color: '#7c3aed' },
-    { name: 'Reject Fresh (Global)', p: 0, k: item.k_rfresh, m: 0, color: '#0891b2' }
+    { name: item._alok ? 'Reject Frozen (porsi GH)' : 'Reject Frozen (Global)', p: 0, k: item.k_frozen, m: 0, color: '#7c3aed' },
+    { name: item._alok ? 'Reject Fresh (porsi GH)' : 'Reject Fresh (Global)', p: 0, k: item.k_rfresh, m: 0, color: '#0891b2' }
   ];
 
   rows.forEach((row, i) => {
@@ -969,7 +1002,7 @@ function renderCanvasLaporanGabungan(item, titleText) {
     else text('-', grX + 320, ry + 20, 16, '#94a3b8', 'right');
 
     if (row.k > 0) {
-      const totalP = row.name.includes('Global') ? 0 : row.p + (row.name !== 'Reject Kebun' ? rkTotal : 0);
+      const totalP = row.name.startsWith('Reject F') ? 0 : row.p + (row.name !== 'Reject Kebun' ? rkTotal : 0);
       const pctK = totalP > 0 ? (row.k / totalP * 100) : 0;
       
       text(fmt(row.k), grX + 530, ry + 20, 16, '#1e293b', 'right');
@@ -1631,6 +1664,7 @@ function drBuildRows(dari, sampai, ghMode, cols) {
   const needGlobal = cols.some(c => c.global || DR_GLOBAL_GROUPS.includes(c.grp));
   const map = new Map();
   const needHy = cols.some(c => c.grp.startsWith('hy'));
+  const alokRekap = buildAlokasiGlobal(db);
 
   // Hyoshii = satu kesatuan per tanggal (tidak per GH): tampil di baris 'GH 1+2'
   if (needHy && ghMode !== 'gh1' && ghMode !== 'gh2') {
@@ -1666,6 +1700,11 @@ function drBuildRows(dari, sampai, ghMode, cols) {
     if (!map.has(key)) map.set(key, drNewRow(item.tgl, ghLabel));
     const r = map.get(key);
     DR_RAW.forEach(k => { r[k] += Number(item[k]) || 0; });
+    if (ghMode !== 'gabung') {
+      // reject fresh/frozen global dibagi ke GH 1 & GH 2 (kalau hari itu ada data GH)
+      if (isGlobal && alokRekap.hasGh(item.tgl)) { r.k_frozen -= Number(item.k_frozen) || 0; r.k_rfresh -= Number(item.k_rfresh) || 0; }
+      else if (!isGlobal) { const a = alokRekap(item); r.k_frozen += a.k_frozen; r.k_rfresh += a.k_rfresh; }
+    }
     if (item.t_ket) r.t_ket = r.t_ket ? (r.t_ket + '; ' + item.t_ket) : String(item.t_ket);
   });
 
@@ -1723,7 +1762,7 @@ function renderDetailReject() {
     const needGlobal = cols.some(c => c.global || DR_GLOBAL_GROUPS.includes(c.grp));
     infoEl.innerHTML = `Periode: <b>${fmtTgl(dari)}</b> s/d <b>${fmtTgl(sampai)}</b> · ${DR_GH_LABEL[ghMode] || ''} · <b>${cols.length}</b> kolom data`
       + (cols.some(c => c.grp.startsWith('hy')) ? '<br><small>Data Hyoshii satu kesatuan per tanggal (tampil di baris GH 1+2; selisih = diterima − total kirim hari itu). Paling mudah dibaca di mode Gabungan.</small>' : '')
-      + (needGlobal ? '<br><small>Reject Fresh/Frozen & Tamu bersifat global (tidak per GH): tampil di baris 🌐 Global, atau digabung ke baris tanggal jika mode Gabungan.</small>' : '');
+      + (needGlobal ? '<br><small>Reject Fresh/Frozen tercampur GH 1 & 2: dibagi otomatis ke tiap GH (dasar: ' + ({ reject: 'total reject', panen: 'panen', kirim: 'kirim grade' }[alokBasis()]) + '). Tamu tetap di baris 🌐 Global; mode Gabungan menampilkan totalnya.</small>' : '');
   }
 
   // Header 2 baris: kelompok + kolom

@@ -1,5 +1,5 @@
 {
-  "version": "1.10.1",
-  "released": "2026-11-23",
-  "notes": "Diterima Hyoshii jadi satu kesatuan per tanggal; Reject Fresh/Frozen masuk Kirim (Berat) di Data Rekap"
+  "version": "1.10.2",
+  "released": "2026-11-24",
+  "notes": "Reject Fresh/Frozen global dibagi otomatis ke GH 1 & GH 2 (laporan, dashboard, data rekap)"
 }

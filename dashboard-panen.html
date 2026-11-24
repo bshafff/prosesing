@@ -5,6 +5,19 @@
     <button class="btn btn-sm" onclick="openModule('dash-mika')" style="margin-left:auto;flex:none;background:#faf5ff;color:#7e22ce;border:1px solid #e9d5ff;">🍓 Dashboard Mika</button>
   </div>
 
+  <!-- PEMBAGIAN REJECT FRESH/FROZEN KE GH -->
+  <div class="card" style="margin-bottom: 1rem;">
+    <div class="input-group" style="margin-bottom:0;">
+      <label>⚖️ Bagi Reject Fresh/Frozen dikirim ke GH 1 &amp; GH 2 berdasarkan</label>
+      <select id="alok-basis" onchange="setAlokBasis(this.value)">
+        <option value="reject">Total reject tiap GH (disarankan)</option>
+        <option value="panen">Total panen tiap GH</option>
+        <option value="kirim">Kirim grade (Hatsu+A+B) tiap GH</option>
+      </select>
+      <small style="color:#666;">Dipakai di Laporan per GH, Dashboard, dan Data Rekap. Mode Gabungan tetap menampilkan total aslinya.</small>
+    </div>
+  </div>
+
   <!-- CARD CETAK LAPORAN (HARIAN/MINGGUAN/BULANAN) -->
   <div class="card" style="border-left: 4px solid #2d5016; margin-bottom: 1rem;">
     <div class="card-title">🖼️ Cetak Laporan (Harian / Mingguan / Bulanan)</div>
