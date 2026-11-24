@@ -21,8 +21,7 @@
         <div class="input-group"><label>Grade B</label><input type="number" step="0.01" inputmode="decimal" id="hy-hk-a15" oninput="hyUpdateCompare()"></div>
       </div>
       <div class="row-3">
-        <div class="input-group"><label>Reject Fresh</label><input type="number" step="0.01" inputmode="decimal" id="hy-hk-rfresh" oninput="hyUpdateCompare()"></div>
-        <div class="input-group"><label>Reject Frozen</label><input type="number" step="0.01" inputmode="decimal" id="hy-hk-frozen" oninput="hyUpdateCompare()"></div>
+        <div class="input-group"><label>Reject (Fresh + Frozen)</label><input type="number" step="0.01" inputmode="decimal" id="hy-hk-reject" oninput="hyUpdateCompare()"></div>
       </div>
       <div class="sub-title">Pack Diterima Hyoshii</div>
       <div class="row-3">
@@ -30,17 +29,17 @@
         <div class="input-group"><label>Grade A</label><input type="number" step="1" inputmode="numeric" id="hy-hp-a11" oninput="hyUpdateCompare()"></div>
         <div class="input-group"><label>Grade B</label><input type="number" step="1" inputmode="numeric" id="hy-hp-a15" oninput="hyUpdateCompare()"></div>
       </div>
-      <div class="sub-title">Pack Reject oleh Hyoshii (alasan)</div>
+      <div class="sub-title">Pack Reject oleh Hyoshii (per grade)</div>
       <div class="row-3">
-        <div class="input-group"><label>Sampel</label><input type="number" step="1" inputmode="numeric" id="hy-hr-sampel" oninput="hyUpdateCompare()"></div>
-        <div class="input-group"><label>Tidak Lolos QC</label><input type="number" step="1" inputmode="numeric" id="hy-hr-qc" oninput="hyUpdateCompare()"></div>
-        <div class="input-group"><label>Lainnya</label><input type="number" step="1" inputmode="numeric" id="hy-hr-lain" oninput="hyUpdateCompare()"></div>
+        <div class="input-group"><label>Hatsuhana</label><input type="number" step="1" inputmode="numeric" id="hy-hr-hatsu" oninput="hyUpdateCompare()"></div>
+        <div class="input-group"><label>Grade A</label><input type="number" step="1" inputmode="numeric" id="hy-hr-a11" oninput="hyUpdateCompare()"></div>
+        <div class="input-group"><label>Grade B</label><input type="number" step="1" inputmode="numeric" id="hy-hr-a15" oninput="hyUpdateCompare()"></div>
       </div>
     </div>
 
     <div class="input-group">
-      <label>Keterangan</label>
-      <input type="text" id="hy-ket" placeholder="mis. 2 pack dipakai sampel Hyoshii">
+      <label>Keterangan (alasan reject: sampel, tidak lolos QC, dll)</label>
+      <input type="text" id="hy-ket" placeholder="mis. 2 pack Grade A dipakai sampel, 1 pack Hatsu tidak lolos QC">
     </div>
 
     <div id="hy-compare" style="margin-bottom:0.75rem;"></div>

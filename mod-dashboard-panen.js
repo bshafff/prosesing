@@ -19,11 +19,12 @@ function onDashboardMonthChange() {
 function alokBasis() { return localStorage.getItem('awb_alok_basis') || 'reject'; }
 function setAlokBasis(v) { localStorage.setItem('awb_alok_basis', v); try { updateDashboard(); } catch (e) { /* abaikan */ } }
 function alokWeight(x, basis) {
-  const rk = (x.rk_crack || 0) + (x.rk_poli || 0) + (x.rk_hpt || 0);
-  const rp = (x.rp_crack || 0) + (x.rp_poli || 0) + (x.rp_hpt || 0) + (x.rp_bruise || 0) + (x.rp_overripe || 0) + (x.rp_kuning || 0) + (x.rp_frozen || 0) + (x.rp_albino || 0);
+  // Reject HPT tidak ikut: pasti tidak dikirim (rk_hpt & rp_hpt dikeluarkan)
+  const rk = (x.rk_crack || 0) + (x.rk_poli || 0);
+  const rp = (x.rp_crack || 0) + (x.rp_poli || 0) + (x.rp_bruise || 0) + (x.rp_overripe || 0) + (x.rp_kuning || 0) + (x.rp_frozen || 0) + (x.rp_albino || 0);
   if (basis === 'panen') return (x.p_hatsu || 0) + (x.p_gradea || 0) + (x.p_gradeb || 0) + rk;
   if (basis === 'kirim') return (x.k_hatsu || 0) + (x.k_a11 || 0) + (x.k_a15 || 0);
-  return rk + rp; // total reject
+  return rk + rp; // total reject (tanpa HPT)
 }
 // Mengembalikan fungsi alok(item) -> {k_frozen, k_rfresh} (porsi item GH) + alok.hasGh(tgl)
 function buildAlokasiGlobal(db) {
@@ -1459,15 +1460,13 @@ const DR_COLS = [
   { id: 'hk_hatsu', grp: 'hykg', label: 'Hatsuhana', t: 'kg' },
   { id: 'hk_a11', grp: 'hykg', label: 'Grade A', t: 'kg' },
   { id: 'hk_a15', grp: 'hykg', label: 'Grade B', t: 'kg' },
-  { id: 'hk_rfresh', grp: 'hykg', label: 'Reject Fresh', t: 'kg' },
-  { id: 'hk_frozen', grp: 'hykg', label: 'Reject Frozen', t: 'kg' },
+  { id: 'hk_reject', grp: 'hykg', label: 'Reject', t: 'kg' },
   { id: 'hk_total', grp: 'hykg', label: 'Total Terima', t: 'kg', bold: true },
 
   { id: 'sel_hatsu', grp: 'hysel', label: 'Hatsuhana', t: 'kg', signed: true },
   { id: 'sel_a11', grp: 'hysel', label: 'Grade A', t: 'kg', signed: true },
   { id: 'sel_a15', grp: 'hysel', label: 'Grade B', t: 'kg', signed: true },
-  { id: 'sel_rfresh', grp: 'hysel', label: 'Reject Fresh', t: 'kg', signed: true },
-  { id: 'sel_frozen', grp: 'hysel', label: 'Reject Frozen', t: 'kg', signed: true },
+  { id: 'sel_reject', grp: 'hysel', label: 'Reject', t: 'kg', signed: true },
   { id: 'sel_total', grp: 'hysel', label: 'Total Selisih', t: 'kg', signed: true, bold: true },
 
   { id: 'hp_hatsu', grp: 'hypk', label: 'Hatsuhana', t: 'int' },
@@ -1480,9 +1479,9 @@ const DR_COLS = [
   { id: 'sp_a15', grp: 'hysp', label: 'Grade B', t: 'int', signed: true },
   { id: 'sp_total', grp: 'hysp', label: 'Total Selisih Pack', t: 'int', signed: true, bold: true },
 
-  { id: 'hr_sampel', grp: 'hyrej', label: 'Sampel', t: 'int' },
-  { id: 'hr_qc', grp: 'hyrej', label: 'Tidak Lolos QC', t: 'int' },
-  { id: 'hr_lain', grp: 'hyrej', label: 'Lainnya', t: 'int' },
+  { id: 'hr_hatsu', grp: 'hyrej', label: 'Hatsuhana', t: 'int' },
+  { id: 'hr_a11', grp: 'hyrej', label: 'Grade A', t: 'int' },
+  { id: 'hr_a15', grp: 'hyrej', label: 'Grade B', t: 'int' },
   { id: 'hr_total', grp: 'hyrej', label: 'Total Reject Pack', t: 'int', bold: true },
   { id: 'h_ket', grp: 'hyrej', label: 'Keterangan Hyoshii', t: 'txt' }
 ];
@@ -1564,7 +1563,7 @@ function setDetailColsPreset(mode) {
   else if (mode === 'kosong') drSelected = new Set();
   else if (mode === 'ringkas') drSelected = new Set(['panen_total', 'rej_total', 'rate', 'kirim_total', 'm_total']);
   else if (mode === 'reject') drSelected = new Set(DR_DEFAULT_COLS);
-  else if (mode === 'hyoshii') drSelected = new Set(['kirim_total', 'hk_total', 'sel_total', 'm_total', 'hp_total', 'sp_total', 'hr_sampel', 'hr_qc', 'hr_lain', 'hr_total']);
+  else if (mode === 'hyoshii') drSelected = new Set(['kirim_total', 'hk_total', 'sel_total', 'm_total', 'hp_total', 'sp_total', 'hr_hatsu', 'hr_a11', 'hr_a15', 'hr_total']);
   buildDetailColsPanel();
   drSavePref();
   renderDetailReject();
@@ -1609,7 +1608,7 @@ const DR_RAW = ['p_hatsu', 'p_gradea', 'p_gradeb', 'rk_crack', 'rk_poli', 'rk_hp
   'rp_crack', 'rp_poli', 'rp_hpt', 'rp_bruise', 'rp_overripe', 'rp_kuning', 'rp_frozen', 'rp_albino',
   'k_hatsu', 'k_a11', 'k_a15', 'k_frozen', 'k_rfresh', 'm_hatsu', 'm_a11', 'm_a15',
   't_curah', 't_hatsu', 't_a11', 't_a15',
-  'hk_hatsu', 'hk_a11', 'hk_a15', 'hk_rfresh', 'hk_frozen', 'hp_hatsu', 'hp_a11', 'hp_a15', 'hr_sampel', 'hr_qc', 'hr_lain'];
+  'hk_hatsu', 'hk_a11', 'hk_a15', 'hk_reject', 'hp_hatsu', 'hp_a11', 'hp_a15', 'hr_hatsu', 'hr_a11', 'hr_a15'];
 
 function drNewRow(tgl, gh) {
   const r = { tgl, gh, t_ket: '', h_ket: '', _hy: false, ds: null };
@@ -1633,12 +1632,13 @@ function drDerive(r) {
   r.kirim_total = r.k_hatsu + r.k_a11 + r.k_a15 + r.k_rfresh + r.k_frozen;
   r.m_total = r.m_hatsu + r.m_a11 + r.m_a15;
   // Hyoshii: satu kesatuan per tanggal; selisih = diterima - TOTAL kirim hari itu (semua GH + reject)
-  r.hk_total = r.hk_hatsu + r.hk_a11 + r.hk_a15 + r.hk_rfresh + r.hk_frozen;
+  r.hk_total = r.hk_hatsu + r.hk_a11 + r.hk_a15 + r.hk_reject;
   r.hp_total = r.hp_hatsu + r.hp_a11 + r.hp_a15;
-  r.hr_total = r.hr_sampel + r.hr_qc + r.hr_lain;
+  r.hr_total = r.hr_hatsu + r.hr_a11 + r.hr_a15;
   const d = r._hy ? r.ds : null;
   const z = k => (d ? r['hk_' + k] - d['k_' + k] : 0);
-  r.sel_hatsu = z('hatsu'); r.sel_a11 = z('a11'); r.sel_a15 = z('a15'); r.sel_rfresh = z('rfresh'); r.sel_frozen = z('frozen');
+  r.sel_hatsu = z('hatsu'); r.sel_a11 = z('a11'); r.sel_a15 = z('a15');
+  r.sel_reject = d ? r.hk_reject - (d.k_rfresh + d.k_frozen) : 0;
   r.sel_total = d ? r.hk_total - (d.k_hatsu + d.k_a11 + d.k_a15 + d.k_rfresh + d.k_frozen) : 0;
   r.sp_hatsu = d ? r.hp_hatsu - d.m_hatsu : 0;
   r.sp_a11 = d ? r.hp_a11 - d.m_a11 : 0;
@@ -1679,7 +1679,8 @@ function drBuildRows(dari, sampai, ghMode, cols) {
       const key = item.tgl + '|GH 1+2';
       if (!map.has(key)) map.set(key, drNewRow(item.tgl, 'GH 1+2'));
       const r = map.get(key);
-      ['hk_hatsu', 'hk_a11', 'hk_a15', 'hk_rfresh', 'hk_frozen', 'hp_hatsu', 'hp_a11', 'hp_a15', 'hr_sampel', 'hr_qc', 'hr_lain'].forEach(k => { r[k] += Number(item[k]) || 0; });
+      ['hk_hatsu', 'hk_a11', 'hk_a15', 'hk_reject', 'hp_hatsu', 'hp_a11', 'hp_a15', 'hr_hatsu', 'hr_a11', 'hr_a15'].forEach(k => { r[k] += Number(item[k]) || 0; });
+      r.hk_reject += (Number(item.hk_rfresh) || 0) + (Number(item.hk_frozen) || 0); // data lama (fresh/frozen terpisah)
       if (item.h_ket) r.h_ket = r.h_ket ? (r.h_ket + '; ' + item.h_ket) : String(item.h_ket);
       r._hy = true;
       r.ds = daily[item.tgl] || { k_hatsu: 0, k_a11: 0, k_a15: 0, k_rfresh: 0, k_frozen: 0, m_hatsu: 0, m_a11: 0, m_a15: 0 };

@@ -1,5 +1,5 @@
 {
-  "version": "1.10.2",
+  "version": "1.10.3",
   "released": "2026-11-24",
-  "notes": "Reject Fresh/Frozen global dibagi otomatis ke GH 1 & GH 2 (laporan, dashboard, data rekap)"
+  "notes": "Hyoshii: reject berat jadi 1 kolom, reject pack per grade, alasan di keterangan"
 }

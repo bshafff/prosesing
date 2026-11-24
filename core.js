@@ -772,7 +772,7 @@ function openImportModal(type) {
     lks: `<b>Format kolom:</b> <code>tanggal, nama, grade, kegiatan, material, jobTambahan, perbantuan, jenisPerbantuan, keterangan</code><br>Multi-kegiatan/material dipisah dengan <b>|</b> (pipe).`,
     panen: `<b>Format kolom:</b> <code>tgl, p_hatsu, p_gradea, p_gradeb, rk_*, rp_*, k_*, m_*, t_*</code><br>1 baris = 1 tanggal. Kolom kosong = 0.`,
     kemasan: `<b>Kolom utama:</b> <code>tgl, name, masuk, bongkarDus, aktualPcs, kirim, tamu, reject, ketTamu, ketReject</code>`,
-    hyoshii: `Pilih file <b>Excel (.xlsx)</b> atau CSV. Pakai <b>template</b> (tombol Download Template) atau langsung file rekap Hyoshii dengan judul grup <b>“...YANG DITERIMA HYOSHII”</b> (bobot &amp; pack) dan kolom Hatsuhana / Grade A / Grade B / Reject Fresh / Frozen. Kolom <b>Tanggal</b> wajib; 1 baris = 1 tanggal (baris tanggal sama dijumlahkan).<br>Format CSV: <code>tgl, hk_hatsu, hk_a11, hk_a15, hk_rfresh, hk_frozen, hp_hatsu, hp_a11, hp_a15, hr_sampel, hr_qc, hr_lain, h_ket</code>`
+    hyoshii: `Pilih file <b>Excel (.xlsx)</b> atau CSV. Pakai <b>template</b> (tombol Download Template) atau langsung file rekap Hyoshii dengan judul grup <b>“...YANG DITERIMA HYOSHII”</b> (bobot &amp; pack): Hatsuhana / Grade A / Grade B / Reject (kolom “Frozen” dibaca sebagai Reject). Reject pack per grade: grup <b>“REJECT HYOSHII”</b>. Kolom <b>Tanggal</b> wajib; 1 baris = 1 tanggal.<br>Format CSV: <code>tgl, hk_hatsu, hk_a11, hk_a15, hk_reject, hp_hatsu, hp_a11, hp_a15, hr_hatsu, hr_a11, hr_a15, h_ket</code>`
   };
   document.getElementById('import-info').innerHTML = infos[type];
   document.getElementById('modal-import').classList.add('show');

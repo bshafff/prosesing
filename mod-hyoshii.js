@@ -1,6 +1,6 @@
 // ========== DATA DITERIMA HYOSHII ==========
 // 1 record = 1 tanggal kirim (satu kesatuan, tidak dipisah GH)
-const HY_NUM_ALL = ['hk_hatsu', 'hk_a11', 'hk_a15', 'hk_rfresh', 'hk_frozen', 'hp_hatsu', 'hp_a11', 'hp_a15', 'hr_sampel', 'hr_qc', 'hr_lain'];
+const HY_NUM_ALL = ['hk_hatsu', 'hk_a11', 'hk_a15', 'hk_reject', 'hp_hatsu', 'hp_a11', 'hp_a15', 'hr_hatsu', 'hr_a11', 'hr_a15'];
 
 function hyEsc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function hyDb() { return readArrayRaw(nativeStorage.getItem(HYOSHII_STORAGE_KEY)); }
@@ -27,9 +27,9 @@ function hySent(tgl) {
 function hyFormVals() {
   const g = id => num((document.getElementById(id) || {}).value);
   return {
-    hk_hatsu: g('hy-hk-hatsu'), hk_a11: g('hy-hk-a11'), hk_a15: g('hy-hk-a15'), hk_rfresh: g('hy-hk-rfresh'), hk_frozen: g('hy-hk-frozen'),
+    hk_hatsu: g('hy-hk-hatsu'), hk_a11: g('hy-hk-a11'), hk_a15: g('hy-hk-a15'), hk_reject: g('hy-hk-reject'),
     hp_hatsu: g('hy-hp-hatsu'), hp_a11: g('hy-hp-a11'), hp_a15: g('hy-hp-a15'),
-    hr_sampel: g('hy-hr-sampel'), hr_qc: g('hy-hr-qc'), hr_lain: g('hy-hr-lain'),
+    hr_hatsu: g('hy-hr-hatsu'), hr_a11: g('hy-hr-a11'), hr_a15: g('hy-hr-a15'),
     h_ket: ((document.getElementById('hy-ket') || {}).value || '').trim()
   };
 }
@@ -37,9 +37,9 @@ function hyFormVals() {
 function hySetForm(rec) {
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = (v === undefined || v === null || v === 0) ? '' : v; };
   const r = rec || {};
-  set('hy-hk-hatsu', r.hk_hatsu); set('hy-hk-a11', r.hk_a11); set('hy-hk-a15', r.hk_a15); set('hy-hk-rfresh', r.hk_rfresh); set('hy-hk-frozen', r.hk_frozen);
+  set('hy-hk-hatsu', r.hk_hatsu); set('hy-hk-a11', r.hk_a11); set('hy-hk-a15', r.hk_a15); set('hy-hk-reject', (r.hk_reject || 0) + (r.hk_rfresh || 0) + (r.hk_frozen || 0));
   set('hy-hp-hatsu', r.hp_hatsu); set('hy-hp-a11', r.hp_a11); set('hy-hp-a15', r.hp_a15);
-  set('hy-hr-sampel', r.hr_sampel); set('hy-hr-qc', r.hr_qc); set('hy-hr-lain', r.hr_lain);
+  set('hy-hr-hatsu', r.hr_hatsu); set('hy-hr-a11', r.hr_a11); set('hy-hr-a15', r.hr_a15);
   const ket = document.getElementById('hy-ket'); if (ket) ket.value = r.h_ket || '';
 }
 
@@ -66,17 +66,18 @@ function hyUpdateCompare() {
     const f = x => isPack ? Math.round(x) : hyN(x);
     return `<tr${bold ? ' style="font-weight:700;"' : ''}><td>${lbl}</td><td class="text-right">${f(kirim)}</td><td class="text-right">${f(terima)}</td><td class="text-right" style="font-weight:700;color:${hySelColor(sel)};">${hySigned(sel, isPack ? 0 : 2)}</td></tr>`;
   };
-  const sentKg = s.k_hatsu + s.k_a11 + s.k_a15 + s.k_rfresh + s.k_frozen, recvKg = v.hk_hatsu + v.hk_a11 + v.hk_a15 + v.hk_rfresh + v.hk_frozen;
+  const sentRej = s.k_rfresh + s.k_frozen;
+  const sentKg = s.k_hatsu + s.k_a11 + s.k_a15 + sentRej, recvKg = v.hk_hatsu + v.hk_a11 + v.hk_a15 + v.hk_reject;
   const sentPack = s.m_hatsu + s.m_a11 + s.m_a15, recvPack = v.hp_hatsu + v.hp_a11 + v.hp_a15;
   let html = `<table class="recap-table" style="min-width:0;width:100%;"><thead><tr><th class="th-base">Berat (kg)</th><th class="th-kirim">Kita Kirim</th><th class="th-hy">Diterima</th><th class="th-hysel">Selisih</th></tr></thead><tbody>
     ${row('Hatsuhana', s.k_hatsu, v.hk_hatsu)}${row('Grade A', s.k_a11, v.hk_a11)}${row('Grade B', s.k_a15, v.hk_a15)}
-    ${row('Reject Fresh', s.k_rfresh, v.hk_rfresh)}${row('Reject Frozen', s.k_frozen, v.hk_frozen)}${row('Total', sentKg, recvKg, false, true)}</tbody></table>`;
+    ${row('Reject', sentRej, v.hk_reject)}${row('Total', sentKg, recvKg, false, true)}</tbody></table>`;
   html += `<table class="recap-table" style="min-width:0;width:100%;margin-top:0.5rem;"><thead><tr><th class="th-base">Pack</th><th class="th-mika">Kita Kirim</th><th class="th-hy">Diterima</th><th class="th-hysel">Selisih</th></tr></thead><tbody>
     ${row('Hatsuhana', s.m_hatsu, v.hp_hatsu, true)}${row('Grade A', s.m_a11, v.hp_a11, true)}${row('Grade B', s.m_a15, v.hp_a15, true)}${row('Total', sentPack, recvPack, true, true)}</tbody></table>`;
-  const hilang = sentPack - recvPack, rej = v.hr_sampel + v.hr_qc + v.hr_lain;
+  const hilang = sentPack - recvPack, rej = v.hr_hatsu + v.hr_a11 + v.hr_a15;
   if (sentPack > 0 || recvPack > 0) {
     if (hilang === rej) html += `<div class="info-box" style="margin-top:0.5rem;">✓ Selisih pack <b>${hilang}</b> sama dengan total reject tercatat (<b>${rej}</b>).</div>`;
-    else html += `<div class="warn-box" style="margin-top:0.5rem;">⚠️ Pack kurang <b>${hilang}</b>, tapi reject (sampel + QC + lainnya) tercatat <b>${rej}</b>. Cek lagi jumlah atau alasan rejectnya.</div>`;
+    else html += `<div class="warn-box" style="margin-top:0.5rem;">⚠️ Pack kurang <b>${hilang}</b>, tapi total pack reject (Hatsu + A + B) tercatat <b>${rej}</b>. Cek lagi jumlah pack diterima atau pack rejectnya.</div>`;
   }
   box.innerHTML = html;
 }
@@ -133,11 +134,11 @@ function renderHyoshii() {
   body.innerHTML = db.map(x => {
     const s = hySent(x.tgl);
     const kgS = s.k_hatsu + s.k_a11 + s.k_a15 + s.k_rfresh + s.k_frozen;
-    const kgR = (x.hk_hatsu || 0) + (x.hk_a11 || 0) + (x.hk_a15 || 0) + (x.hk_rfresh || 0) + (x.hk_frozen || 0);
+    const kgR = (x.hk_hatsu || 0) + (x.hk_a11 || 0) + (x.hk_a15 || 0) + (x.hk_reject || 0) + (x.hk_rfresh || 0) + (x.hk_frozen || 0);
     const pkS = s.m_hatsu + s.m_a11 + s.m_a15, pkR = (x.hp_hatsu || 0) + (x.hp_a11 || 0) + (x.hp_a15 || 0);
-    const rej = (x.hr_sampel || 0) + (x.hr_qc || 0) + (x.hr_lain || 0);
+    const rej = (x.hr_hatsu || 0) + (x.hr_a11 || 0) + (x.hr_a15 || 0);
     T.kgS += kgS; T.kgR += kgR; T.pkS += pkS; T.pkR += pkR; T.rej += rej;
-    const ketRej = [x.hr_sampel ? 'Sampel ' + x.hr_sampel : '', x.hr_qc ? 'QC ' + x.hr_qc : '', x.hr_lain ? 'Lain ' + x.hr_lain : ''].filter(Boolean).join(', ');
+    const ketRej = [x.hr_hatsu ? 'Hatsu ' + x.hr_hatsu : '', x.hr_a11 ? 'A ' + x.hr_a11 : '', x.hr_a15 ? 'B ' + x.hr_a15 : ''].filter(Boolean).join(', ');
     return `<tr>
       <td style="white-space:nowrap;"><button class="btn btn-sm btn-secondary" onclick="hyEdit('${x.id}')" title="Edit">✏</button> <button class="btn btn-sm btn-danger" onclick="hyHapus('${x.id}')" title="Hapus">🗑️</button></td>
       <td>${hyFmtTgl(x.tgl)}</td>
@@ -219,14 +220,9 @@ function hyClassify(group, header) {
   if (/^(tanggal|tgl|date)$/.test(h)) return 'tgl';
   if (/^(gh|greenhouse|lokasi)$/.test(h)) return 'gh_skip';
   if (/^(ket|keterangan|catatan)/.test(h)) return 'h_ket';
-  const grade = /hatsu/.test(h) ? 'hatsu' : /fresh/.test(h) ? 'rfresh' : /frozen/.test(h) ? 'frozen' : /(grade\s*a|^a$|a11|hy11)/.test(h) ? 'a11' : /(grade\s*b|^b$|a15|hy15)/.test(h) ? 'a15' : '';
-  if (/REJECT/.test(g) && !/DITERIMA/.test(g)) {
-    if (/sampel|sample/.test(h)) return 'hr_sampel';
-    if (/qc/.test(h)) return 'hr_qc';
-    if (/lain|other|kurang|rusak/.test(h)) return 'hr_lain';
-    return '';
-  }
-  if (/DITERIMA/.test(g) && /PACK/.test(g) && grade && !/^(frozen|rfresh)$/.test(grade)) return 'hp_' + grade;
+  const grade = /hatsu/.test(h) ? 'hatsu' : /(fresh|frozen|reject)/.test(h) ? 'reject' : /(grade\s*a|^a$|a11|hy11)/.test(h) ? 'a11' : /(grade\s*b|^b$|a15|hy15)/.test(h) ? 'a15' : '';
+  if (/REJECT/.test(g) && !/DITERIMA/.test(g)) return grade && grade !== 'reject' ? 'hr_' + grade : '';
+  if (/DITERIMA/.test(g) && /PACK/.test(g) && grade && grade !== 'reject') return 'hp_' + grade;
   if (/DITERIMA/.test(g) && /(BOBOT|BERAT|KG)/.test(g) && grade) return 'hk_' + grade;
   return '';
 }
@@ -349,26 +345,26 @@ async function hyDownloadTemplate() {
     cell.font = { bold: true, color: { argb: 'FFFFFFFF' } }; cell.border = border;
     cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
   };
-  ws.mergeCells(1, 1, 1, 13);
+  ws.mergeCells(1, 1, 1, 12);
   ws.getCell(1, 1).value = 'Template Import — Data Diterima Hyoshii (1 baris = 1 tanggal; isi mulai baris 4, jangan ubah judul kolom)';
   ws.getCell(1, 1).font = { italic: true, color: { argb: 'FF475569' } };
   ws.mergeCells(2, 1, 3, 1); hdr(ws.getCell(2, 1), 'Tanggal', 'FF2D5016');
-  ws.mergeCells(2, 2, 2, 6); hdr(ws.getCell(2, 2), 'BOBOT PENGIRIMAN YANG DITERIMA HYOSHII (kg)', 'FF2F4F9F');
-  ['Hatsuhana', 'Grade A', 'Grade B', 'Reject Fresh', 'Reject Frozen'].forEach((t, i) => hdr(ws.getCell(3, 2 + i), t, 'FF2F4F9F'));
-  ws.mergeCells(2, 7, 2, 9); hdr(ws.getCell(2, 7), 'TOTAL PACK YANG DITERIMA HYOSHII (pack)', 'FF4F46E5');
-  ['Hatsuhana', 'Grade A', 'Grade B'].forEach((t, i) => hdr(ws.getCell(3, 7 + i), t, 'FF4F46E5'));
-  ws.mergeCells(2, 10, 2, 12); hdr(ws.getCell(2, 10), 'REJECT HYOSHII (pack)', 'FFB45309');
-  ['Sampel', 'Tidak Lolos QC', 'Lainnya'].forEach((t, i) => hdr(ws.getCell(3, 10 + i), t, 'FFB45309'));
-  ws.mergeCells(2, 13, 3, 13); hdr(ws.getCell(2, 13), 'Keterangan', 'FF475569');
-  const sample = [['2026-11-18', 83.1, 64.0, 20.4, 14.4, 0, 478, 283, 86, 1, 0, 0, 'contoh: 1 pack sampel'], ['2026-11-19', 71.9, 60.1, 22.2, 22.6, 0, 416, 267, 94, 0, 0, 0, '']];
+  ws.mergeCells(2, 2, 2, 5); hdr(ws.getCell(2, 2), 'BOBOT PENGIRIMAN YANG DITERIMA HYOSHII (kg)', 'FF2F4F9F');
+  ['Hatsuhana', 'Grade A', 'Grade B', 'Reject'].forEach((t, i) => hdr(ws.getCell(3, 2 + i), t, 'FF2F4F9F'));
+  ws.mergeCells(2, 6, 2, 8); hdr(ws.getCell(2, 6), 'TOTAL PACK YANG DITERIMA HYOSHII (pack)', 'FF4F46E5');
+  ['Hatsuhana', 'Grade A', 'Grade B'].forEach((t, i) => hdr(ws.getCell(3, 6 + i), t, 'FF4F46E5'));
+  ws.mergeCells(2, 9, 2, 11); hdr(ws.getCell(2, 9), 'REJECT HYOSHII (pack)', 'FFB45309');
+  ['Hatsuhana', 'Grade A', 'Grade B'].forEach((t, i) => hdr(ws.getCell(3, 9 + i), t, 'FFB45309'));
+  ws.mergeCells(2, 12, 3, 12); hdr(ws.getCell(2, 12), 'Keterangan', 'FF475569');
+  const sample = [['2026-11-18', 83.1, 64.0, 20.4, 14.4, 478, 283, 86, 1, 0, 0, 'contoh: 1 pack Hatsu dipakai sampel'], ['2026-11-19', 71.9, 60.1, 22.2, 22.6, 416, 267, 94, 0, 0, 0, '']];
   sample.forEach((row, ri) => row.forEach((v, ci) => {
     const cell = ws.getCell(4 + ri, 1 + ci);
     cell.value = ci === 0 ? new Date(v + 'T00:00:00Z') : v; cell.border = border;
     if (ci === 0) cell.numFmt = 'dd/mm/yyyy';
   }));
   ws.getColumn(1).width = 13;
-  for (let c = 2; c <= 12; c++) ws.getColumn(c).width = 13;
-  ws.getColumn(13).width = 34; ws.getRow(3).height = 24;
+  for (let c = 2; c <= 11; c++) ws.getColumn(c).width = 13;
+  ws.getColumn(12).width = 40; ws.getRow(3).height = 24;
   ws.views = [{ state: 'frozen', ySplit: 3, xSplit: 1 }];
   const buf = await wb.xlsx.writeBuffer();
   const link = document.createElement('a');
