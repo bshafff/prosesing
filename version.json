@@ -1,5 +1,4 @@
 {
-  "version": "1.10.5",
+  "version": "1.10.4",
   "released": "2026-11-24",
-  "notes": "Hyoshii: reject berat jadi 1 kolom, reject pack per grade, alasan di keterangan"
-}
+  "notes": "Dashboard Panen dirapikan: pengaturan disatukan, kartu bisa dilipat, urutan diatur ulang"}

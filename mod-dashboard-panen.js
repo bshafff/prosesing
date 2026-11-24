@@ -51,7 +51,39 @@ function buildAlokasiGlobal(db) {
   return fn;
 }
 
+// ========== KARTU DASHBOARD BISA DILIPAT ==========
+function initDashCollapse() {
+  let st = {};
+  try { st = JSON.parse(localStorage.getItem('awb_dash_collapse') || '{}') || {}; } catch (e) { st = {}; }
+  document.querySelectorAll('#dashboard [data-collapse]').forEach(el => {
+    if (el.dataset.cinit) return;
+    el.dataset.cinit = '1';
+    const id = el.dataset.collapse;
+    const open = (id in st) ? !!st[id] : el.dataset.open === '1';
+    el.classList.add('dash-collapsible');
+    if (!open) el.classList.add('collapsed');
+    const head = el.querySelector(':scope > .card-title, :scope > .chart-title');
+    if (!head) return;
+    head.addEventListener('click', () => {
+      el.classList.toggle('collapsed');
+      let cur = {};
+      try { cur = JSON.parse(localStorage.getItem('awb_dash_collapse') || '{}') || {}; } catch (e) { cur = {}; }
+      cur[id] = !el.classList.contains('collapsed');
+      try { localStorage.setItem('awb_dash_collapse', JSON.stringify(cur)); } catch (e) { /* abaikan */ }
+    });
+  });
+}
+
+function toggleAllDashCards() {
+  const els = [...document.querySelectorAll('#dashboard [data-collapse]')];
+  const anyOpen = els.some(e => !e.classList.contains('collapsed'));
+  const cur = {};
+  els.forEach(e => { e.classList.toggle('collapsed', anyOpen); cur[e.dataset.collapse] = !anyOpen; });
+  try { localStorage.setItem('awb_dash_collapse', JSON.stringify(cur)); } catch (e) { /* abaikan */ }
+}
+
 function updateDashboard() {
+  try { initDashCollapse(); } catch (e) { console.warn('collapse:', e); }
   const alokSel = document.getElementById('alok-basis'); if (alokSel) alokSel.value = alokBasis();
   const bulanEl = document.getElementById('dashboard-bulan');
   if (!bulanEl) return;
