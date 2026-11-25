@@ -316,7 +316,7 @@ function renderLaporanMgmt() {
     ${ghRow('Reject (kg)', t => mgN(t.rej))}
     ${ghRow('Reject Rate', t => mgP(t.rateRej, 2), true, t => (t.panen > 0 ? rrCol(t.rateRej) : null))}
     ${prodRow('Jumlah tanaman', pr => mgN(pr.pop, 0))}
-    ${prodRow('Produktivitas (gram/tanaman)', pr => mgN(pr.gpt, 1), true)}
+    ${prodRow('Produktivitas periode ini (gram/tanaman)', pr => mgN(pr.gpt, 1), true)}
   </tbody></table>
   <div style="font-size:10.5px;color:${MG.MUTE};margin-top:6px;">Reject Fresh/Frozen yang tercampur GH dibagi otomatis ke GH yang panen pada hari itu.${has1 && !has2 ? ' GH 2 belum ada data pada periode ini.' : ''}</div>`;
   const ghTitle = ghs.length > 1 ? 'Perbandingan GH 1 vs GH 2' : ('Ringkasan ' + (ghs[0] ? ghs[0][0] : 'GH'));
