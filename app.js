@@ -7,7 +7,8 @@ const VIEW_FILES = {
   'dash-estimasi': 'dashboard-estimasi.html',
   'panen': 'rekap-panen.html',
   'kemasan': 'stok-mika.html',
-  'hyoshii': 'hyoshii.html'
+  'hyoshii': 'hyoshii.html',
+  'backup': 'backup.html'
 };
 
 async function loadAllViews() {
@@ -84,6 +85,7 @@ async function initApp() {
   try { renderTableLks(); } catch (e) { console.warn('renderTableLks:', e); }
   try { renderTablePanen(); } catch (e) { console.warn('renderTablePanen:', e); }
   try { initEstimasi(); renderEstimasi(); } catch (e) { console.warn('initEstimasi:', e); }
+  try { initBackup(); } catch (e) { console.warn('initBackup:', e); }
   try { initHyoshii(); } catch (e) { console.warn('initHyoshii:', e); }
   try { loadPanenForDate(); } catch (e) { console.warn('loadPanenForDate:', e); }
   try { recalculateStockKemasan(); } catch (e) { console.warn('recalculateStockKemasan:', e); }

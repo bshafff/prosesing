@@ -405,6 +405,7 @@ async function pullFromSheet(silent) {
     updateSyncStatus('syncing');
     const result = await jsonpRequest({ action: 'pull' });
     if (!result || !result.ok) throw new Error(result && result.error ? result.error : 'Gagal pull.');
+    try { if (typeof bkSnapshotSafe === 'function') await bkSnapshotSafe('Sebelum muat dari Google Sheet' + (silent ? ' (otomatis)' : '')); } catch (e) { /* abaikan */ }
     suppressSync = true;
     Object.entries(result.data || {}).forEach(([type, records]) => {
       const key = type === 'lks' ? LKS_STORAGE_KEY : type === 'panen' ? PANEN_STORAGE_KEY : type === 'kemasan' ? KEMASAN_STORAGE_KEY : type === 'hyoshii' ? HYOSHII_STORAGE_KEY : type === 'populasi' ? POPULASI_STORAGE_KEY : null;
@@ -982,6 +983,8 @@ function executeImport() {
 
     const usedIds = new Set();
     db = db.map(rec => ensureValidId(rec, usedIds));
+
+    if (shouldClear && typeof bkSnapshotSafe === 'function') bkSnapshotSafe('Sebelum import (hapus data lama)', { force: true });
 
     if (shouldClear) {
       suppressSync = true;

@@ -1,4 +1,4 @@
 {
-  "version": "1.13.5",
+  "version": "1.14.0",
   "released": "2026-11-25",
-  "notes": "Data Rekap: kolom Terima Hyoshii kini muncul di mode GH 1 saja / GH 2 saja (dibagi proporsional dari porsi kirim)"}
+  "notes": "Menu Backup & Pulihkan: unduh semua data, pulihkan dari file/snapshot, snapshot otomatis sebelum data ditimpa, backup Sheet ke Drive"}

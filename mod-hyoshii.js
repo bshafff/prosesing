@@ -310,6 +310,7 @@ function hyExecuteImport() {
   const recs = hyRowsToRecords(importState.rows);
   if (!recs.length) { showToast('Tidak ada baris valid.', 'error'); return; }
   const shouldClear = document.getElementById('import-clear').checked;
+  if (shouldClear && typeof bkSnapshotSafe === 'function') bkSnapshotSafe('Sebelum import Hyoshii (hapus data lama)', { force: true });
   __bulkMode = true;
   try {
     let db = shouldClear ? [] : hyDb();

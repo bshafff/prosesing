@@ -1,8 +1,9 @@
 /**
- * Google Apps Script backend - Processing AWB PWA (v1.5)
+ * Google Apps Script backend - Processing AWB PWA (v1.6)
  * v1.3: Anti-duplikat + ID auto plain text
  * v1.4: tambah tipe data 'hyoshii' (sheet HYOSHII) untuk menu "Diterima Hyoshii"
  * v1.5: tambah tipe data 'populasi' (sheet POPULASI) untuk jumlah tanaman per GH
+ * v1.6: backup Google Sheet ke Google Drive (action 'backup' + trigger mingguan)
  */
 
 const CONFIG = {
@@ -15,7 +16,9 @@ const CONFIG = {
     hyoshii: 'HYOSHII',
     populasi: 'POPULASI'
   },
-  LOCK_TIMEOUT_MS: 60000
+  LOCK_TIMEOUT_MS: 60000,
+  BACKUP_FOLDER: 'Backup AWB Processing',
+  BACKUP_KEEP: 8
 };
 
 function doGet(e) {
@@ -28,7 +31,7 @@ function doGet(e) {
     const action = e.parameter.action || 'ping';
 
     if (action === 'ping') {
-      return output({ ok: true, message: 'AWB Processing API aktif', version: '1.5.0' }, callback);
+      return output({ ok: true, message: 'AWB Processing API aktif', version: '1.6.0' }, callback);
     }
 
     if (action === 'pull') {
@@ -45,6 +48,10 @@ function doGet(e) {
       const payload = decodePayload(e.parameter.payload || '');
       const result = handleWriteBatch(payload);
       return output({ ok: true, ...result }, callback);
+    }
+
+    if (action === 'backup') {
+      return output({ ok: true, ...backupSpreadsheet() }, callback);
     }
 
     if (action === 'cleanup') {
@@ -474,4 +481,33 @@ function setupSheets() {
     ensureSheet(type);
   });
   return 'OK';
+}
+
+// ============ BACKUP KE GOOGLE DRIVE ============
+// Membuat salinan seluruh spreadsheet di folder 'Backup AWB Processing', menyimpan BACKUP_KEEP salinan terakhir.
+function backupSpreadsheet() {
+  const ss = getSpreadsheet();
+  const file = DriveApp.getFileById(ss.getId());
+  const folders = DriveApp.getFoldersByName(CONFIG.BACKUP_FOLDER);
+  const folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(CONFIG.BACKUP_FOLDER);
+  const stamp = Utilities.formatDate(new Date(), 'Asia/Jakarta', 'yyyy-MM-dd HH.mm');
+  const name = 'AWB Processing - ' + stamp;
+  file.makeCopy(name, folder);
+
+  // hapus salinan lama (sisakan BACKUP_KEEP terbaru)
+  const list = [];
+  const it = folder.getFiles();
+  while (it.hasNext()) { const f = it.next(); list.push({ f: f, t: f.getDateCreated().getTime() }); }
+  list.sort(function(a, b) { return b.t - a.t; });
+  list.slice(CONFIG.BACKUP_KEEP).forEach(function(x) { x.f.setTrashed(true); });
+  return { name: name, folder: CONFIG.BACKUP_FOLDER, kept: Math.min(list.length, CONFIG.BACKUP_KEEP) };
+}
+
+// Jalankan SEKALI dari editor Apps Script (Run > setupWeeklyBackup) untuk mengaktifkan backup otomatis tiap Minggu dini hari.
+function setupWeeklyBackup() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'backupSpreadsheet') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('backupSpreadsheet').timeBased().onWeekDay(ScriptApp.WeekDay.SUNDAY).atHour(2).create();
+  return 'Backup mingguan aktif (Minggu 02.00)';
 }

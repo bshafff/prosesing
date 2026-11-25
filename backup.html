@@ -1,0 +1,39 @@
+<div id="backup" class="view">
+  <div class="view-toolbar">
+    <button class="btn btn-sm btn-home" onclick="goHome()">← Menu</button>
+    <span class="view-title">💾 Backup &amp; Pulihkan</span>
+  </div>
+
+  <div class="card" id="bk-body">
+    <div class="card-title">Status</div>
+    <div id="bk-status"></div>
+  </div>
+
+  <div class="card" style="margin-top:1rem;">
+    <div class="card-title">⬇️ Unduh Backup</div>
+    <p style="font-size:0.85rem;color:#555;margin:0 0 0.75rem;">Menyimpan semua data (LKS, Panen, Kemasan, Diterima Hyoshii, Jumlah Tanaman) ke satu file di perangkat Anda. Simpan juga salinannya di Google Drive atau kirim ke WhatsApp sendiri. Disarankan minimal seminggu sekali.</p>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="bkDownload()">⬇️ Unduh Semua Data (JSON)</button>
+      <button class="btn btn-secondary" id="bk-btn-drive" onclick="bkDriveBackup()">☁️ Salin Google Sheet ke Drive</button>
+    </div>
+    <small style="color:#666;display:block;margin-top:0.5rem;">Tombol Drive membuat salinan seluruh Google Sheet di folder “Backup AWB Processing” (butuh Code.gs terbaru). Aplikasi juga otomatis menyimpan snapshot di perangkat ini tiap hari dan sebelum data ditimpa/dihapus.</small>
+  </div>
+
+  <div class="card" style="margin-top:1rem;">
+    <div class="card-title">↩ Pulihkan dari File</div>
+    <p style="font-size:0.85rem;color:#555;margin:0 0 0.75rem;">Pilih file backup (.json) dari menu Unduh di atas. Data saat ini akan diganti, dan salinannya disimpan dulu sebagai snapshot.</p>
+    <input type="file" accept=".json,application/json" onchange="bkRestoreFile(this)">
+  </div>
+
+  <div class="card" style="margin-top:1rem;">
+    <div class="card-title">🕘 Snapshot di Perangkat Ini <span style="font-weight:normal;font-size:0.75rem;color:#666;">(maks. 8 terakhir)</span></div>
+    <div style="margin-bottom:0.75rem;"><button class="btn btn-sm btn-secondary" onclick="bkSnapshotNow()">📸 Buat snapshot sekarang</button></div>
+    <div class="recap-wrap">
+      <table class="recap-table" style="min-width:0;width:100%;">
+        <thead><tr><th class="th-base">Waktu</th><th class="th-base">Sebab</th><th class="th-base">Isi</th><th class="th-base">Aksi</th></tr></thead>
+        <tbody id="bk-snaps"></tbody>
+      </table>
+    </div>
+    <small style="color:#666;display:block;margin-top:0.5rem;">Snapshot tersimpan hanya di perangkat/browser ini. Kalau data browser dihapus, snapshot ikut hilang. Karena itu tetap unduh backup berkala.</small>
+  </div>
+</div>
