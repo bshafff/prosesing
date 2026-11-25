@@ -129,7 +129,7 @@ function renderHyoshii() {
   const bulan = bulanEl ? bulanEl.value : '';
   const db = hyDb().filter(x => !bulan || (x.tgl || '').startsWith(bulan)).sort((a, b) => b.tgl.localeCompare(a.tgl));
   const foot = document.getElementById('hy-hist-foot');
-  if (!db.length) { body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#999;">Belum ada data pada bulan ini</td></tr>'; foot.innerHTML = ''; return; }
+  if (!db.length) { body.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#999;">Belum ada data pada bulan ini</td></tr>'; foot.innerHTML = ''; return; }
   const T = { kgS: 0, kgR: 0, pkS: 0, pkR: 0, rej: 0 };
   body.innerHTML = db.map(x => {
     const s = hySent(x.tgl);
@@ -138,19 +138,23 @@ function renderHyoshii() {
     const pkS = s.m_hatsu + s.m_a11 + s.m_a15, pkR = (x.hp_hatsu || 0) + (x.hp_a11 || 0) + (x.hp_a15 || 0);
     const rej = (x.hr_hatsu || 0) + (x.hr_a11 || 0) + (x.hr_a15 || 0);
     T.kgS += kgS; T.kgR += kgR; T.pkS += pkS; T.pkR += pkR; T.rej += rej;
+    const sentRej = s.k_rfresh + s.k_frozen, recvRej = (x.hk_reject || 0) + (x.hk_rfresh || 0) + (x.hk_frozen || 0);
+    const rejMismatch = (sentRej > 0) !== (recvRej > 0);
     const ketRej = [x.hr_hatsu ? 'Hatsu ' + x.hr_hatsu : '', x.hr_a11 ? 'A ' + x.hr_a11 : '', x.hr_a15 ? 'B ' + x.hr_a15 : ''].filter(Boolean).join(', ');
     return `<tr>
       <td style="white-space:nowrap;"><button class="btn btn-sm btn-secondary" onclick="hyEdit('${x.id}')" title="Edit">✏</button> <button class="btn btn-sm btn-danger" onclick="hyHapus('${x.id}')" title="Hapus">🗑️</button></td>
       <td>${hyFmtTgl(x.tgl)}</td>
+      <td class="text-right">${hyN(kgS)}</td>
       <td class="text-right">${hyN(kgR)}</td>
       <td class="text-right" style="font-weight:700;color:${hySelColor(kgR - kgS)};">${hySigned(kgR - kgS)}</td>
       <td class="text-right">${Math.round(pkR)}</td>
       <td class="text-right" style="font-weight:700;color:${hySelColor(pkR - pkS)};">${hySigned(pkR - pkS, 0)}</td>
+      <td class="text-right" style="font-size:0.8rem;${rejMismatch ? 'color:#d97706;font-weight:700;' : ''}" title="Reject: kirim → diterima">${hyN(sentRej)} → ${hyN(recvRej)}${rejMismatch ? ' ⚠' : ''}</td>
       <td style="font-size:0.8rem;">${rej ? rej + ' (' + ketRej + ')' : '-'}${x.h_ket ? '<br><small style="color:#666;">' + hyEsc(x.h_ket) + '</small>' : ''}</td>
     </tr>`;
   }).join('');
   const c = 'background:#2d5016;color:#fff;font-weight:bold;text-align:right;';
-  foot.innerHTML = `<tr><td colspan="2" style="${c}text-align:center;">TOTAL</td><td style="${c}">${hyN(T.kgR)}</td><td style="${c}">${hySigned(T.kgR - T.kgS)}</td><td style="${c}">${Math.round(T.pkR)}</td><td style="${c}">${hySigned(T.pkR - T.pkS, 0)}</td><td style="${c}">${T.rej}</td></tr>`;
+  foot.innerHTML = `<tr><td colspan="2" style="${c}text-align:center;">TOTAL</td><td style="${c}">${hyN(T.kgS)}</td><td style="${c}">${hyN(T.kgR)}</td><td style="${c}">${hySigned(T.kgR - T.kgS)}</td><td style="${c}">${Math.round(T.pkR)}</td><td style="${c}">${hySigned(T.pkR - T.pkS, 0)}</td><td style="${c}"></td><td style="${c}">${T.rej}</td></tr>`;
 }
 
 function initHyoshii() {

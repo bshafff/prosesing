@@ -1,4 +1,4 @@
 {
-  "version": "1.13.1",
+  "version": "1.13.2",
   "released": "2026-11-25",
-  "notes": "Produktivitas per tanaman: isian jumlah tanaman per GH (tanggal berlaku), kartu produktivitas, masuk Laporan Manajemen"}
+  "notes": "Perbaikan: edit data panen tidak lagi menghapus reject dikirim data lama; kolom kirim & reject di history Hyoshii; Cek Data reject kirim vs terima"}

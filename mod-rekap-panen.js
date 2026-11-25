@@ -752,6 +752,15 @@ function editDataPanen(id) {
       <div class="input-group"><label>Mika A11 (Pcs)</label><input type="number" id="edit-m-a11" value="${item.m_a11 || 0}"></div>
       <div class="input-group"><label>Mika A15 (Pcs)</label><input type="number" id="edit-m-a15" value="${item.m_a15 || 0}"></div>
     `;
+    // Data lama: reject dikirim (frozen/fresh) pernah tersimpan di record GH. Tampilkan supaya tidak ikut terhapus saat disimpan.
+    if ((item.k_frozen || 0) > 0 || (item.k_rfresh || 0) > 0) {
+      html += `
+      <hr style="border:0;border-top:2px solid #e5e7eb;margin:1rem 0;">
+      <div style="font-size:0.75rem;font-weight:800;color:#2d5016;text-transform:uppercase;margin-bottom:0.75rem;">❄️ Reject Dikirim (data lama di GH ini)</div>
+      <div class="input-group"><label>Reject Frozen Dikirim (Kg)</label><input type="number" step="0.01" id="edit-k-frozen" value="${item.k_frozen || 0}"></div>
+      <div class="input-group"><label>Reject Fresh Dikirim (Kg)</label><input type="number" step="0.01" id="edit-k-rfresh" value="${item.k_rfresh || 0}"></div>
+      `;
+    }
   } else {
     html += `
       <hr style="border:0;border-top:2px solid #e5e7eb;margin:1rem 0;">
@@ -788,6 +797,8 @@ function saveEditPanen() {
   const g = id => { const el = document.getElementById(id); return el ? parseFloat(el.value || 0) : 0; };
   const gInt = id => { const el = document.getElementById(id); return el ? (parseInt(el.value || 0) || 0) : 0; };
   const gStr = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  // Kalau inputnya tidak tampil di modal (record GH), pertahankan nilai yang sudah tersimpan, jangan di-nol-kan
+  const gKeep = (id, key) => { const el = document.getElementById(id); return el ? (parseFloat(el.value || 0) || 0) : (parseFloat(db[idx][key]) || 0); };
   
   const gh = gStr('edit-p-gh');
   const isGlobal = gh === 'GLOBAL';
@@ -816,8 +827,8 @@ function saveEditPanen() {
     m_hatsu: isGlobal ? 0 : gInt('edit-m-hatsu'),
     m_a11: isGlobal ? 0 : gInt('edit-m-a11'),
     m_a15: isGlobal ? 0 : gInt('edit-m-a15'),
-    k_frozen: g('edit-k-frozen'),
-    k_rfresh: g('edit-k-rfresh'),
+    k_frozen: gKeep('edit-k-frozen', 'k_frozen'),
+    k_rfresh: gKeep('edit-k-rfresh', 'k_rfresh'),
     t_curah: g('edit-t-curah'),
     t_hatsu: gInt('edit-t-hatsu'),
     t_a11: gInt('edit-t-a11'),

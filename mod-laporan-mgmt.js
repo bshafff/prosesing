@@ -534,11 +534,14 @@ function renderCekData() {
     Object.keys(days).forEach(t => { if (t >= hyFirst && t < today && days[t].kirimGrade > 0 && !hyByDate[t]) add('info', t, '', 'Belum ada data Diterima Hyoshii'); });
   }
   Object.keys(hyByDate).forEach(t => {
-    const sent = { kg: 0, pack: 0 };
-    all.filter(x => x.tgl === t).forEach(x => { sent.kg += n(x, 'k_hatsu') + n(x, 'k_a11') + n(x, 'k_a15') + n(x, 'k_rfresh') + n(x, 'k_frozen'); sent.pack += n(x, 'm_hatsu') + n(x, 'm_a11') + n(x, 'm_a15'); });
+    const sent = { kg: 0, pack: 0, rej: 0 };
+    all.filter(x => x.tgl === t).forEach(x => { sent.rej += n(x, 'k_rfresh') + n(x, 'k_frozen'); sent.kg += n(x, 'k_hatsu') + n(x, 'k_a11') + n(x, 'k_a15') + n(x, 'k_rfresh') + n(x, 'k_frozen'); sent.pack += n(x, 'm_hatsu') + n(x, 'm_a11') + n(x, 'm_a15'); });
     let rk = 0, rpk = 0, rj = 0;
     hyByDate[t].forEach(x => { rk += n(x, 'hk_hatsu') + n(x, 'hk_a11') + n(x, 'hk_a15') + n(x, 'hk_reject') + n(x, 'hk_rfresh') + n(x, 'hk_frozen'); rpk += n(x, 'hp_hatsu') + n(x, 'hp_a11') + n(x, 'hp_a15'); rj += n(x, 'hr_hatsu') + n(x, 'hr_a11') + n(x, 'hr_a15'); });
     if (sent.kg <= 0) { add('warn', t, '', 'Ada data Hyoshii tapi tidak ada data kirim di tanggal ini'); return; }
+    let recvRej = 0; hyByDate[t].forEach(x => { recvRej += n(x, 'hk_reject') + n(x, 'hk_rfresh') + n(x, 'hk_frozen'); });
+    if (recvRej > 0 && sent.rej === 0) add('warn', t, '', `Hyoshii mencatat reject ${f2(recvRej)} kg, tapi Reject Dikirim di Rekap Panen kosong (belum diisi atau terhapus saat edit?)`);
+    else if (sent.rej > 0 && recvRej === 0) add('warn', t, '', `Reject dikirim ${f2(sent.rej)} kg, tapi Hyoshii tidak mencatat reject diterima`);
     if (Math.abs(rk - sent.kg) / sent.kg > 0.03) add('warn', t, '', `Berat diterima Hyoshii ${f2(rk)} kg beda ${mgN(Math.abs(rk - sent.kg) / sent.kg * 100, 1)}% dari kirim ${f2(sent.kg)} kg`);
     if (sent.pack - rpk !== rj) add('warn', t, '', `Selisih pack kirim−terima = ${sent.pack - rpk}, tapi total pack reject Hyoshii = ${rj}`);
   });
