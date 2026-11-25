@@ -123,7 +123,9 @@ function mgHyoshii(start, end) {
     if (x.h_ket) ket.push({ tgl: x.tgl, ket: x.h_ket });
   });
   const S = { hatsu: 0, a11: 0, a15: 0, reject: 0, pHatsu: 0, pA11: 0, pA15: 0 };
+  const sentByDate = {};
   readArrayRaw(nativeStorage.getItem(PANEN_STORAGE_KEY)).filter(x => dates.has(x.tgl)).forEach(x => {
+    sentByDate[x.tgl] = (sentByDate[x.tgl] || 0) + n(x, 'k_hatsu') + n(x, 'k_a11') + n(x, 'k_a15') + n(x, 'k_rfresh') + n(x, 'k_frozen');
     S.hatsu += n(x, 'k_hatsu'); S.a11 += n(x, 'k_a11'); S.a15 += n(x, 'k_a15');
     S.reject += n(x, 'k_rfresh') + n(x, 'k_frozen');
     S.pHatsu += n(x, 'm_hatsu'); S.pA11 += n(x, 'm_a11'); S.pA15 += n(x, 'm_a15');
@@ -134,7 +136,10 @@ function mgHyoshii(start, end) {
   R.rjTotal = R.rjHatsu + R.rjA11 + R.rjA15;
   const pct = S.total > 0 ? R.total / S.total * 100 : 0;
   ket.sort((a, b) => a.tgl.localeCompare(b.tgl));
-  return { recv: R, sent: S, pct, ket, hari: dates.size };
+  const recvByDate = {};
+  hy.forEach(x => { recvByDate[x.tgl] = (recvByDate[x.tgl] || 0) + n(x, 'hk_hatsu') + n(x, 'hk_a11') + n(x, 'hk_a15') + n(x, 'hk_reject') + n(x, 'hk_rfresh') + n(x, 'hk_frozen'); });
+  const byDate = Object.keys(recvByDate).sort().filter(d => sentByDate[d] > 0).map(d => ({ tgl: d, pct: recvByDate[d] / sentByDate[d] * 100 }));
+  return { recv: R, sent: S, pct, ket, hari: dates.size, byDate };
 }
 
 // Tanggal pertama GH 2 mulai panen (sebelumnya hanya GH 1)
@@ -178,12 +183,14 @@ function mgLineChart(labels, series, opts) {
   const W = 440, H = 190, L = 46, R = 12, T = 14, B = 26;
   const n = labels.length;
   if (!n) return `<div style="color:${MG.MUTE};font-size:12px;">Belum ada data</div>`;
-  let max = Math.max(...series.flatMap(s => s.values), opts.target || 0, 0.0001) * 1.12;
+  const minV = opts.min || 0;
+  let max = opts.max || Math.max(...series.flatMap(s => s.values), opts.target || 0, 0.0001) * 1.12;
+  if (max <= minV) max = minV + 1;
   const x = i => n === 1 ? (L + (W - L - R) / 2) : L + (W - L - R) * i / (n - 1);
-  const y = v => T + (H - T - B) * (1 - v / max);
+  const y = v => T + (H - T - B) * (1 - (v - minV) / (max - minV));
   let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;">`;
   for (let g = 0; g <= 4; g++) {
-    const v = max * g / 4, yy = y(v);
+    const v = minV + (max - minV) * g / 4, yy = y(v);
     svg += `<line x1="${L}" y1="${yy}" x2="${W - R}" y2="${yy}" stroke="${MG.LINE}" stroke-width="1"/>`;
     svg += `<text x="${L - 6}" y="${yy + 3}" font-size="9.5" fill="${MG.MUTE}" text-anchor="end">${mgN(v, opts.dec === undefined ? 0 : opts.dec)}</text>`;
   }
@@ -278,8 +285,8 @@ function renderLaporanMgmt() {
   // KPI
   const kpis = '<table style="width:100%;border-collapse:separate;border-spacing:0;margin:0 -5px;"><tr>'
     + mgKpi('Total Panen', mgN(A.panen) + ' <span style="font-size:13px;font-weight:700;">kg</span>', `${mgN(A.pack, 0)} pack terkirim`, mgDelta(A.panen, PA.panen, true), MG.GREEN)
-    + mgKpi('Terkirim', mgP(A.rateKirim), `${mgN(A.kirim)} kg dari panen`, mgDelta(A.rateKirim, PA.panen > 0 ? PA.rateKirim : null, true, 'poin'), MG.GREEN)
-    + mgKpi('Reject Rate', `<span style="color:${rrStatus[1]};">${mgP(rr, 2)}</span>`, `<span style="color:${rrStatus[1]};font-weight:700;">${rrStatus[0]}</span> · target ≤ ${mgN(target, 0)}%`, mgDelta(rr, PA.panen > 0 ? PA.rateRej : null, false, 'poin'), rrStatus[1])
+    + mgKpi('Terkirim', mgP(A.rateKirim), `${mgN(A.kirimGrade)} kg grade + ${mgN(A.rejKirim)} kg reject`, mgDelta(A.rateKirim, PA.panen > 0 ? PA.rateKirim : null, true, 'poin'), MG.GREEN)
+    + mgKpi('Reject Rate', `<span style="color:${rrStatus[1]};">${mgP(rr, 2)}</span>`, `<span style="color:${rrStatus[1]};font-weight:700;">${rrStatus[0]}</span> · target ≤ ${mgN(target, 0)}%<br>tanpa HPT: ${mgP(A.panen > 0 ? (A.rej - A.cause.hpt) / A.panen * 100 : 0, 2)}`, mgDelta(rr, PA.panen > 0 ? PA.rateRej : null, false, 'poin'), rrStatus[1])
     + mgKpi('Diterima Hyoshii', hy ? mgP(hy.pct, 2) : '–', hy ? `${mgN(hy.recv.total)} dari ${mgN(hy.sent.total)} kg` : 'belum ada data Hyoshii', hy && phy ? mgDelta(hy.pct, phy.pct, true, 'poin') : `<span style="color:${MG.MUTE};">belum ada pembanding</span>`, MG.GREEN)
     + '</tr></table>';
 
@@ -295,8 +302,9 @@ function renderLaporanMgmt() {
   const ghRow = (lbl, f, bold, colorFn) => `<tr>${tdl(lbl)}${ghs.map(([nm, t], i) => td(f(t), bold || i === ghs.length - 1 && ghs.length > 1, colorFn && colorFn(t))).join('')}</tr>`;
   const ghTable = `<table style="width:100%;border-collapse:collapse;"><thead><tr>${th('', 'left')}${ghs.map(([nm]) => th(nm)).join('')}</tr></thead><tbody>
     ${ghRow('Panen (kg)', t => mgN(t.panen))}
-    ${ghRow('Terkirim (kg)', t => mgN(t.kirim))}
-    ${ghRow('% Terkirim', t => mgP(t.rateKirim))}
+    ${ghRow('Kirim grade (kg)', t => mgN(t.kirimGrade))}
+    ${ghRow('Reject dikirim (kg)', t => mgN(t.rejKirim))}
+    ${ghRow('% Terkirim (total)', t => mgP(t.rateKirim))}
     ${ghRow('Reject (kg)', t => mgN(t.rej))}
     ${ghRow('Reject Rate', t => mgP(t.rateRej, 2), true, t => (t.panen > 0 ? rrCol(t.rateRej) : null))}
   </tbody></table>
@@ -324,7 +332,7 @@ function renderLaporanMgmt() {
     .map(c => `<tr><td style="padding:5px 6px;font-size:12px;font-weight:700;color:${MG.INK};width:20%;border-bottom:1px solid ${MG.LINE};">${c.nm}</td>
       <td style="padding:3px 6px;border-bottom:1px solid ${MG.LINE};">${cg.map(([nm, t, col]) => bar(t.cause[c.k], t.rej, col)).join('')}</td></tr>`).join('');
   const causeHtml = causeRows
-    ? `<div style="font-size:11px;color:${MG.MUTE};margin-bottom:6px;">${cg.map(([nm, t, col]) => `<span style="display:inline-block;width:10px;height:10px;background:${col};border-radius:2px;margin-right:4px;"></span>${nm} (${mgN(t.rej)} kg)`).join('&nbsp;&nbsp;&nbsp;')} · persentase = porsi dari total reject ${cg.length > 1 ? 'tiap GH' : cg[0][0]}</div><table style="width:100%;border-collapse:collapse;">${causeRows}</table>`
+    ? `<div style="font-size:11px;color:${MG.MUTE};margin-bottom:6px;">${cg.map(([nm, t, col]) => `<span style="display:inline-block;width:10px;height:10px;background:${col};border-radius:2px;margin-right:4px;"></span>${nm} (${mgN(t.rej)} kg)`).join('&nbsp;&nbsp;&nbsp;')} · persentase = porsi dari total reject ${cg.length > 1 ? 'tiap GH' : cg[0][0]}</div><table style="width:100%;border-collapse:collapse;">${causeRows}</table><div style="font-size:10.5px;color:${MG.MUTE};margin-top:6px;">HPT (${mgN(A.cause.hpt)} kg) adalah reject yang pasti tidak dikirim; indikator efektivitas pengendalian hama.</div>`
     : `<div style="color:${MG.MUTE};font-size:12px;">Belum ada data reject</div>`;
   const causeTitle = cg.length > 1 ? 'Penyebab Reject per GH' : 'Penyebab Reject';
 
@@ -343,6 +351,11 @@ function renderLaporanMgmt() {
     if (hy.ket.length) {
       const items = hy.ket.slice(-5).map(k => `<li style="margin:2px 0;"><b>${mgShort(k.tgl)}</b> — ${mgEsc(k.ket)}</li>`).join('');
       hyHtml += `<div style="margin-top:8px;font-size:11.5px;color:${MG.INK};"><b>Keterangan reject:</b><ul style="margin:4px 0 0 18px;padding:0;">${items}</ul></div>`;
+    }
+    if (hy.byDate.length >= 2) {
+      const vals = hy.byDate.map(b => b.pct);
+      const lo = Math.max(0, Math.floor(Math.min(...vals) - 1)), hi = Math.max(100, Math.ceil(Math.max(...vals)));
+      hyHtml += `<div style="margin-top:10px;font-size:12px;font-weight:700;color:${MG.INK};">Tren % diterima Hyoshii (per hari)</div>` + mgLineChart(hy.byDate.map(b => mgShort(b.tgl)), [{ name: '% diterima', color: MG.GREEN, values: vals }], { min: lo, max: hi, dec: 1 });
     }
     hyHtml += `<div style="font-size:10.5px;color:${MG.MUTE};margin-top:6px;">Dihitung dari ${hy.hari} hari pengiriman yang sudah ada data Hyoshii-nya.</div>`;
   } else {
@@ -438,4 +451,102 @@ async function mgSaveImage() {
     if (wrap && wrap.parentNode) wrap.parentNode.removeChild(wrap);
     if (btn) { btn.disabled = false; btn.innerHTML = label; }
   }
+}
+
+// ========== CEK DATA (kejanggalan input pada periode di Pengaturan) ==========
+function renderCekData() {
+  const host = document.getElementById('cekdata-body');
+  if (!host) return;
+  const dariEl = document.getElementById('dashboard-dari'), sampaiEl = document.getElementById('dashboard-sampai');
+  if (!dariEl || !sampaiEl || !dariEl.value || !sampaiEl.value) return;
+  let dari = dariEl.value, sampai = sampaiEl.value;
+  if (dari > sampai) { const t = dari; dari = sampai; sampai = t; }
+  const today = mgYmd(new Date());
+  const all = readArrayRaw(nativeStorage.getItem(PANEN_STORAGE_KEY));
+  const hyAll = readArrayRaw(nativeStorage.getItem(HYOSHII_STORAGE_KEY));
+  const inR = x => x.tgl && x.tgl >= dari && x.tgl <= sampai;
+  const n = (x, k) => Number(x[k]) || 0;
+  const issues = [];
+  const add = (sev, tgl, gh, msg) => issues.push({ sev, tgl, gh, msg });
+  const f2 = v => mgN(v, 2);
+
+  const recs = all.filter(inR);
+  // 1) data ganda (tanggal + GH sama)
+  const groups = {};
+  recs.forEach(x => { const k = x.tgl + '|' + (x.gh === 'GLOBAL' ? 'GLOBAL' : ghOf(x)); (groups[k] = groups[k] || []).push(x); });
+  Object.keys(groups).forEach(k => { if (groups[k].length > 1) { const [t, g] = k.split('|'); add('error', t, g, `Ada ${groups[k].length} data untuk tanggal & GH yang sama (kemungkinan dobel)`); } });
+
+  // 2) per record GH
+  const days = {};
+  recs.forEach(x => {
+    if (x.gh === 'GLOBAL') return;
+    const g = ghOf(x);
+    const d = days[x.tgl] || (days[x.tgl] = { panen: 0, rej: 0, kirimGrade: 0, pack: 0, gh: {} });
+    const rk = n(x, 'rk_crack') + n(x, 'rk_poli') + n(x, 'rk_hpt');
+    const rp = n(x, 'rp_crack') + n(x, 'rp_poli') + n(x, 'rp_hpt') + n(x, 'rp_bruise') + n(x, 'rp_overripe') + n(x, 'rp_kuning') + n(x, 'rp_frozen') + n(x, 'rp_albino');
+    const panen = n(x, 'p_hatsu') + n(x, 'p_gradea') + n(x, 'p_gradeb') + rk;
+    const kg = n(x, 'k_hatsu') + n(x, 'k_a11') + n(x, 'k_a15');
+    const pk = n(x, 'm_hatsu') + n(x, 'm_a11') + n(x, 'm_a15');
+    d.panen += panen; d.rej += rk + rp; d.kirimGrade += kg; d.pack += pk; d.gh[g] = (d.gh[g] || 0) + panen;
+    [['Hatsuhana', 'k_hatsu', 'p_hatsu', 'm_hatsu'], ['Grade A', 'k_a11', 'p_gradea', 'm_a11'], ['Grade B', 'k_a15', 'p_gradeb', 'm_a15']].forEach(([nm, kk, pp, mm]) => {
+      if (n(x, kk) > n(x, pp) + 0.05) add('error', x.tgl, g, `Kirim ${nm} (${f2(n(x, kk))} kg) lebih besar dari panen (${f2(n(x, pp))} kg)`);
+      if (n(x, kk) > 0 && n(x, mm) === 0) add('warn', x.tgl, g, `Ada kirim ${nm} ${f2(n(x, kk))} kg tapi pack kosong`);
+      else if (n(x, mm) > 0 && n(x, kk) === 0) add('warn', x.tgl, g, `Ada pack ${nm} (${n(x, mm)}) tapi berat kirim kosong`);
+      else if (n(x, kk) > 0 && n(x, mm) > 0) {
+        const r = n(x, kk) / n(x, mm);
+        if (r < 0.1 || r > 0.4) add('warn', x.tgl, g, `Berat per pack ${nm} tidak wajar: ${mgN(r, 3)} kg/pack (${f2(n(x, kk))} kg, ${n(x, mm)} pack)`);
+      }
+    });
+    if (panen > 0 && n(x, 'p_hatsu') + n(x, 'p_gradea') + n(x, 'p_gradeb') > 0 && (rk + rp) / panen > 0.25) add('warn', x.tgl, g, `Reject rate ${mgP((rk + rp) / panen * 100, 1)} (tinggi), cek input reject`);
+  });
+  Object.keys(days).forEach(t => {
+    const d = days[t];
+    if (d.panen > 0 && d.kirimGrade === 0) add('warn', t, '', `Ada panen ${f2(d.panen)} kg tapi belum ada data kirim`);
+  });
+
+  // 3) GH 2 / GH 1 belum diinput pada hari kerja setelah GH 2 mulai
+  const g2s = mgGh2Start();
+  if (g2s) {
+    Object.keys(days).forEach(t => {
+      if (t < g2s) return;
+      const g = days[t].gh;
+      if (g['GH 1'] > 0 && !(g['GH 2'] > 0)) add('warn', t, 'GH 2', 'Data GH 2 belum ada padahal GH 1 sudah diinput');
+      if (g['GH 2'] > 0 && !(g['GH 1'] > 0)) add('warn', t, 'GH 1', 'Data GH 1 belum ada padahal GH 2 sudah diinput');
+    });
+  }
+
+  // 4) Hyoshii
+  const hyDates = hyAll.map(x => x.tgl).filter(Boolean).sort();
+  const hyFirst = hyDates[0] || '';
+  const hyByDate = {};
+  hyAll.filter(inR).forEach(x => { (hyByDate[x.tgl] = hyByDate[x.tgl] || []).push(x); });
+  if (hyFirst) {
+    Object.keys(days).forEach(t => { if (t >= hyFirst && t < today && days[t].kirimGrade > 0 && !hyByDate[t]) add('info', t, '', 'Belum ada data Diterima Hyoshii'); });
+  }
+  Object.keys(hyByDate).forEach(t => {
+    const sent = { kg: 0, pack: 0 };
+    all.filter(x => x.tgl === t).forEach(x => { sent.kg += n(x, 'k_hatsu') + n(x, 'k_a11') + n(x, 'k_a15') + n(x, 'k_rfresh') + n(x, 'k_frozen'); sent.pack += n(x, 'm_hatsu') + n(x, 'm_a11') + n(x, 'm_a15'); });
+    let rk = 0, rpk = 0, rj = 0;
+    hyByDate[t].forEach(x => { rk += n(x, 'hk_hatsu') + n(x, 'hk_a11') + n(x, 'hk_a15') + n(x, 'hk_reject') + n(x, 'hk_rfresh') + n(x, 'hk_frozen'); rpk += n(x, 'hp_hatsu') + n(x, 'hp_a11') + n(x, 'hp_a15'); rj += n(x, 'hr_hatsu') + n(x, 'hr_a11') + n(x, 'hr_a15'); });
+    if (sent.kg <= 0) { add('warn', t, '', 'Ada data Hyoshii tapi tidak ada data kirim di tanggal ini'); return; }
+    if (Math.abs(rk - sent.kg) / sent.kg > 0.03) add('warn', t, '', `Berat diterima Hyoshii ${f2(rk)} kg beda ${mgN(Math.abs(rk - sent.kg) / sent.kg * 100, 1)}% dari kirim ${f2(sent.kg)} kg`);
+    if (sent.pack - rpk !== rj) add('warn', t, '', `Selisih pack kirim−terima = ${sent.pack - rpk}, tapi total pack reject Hyoshii = ${rj}`);
+  });
+
+  const order = { error: 0, warn: 1, info: 2 };
+  issues.sort((a, b) => order[a.sev] - order[b.sev] || b.tgl.localeCompare(a.tgl));
+  const cnt = { error: 0, warn: 0, info: 0 };
+  issues.forEach(i => { cnt[i.sev]++; });
+  const badge = document.getElementById('cekdata-badge');
+  if (badge) badge.innerHTML = issues.length
+    ? `<span style="background:${cnt.error ? MG.BAD : MG.WARN};color:#fff;border-radius:10px;padding:2px 9px;font-size:0.75rem;">${issues.length} temuan</span>`
+    : `<span style="background:${MG.OK};color:#fff;border-radius:10px;padding:2px 9px;font-size:0.75rem;">✓ bersih</span>`;
+  if (!issues.length) { host.innerHTML = `<div style="color:${MG.OK};font-size:0.9rem;">✓ Tidak ada kejanggalan pada ${mgLong(dari)} – ${mgLong(sampai)}.</div>`; return; }
+  const meta = { error: ['🔴', 'Perlu dibetulkan', MG.BAD], warn: ['🟡', 'Perlu dicek', MG.WARN], info: ['🔵', 'Info', MG.MUTE] };
+  const LIMIT = 10;
+  const row = i => `<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid ${MG.LINE};font-size:0.85rem;line-height:1.35;"><span>${meta[i.sev][0]}</span><span style="white-space:nowrap;font-weight:700;color:${MG.INK};">${mgShort(i.tgl)}${i.gh ? ' · ' + i.gh : ''}</span><span style="color:#334155;">${mgEsc(i.msg)}</span></div>`;
+  const summary = ['error', 'warn', 'info'].filter(k => cnt[k]).map(k => `<span style="color:${meta[k][2]};font-weight:700;">${meta[k][0]} ${cnt[k]} ${meta[k][1].toLowerCase()}</span>`).join(' &nbsp; ');
+  host.innerHTML = `<div style="margin-bottom:6px;font-size:0.85rem;">${summary}</div>`
+    + issues.slice(0, LIMIT).map(row).join('')
+    + (issues.length > LIMIT ? `<div id="cekdata-more" style="display:none;">${issues.slice(LIMIT).map(row).join('')}</div><button type="button" class="btn btn-sm btn-secondary" style="margin-top:8px;" onclick="var m=document.getElementById('cekdata-more');var o=m.style.display==='none';m.style.display=o?'block':'none';this.textContent=o?'Sembunyikan':'Tampilkan semua (${issues.length})';">Tampilkan semua (${issues.length})</button>` : '');
 }

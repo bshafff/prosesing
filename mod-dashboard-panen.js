@@ -223,10 +223,12 @@ function updateDashboard() {
   document.getElementById('stat-dikirim').textContent = T.kirim_total.toFixed(2);
   document.getElementById('stat-kirim').textContent = T.mika_total;
   document.getElementById('stat-rate-kirim').textContent = rateKirim.toFixed(2) + '%';
+  const dikMeta = document.getElementById('stat-dikirim-meta');
+  if (dikMeta) dikMeta.textContent = `Kg · Grade ${(T.kirim_total - T.k_frozen).toFixed(2)} + Reject dikirim ${T.k_frozen.toFixed(2)}`;
   
   const rejPacking = T.rej_total - T.rk_total;
   document.getElementById('stat-rej-total').textContent = T.rej_total.toFixed(2);
-  document.getElementById('stat-rej-meta').textContent = `Kg · Kebun ${T.rk_total.toFixed(2)} | Packing ${rejPacking.toFixed(2)}`;
+  document.getElementById('stat-rej-meta').textContent = `Kg · Kebun ${T.rk_total.toFixed(2)} | Packing ${rejPacking.toFixed(2)} | HPT ${(T.rk_hpt + T.rp_hpt).toFixed(2)} (tidak dikirim)`;
   let badgeClass = 'good', badgeMsg = '✓ Aman';
   if (rejectRate > 20) { badgeClass = 'bad'; badgeMsg = '⚠️ Tinggi'; }
   else if (rejectRate > 10) { badgeClass = 'warn'; badgeMsg = '⚠️ Perhatian'; }
@@ -282,6 +284,8 @@ function updateDashboard() {
   renderRejectBreakdown(); 
   renderRejectTrendChart();
  renderDetailReject(); // <--- TAMBAHKAN INI
+  try { initRejectTab(); } catch (e) { console.warn('reject tab:', e); }
+  try { if (typeof renderCekData === 'function') renderCekData(); } catch (e) { console.warn('cek data:', e); }
   try { if (typeof renderLaporanMgmt === 'function') renderLaporanMgmt(); } catch (e) { console.warn('laporan mgmt:', e); }
 }
 
@@ -311,6 +315,77 @@ function getBulanComparePeriod() {
     };
   }
   return { mode: 'all', from: null, to: null };
+}
+
+// ========== TAB REJECT & TABEL PERBANDINGAN BULANAN ==========
+function setRejectTab(name) {
+  ['komposisi', 'tren', 'bulanan'].forEach(t => {
+    const pane = document.getElementById('rjpane-' + t), btn = document.getElementById('rjtab-' + t);
+    if (pane) pane.style.display = t === name ? '' : 'none';
+    if (btn) { btn.classList.toggle('btn-primary', t === name); btn.classList.toggle('btn-secondary', t !== name); }
+  });
+  try { localStorage.setItem('awb_reject_tab', name); } catch (e) { /* abaikan */ }
+}
+function initRejectTab() {
+  const el = document.getElementById('reject-tabs');
+  if (!el || el.dataset.tinit) return;
+  el.dataset.tinit = '1';
+  let t = 'komposisi';
+  try { t = localStorage.getItem('awb_reject_tab') || 'komposisi'; } catch (e) { /* abaikan */ }
+  setRejectTab(t);
+}
+function toggleBulanCompareTable(forceOpen) {
+  const w = document.getElementById('bulan-compare-table-wrap'), b = document.getElementById('bulan-compare-toggle');
+  if (!w) return;
+  const open = forceOpen === true ? true : w.style.display === 'none';
+  w.style.display = open ? 'block' : 'none';
+  if (b) b.textContent = open ? '▴ Sembunyikan tabel detail' : '▾ Tampilkan tabel detail';
+}
+
+function renderBulanCompareChart(rows) {
+  const el = document.getElementById('bulan-compare-chart');
+  if (!el) return;
+  if (!rows || !rows.length) { el.innerHTML = ''; return; }
+  const n = rows.length, W = 760, H = 270, L = 52, R = 46, T = 20, B = 40;
+  const nice = v => { const p = Math.pow(10, Math.floor(Math.log10(v))); const m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : m <= 7.5 ? 7.5 : 10) * p; };
+  const maxKg = nice(Math.max(...rows.map(r => Math.max(r.panen_total, r.kirim_total)), 1) * 1.08);
+  const rates = rows.map(r => r.panen_total > 0 ? r.rej_total / r.panen_total * 100 : 0);
+  const maxRate = nice(Math.max(...rates, 1) * 1.2);
+  const slot = (W - L - R) / n, bw = Math.min(26, slot / 3.2);
+  const yk = v => T + (H - T - B) * (1 - v / maxKg), yr = v => T + (H - T - B) * (1 - v / maxRate);
+  const fmt = (v, d) => Number(v).toLocaleString('id-ID', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const mon = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;max-width:900px;">`;
+  for (let g = 0; g <= 4; g++) {
+    const yy = yk(maxKg * g / 4);
+    svg += `<line x1="${L}" y1="${yy}" x2="${W - R}" y2="${yy}" stroke="#e2e8f0"/>`;
+    svg += `<text x="${L - 6}" y="${yy + 3}" font-size="10" fill="#64748b" text-anchor="end">${fmt(maxKg * g / 4, 0)}</text>`;
+    svg += `<text x="${W - R + 6}" y="${yy + 3}" font-size="10" fill="#dc2626">${fmt(maxRate * g / 4, 0)}%</text>`;
+  }
+  const g2s = (typeof mgGh2Start === 'function' && dashGh() === 'all') ? mgGh2Start() : '';
+  rows.forEach((r, i) => {
+    const cx = L + slot * (i + 0.5);
+    const [yy, mm] = r.ym.split('-');
+    svg += `<rect x="${cx - bw - 1}" y="${yk(r.panen_total)}" width="${bw}" height="${yk(0) - yk(r.panen_total)}" fill="#2d5016" rx="2"/>`;
+    svg += `<rect x="${cx + 1}" y="${yk(r.kirim_total)}" width="${bw}" height="${yk(0) - yk(r.kirim_total)}" fill="#94a3b8" rx="2"/>`;
+    svg += `<text x="${cx}" y="${H - 22}" font-size="10.5" fill="#0f172a" text-anchor="middle" font-weight="700">${mon[Number(mm) - 1]}</text>`;
+    svg += `<text x="${cx}" y="${H - 10}" font-size="9.5" fill="#64748b" text-anchor="middle">${yy}</text>`;
+    if (n <= 9) svg += `<text x="${cx - bw / 2 - 1}" y="${yk(r.panen_total) - 4}" font-size="9" fill="#2d5016" text-anchor="middle">${fmt(r.panen_total, 0)}</text>`;
+    if (g2s && g2s.substring(0, 7) === r.ym) {
+      svg += `<line x1="${cx - slot / 2}" y1="${T - 4}" x2="${cx - slot / 2}" y2="${H - B}" stroke="#d97706" stroke-dasharray="4 3"/>`;
+      svg += `<text x="${cx - slot / 2 + 3}" y="${T + 6}" font-size="9.5" fill="#d97706" font-weight="700">GH 2 mulai ${g2s.substring(8, 10)}/${g2s.substring(5, 7)}</text>`;
+    }
+  });
+  const pts = rates.map((v, i) => `${L + slot * (i + 0.5)},${yr(v)}`).join(' ');
+  svg += `<polyline points="${pts}" fill="none" stroke="#dc2626" stroke-width="2.4" stroke-linejoin="round"/>`;
+  rates.forEach((v, i) => {
+    const x = L + slot * (i + 0.5);
+    svg += `<circle cx="${x}" cy="${yr(v)}" r="3.2" fill="#dc2626"/>`;
+    if (n <= 12) svg += `<text x="${x}" y="${yr(v) - 7}" font-size="9.5" fill="#dc2626" text-anchor="middle" font-weight="700">${fmt(v, 1)}%</text>`;
+  });
+  svg += '</svg>';
+  const leg = '<div style="font-size:11.5px;color:#64748b;margin-top:4px;"><span style="display:inline-block;width:10px;height:10px;background:#2d5016;border-radius:2px;margin-right:4px;"></span>Panen (kg) &nbsp;&nbsp;<span style="display:inline-block;width:10px;height:10px;background:#94a3b8;border-radius:2px;margin-right:4px;"></span>Terkirim (kg) &nbsp;&nbsp;<span style="display:inline-block;width:14px;height:3px;background:#dc2626;margin-right:4px;vertical-align:middle;"></span>Reject rate (%, sumbu kanan)</div>';
+  el.innerHTML = svg + leg;
 }
 
 function renderMonthlyComparison() {
@@ -359,6 +434,7 @@ function renderMonthlyComparison() {
 
   const infoEl = document.getElementById('bulan-compare-info');
 
+  renderBulanCompareChart(rows);
   if (!rows.length) {
     tbody.innerHTML = '<tr><td colspan="18" style="text-align:center;color:#999;padding:1rem;">Belum ada data</td></tr>';
     const footEl = document.getElementById('bulan-compare-foot');
@@ -873,6 +949,8 @@ async function downloadBulanCompareImage() {
   const gh = ghLabelOf(dashGh()).replace(/\s/g, '');
   const periodLabel = period.mode === 'all' ? 'SemuaBulan' : `${period.from}_to_${period.to}`;
   const filename = `Rekap_Perbandingan_Bulanan_${periodLabel}_${gh}.png`;
+  toggleBulanCompareTable(true); // tabel detail ikut masuk gambar
+  await new Promise(r => setTimeout(r, 150));
   captureCardAsImage('panen-bulan-compare-card', filename, true);
 }
 

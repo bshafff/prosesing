@@ -5,7 +5,6 @@
     <button class="btn btn-sm" onclick="openModule('dash-mika')" style="margin-left:auto;flex:none;background:#faf5ff;color:#7e22ce;border:1px solid #e9d5ff;">🍓 Dashboard Mika</button>
   </div>
 
-  <!-- LAPORAN MANAJEMEN -->
   <div class="card" id="mgmt-card" style="margin-bottom:1rem;border-left:4px solid #2d5016;" data-collapse="mgmt" data-open="1">
     <div class="card-title">📑 Laporan Manajemen</div>
     <div class="row-3" style="align-items:flex-end;margin-bottom:0.75rem;">
@@ -92,7 +91,6 @@
     </div>
   </div>
 
-  <!-- PENGATURAN PERIODE -->
   <div class="card" id="dash-settings" style="margin-bottom:1rem;">
     <div class="card-title">⚙️ Pengaturan</div>
     <input type="month" id="dashboard-bulan" style="display:none;">
@@ -141,6 +139,12 @@
     </div>
   </div>
 
+  <!-- CEK DATA -->
+  <div class="card" id="cekdata-card" style="margin-bottom:1rem;" data-collapse="cekdata" data-open="1">
+    <div class="card-title"><span>🔎 Cek Data <small style="font-weight:normal;color:#666;">(periode di Pengaturan)</small></span> <span id="cekdata-badge"></span></div>
+    <div id="cekdata-body"><small style="color:#666;">Memeriksa...</small></div>
+  </div>
+
   <div class="stats stats-3" id="dashboard-stats">
     <div class="stat-card red">
       <div class="stat-label">Total Panen</div>
@@ -151,7 +155,7 @@
     <div class="stat-card blue">
       <div class="stat-label">Total Dikirim</div>
       <div class="stat-value" id="stat-dikirim">0.00</div>
-      <div class="stat-meta">Kg</div>
+      <div class="stat-meta" id="stat-dikirim-meta">Kg</div>
     </div>
     <div class="stat-card purple">
       <div class="stat-label">Total Buah Terkirim</div>
@@ -176,13 +180,19 @@
     </div>
   </div>
 
-  <div class="chart-card" data-collapse="komposisi" data-open="1">
-    <div class="chart-title">🥧 Komposisi Reject (periode terpilih)</div>
+  <!-- REJECT (tab: Komposisi / Tren / Per Bulan) -->
+  <div class="card" style="margin-top:1rem;" data-collapse="reject" data-open="1">
+    <div class="card-title">🍓 Reject</div>
+    <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.9rem;" id="reject-tabs">
+      <button type="button" class="btn btn-sm btn-primary" id="rjtab-komposisi" onclick="setRejectTab('komposisi')">🥧 Komposisi</button>
+      <button type="button" class="btn btn-sm btn-secondary" id="rjtab-tren" onclick="setRejectTab('tren')">📈 Tren %</button>
+      <button type="button" class="btn btn-sm btn-secondary" id="rjtab-bulanan" onclick="setRejectTab('bulanan')">📝 Analisis per Bulan</button>
+    </div>
+    <div id="rjpane-komposisi">
+      <small style="color:#666;display:block;margin-bottom:0.5rem;">Mengikuti periode di Pengaturan.</small>
     <div id="chart-reject"></div>
-  </div>
-
-  <div class="card" style="margin-top:1rem;" data-collapse="tren" data-open="1">
-    <div class="card-title">📈 Tren Persentase Reject (Stand Alone)</div>
+    </div>
+    <div id="rjpane-tren" style="display:none;">
     <div class="row-3" style="align-items: flex-end; margin-bottom: 1rem;">
       <div class="input-group" style="margin-bottom:0;">
         <label>Dari Tanggal</label>
@@ -237,10 +247,8 @@
     </div>
 
     <div class="chart-scroll" id="chart-reject-trend" style="margin-top:1rem; min-height:320px;"></div>
-  </div>
-
-  <div class="card" style="margin-top:1rem;" data-collapse="analisis" data-open="1">
-    <div class="card-title">📝 Analisis Breakdown Reject Bulanan (Per GH)</div>
+    </div>
+    <div id="rjpane-bulanan" style="display:none;">
     <div class="row-2" style="align-items:flex-end;margin-bottom:0.5rem;">
       <div class="input-group" style="margin-bottom:0;">
         <label>Dari Bulan</label>
@@ -274,6 +282,7 @@
           <tr><td colspan="5" style="text-align:center;color:#999;">Belum ada data</td></tr>
         </tbody>
       </table>
+    </div>
     </div>
   </div>
 
@@ -355,8 +364,12 @@
 
     <div style="margin-bottom:0.75rem;" data-html2canvas-ignore="true">
       <button type="button" class="btn btn-primary btn-sm" onclick="downloadBulanCompareImage()">📸 Screenshot</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="bulan-compare-toggle" onclick="toggleBulanCompareTable()">▾ Tampilkan tabel detail</button>
     </div>
 
+    <div id="bulan-compare-chart" style="margin-top:0.5rem;"></div>
+
+    <div id="bulan-compare-table-wrap" style="display:none;">
     <div class="recap-wrap" style="margin-top:1rem;">
       <table class="recap-table" style="min-width:1400px;">
         <thead>
@@ -393,6 +406,7 @@
         </tbody>
         <tfoot id="bulan-compare-foot"></tfoot>
       </table>
+    </div>
     </div>
   </div>
 

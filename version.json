@@ -1,4 +1,4 @@
 {
-  "version": "1.11.2",
-  "released": "2026-11-24",
-  "notes": "Perbaikan: data lama tanpa kolom GH dibaca sebagai GH 1; laporan & rekap menyesuaikan periode saat GH 2 belum ada"}
+  "version": "1.12.0",
+  "released": "2026-11-25",
+  "notes": "Cek Data, grafik perbandingan bulanan, kartu Reject bertab, kirim grade vs reject dikirim, HPT dipisah"}
