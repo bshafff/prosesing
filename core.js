@@ -3,6 +3,7 @@ const LKS_STORAGE_KEY = 'lks_awb_v1';
 const PANEN_STORAGE_KEY = 'panen_awb_v1';
 const KEMASAN_STORAGE_KEY = 'kemasan_awb_v1';
 const HYOSHII_STORAGE_KEY = 'hyoshii_awb_v1';
+const POPULASI_STORAGE_KEY = 'populasi_awb_v1';
 
 // ========== KONFIGURASI ==========
 const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwAKinQvQF4Twvj9_2aWq9Q0j8bxrq8JfwlZIsKd1zXV3AMZrx5F806CRCO5Vp_Rx5u/exec';
@@ -241,6 +242,7 @@ function syncTypeFromKey(key) {
   if (key === PANEN_STORAGE_KEY) return 'panen';
   if (key === KEMASAN_STORAGE_KEY) return 'kemasan';
   if (key === HYOSHII_STORAGE_KEY) return 'hyoshii';
+  if (key === POPULASI_STORAGE_KEY) return 'populasi';
   return null;
 }
 
@@ -405,7 +407,7 @@ async function pullFromSheet(silent) {
     if (!result || !result.ok) throw new Error(result && result.error ? result.error : 'Gagal pull.');
     suppressSync = true;
     Object.entries(result.data || {}).forEach(([type, records]) => {
-      const key = type === 'lks' ? LKS_STORAGE_KEY : type === 'panen' ? PANEN_STORAGE_KEY : type === 'kemasan' ? KEMASAN_STORAGE_KEY : type === 'hyoshii' ? HYOSHII_STORAGE_KEY : null;
+      const key = type === 'lks' ? LKS_STORAGE_KEY : type === 'panen' ? PANEN_STORAGE_KEY : type === 'kemasan' ? KEMASAN_STORAGE_KEY : type === 'hyoshii' ? HYOSHII_STORAGE_KEY : type === 'populasi' ? POPULASI_STORAGE_KEY : null;
       if (!key) return;
       nativeStorage.setItem(key, JSON.stringify(Array.isArray(records) ? records : []));
     });
@@ -416,6 +418,7 @@ async function pullFromSheet(silent) {
     renderTableLks(); 
     renderTablePanen();
     try { if (typeof renderHyoshii === 'function') { renderHyoshii(); hyLoadForm(); } } catch (e) { console.warn('renderHyoshii:', e); }
+    try { if (typeof renderPopulasi === 'function') renderPopulasi(); } catch (e) { console.warn('renderPopulasi:', e); }
     recalculateStockKemasan(); 
     
     // --- PENGAMAN: Jangan render ulang form kemasan jika user sedang di halaman kemasan ---

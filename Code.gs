@@ -1,24 +1,21 @@
 /**
- * Google Apps Script backend - Processing AWB PWA
- *
- * 1) Buat Google Spreadsheet kosong.
- * 2) Extensions > Apps Script.
- * 3) Tempel seluruh kode ini.
- * 4) Isi SPREADSHEET_ID dan API_KEY.
- * 5) Deploy > New deployment > Web app.
- *    Execute as: Me
- *    Who has access: Anyone
- * 6) Salin URL /exec ke index.html pada SYNC_CONFIG.APPS_SCRIPT_URL.
+ * Google Apps Script backend - Processing AWB PWA (v1.5)
+ * v1.3: Anti-duplikat + ID auto plain text
+ * v1.4: tambah tipe data 'hyoshii' (sheet HYOSHII) untuk menu "Diterima Hyoshii"
+ * v1.5: tambah tipe data 'populasi' (sheet POPULASI) untuk jumlah tanaman per GH
  */
 
 const CONFIG = {
-  SPREADSHEET_ID: 'PASTE_SPREADSHEET_ID_HERE',
+  SPREADSHEET_ID: '16fVN4SMYWtz-NkM3mHSZeHIEjmNdZmW1L3I8rziKjfI',
   API_KEY: 'AWB_PROCESSING_2026',
   SHEETS: {
     lks: 'LKS',
     panen: 'PANEN',
-    kemasan: 'KEMASAN'
-  }
+    kemasan: 'KEMASAN',
+    hyoshii: 'HYOSHII',
+    populasi: 'POPULASI'
+  },
+  LOCK_TIMEOUT_MS: 60000
 };
 
 function doGet(e) {
@@ -31,7 +28,7 @@ function doGet(e) {
     const action = e.parameter.action || 'ping';
 
     if (action === 'ping') {
-      return output({ ok: true, message: 'AWB Processing API aktif', version: '1.0.0' }, callback);
+      return output({ ok: true, message: 'AWB Processing API aktif', version: '1.5.0' }, callback);
     }
 
     if (action === 'pull') {
@@ -44,6 +41,17 @@ function doGet(e) {
       return output({ ok: true, ...result }, callback);
     }
 
+    if (action === 'writeBatch') {
+      const payload = decodePayload(e.parameter.payload || '');
+      const result = handleWriteBatch(payload);
+      return output({ ok: true, ...result }, callback);
+    }
+
+    if (action === 'cleanup') {
+      const result = cleanupAllDuplicates();
+      return output({ ok: true, ...result }, callback);
+    }
+
     return output({ ok: false, error: 'Action tidak dikenal: ' + action }, callback);
   } catch (err) {
     return output({ ok: false, error: String(err && err.message ? err.message : err) }, callback);
@@ -53,7 +61,6 @@ function doGet(e) {
 function output(data, callback) {
   const json = JSON.stringify(data);
   if (callback) {
-    // callback hanya berasal dari browser aplikasi yang membuat nama alfanumerik/underscore.
     return ContentService
       .createTextOutput(callback + '(' + json + ');')
       .setMimeType(ContentService.MimeType.JAVASCRIPT);
@@ -84,6 +91,16 @@ function ensureSheet(type) {
   let sheet = ss.getSheetByName(name);
   if (!sheet) sheet = ss.insertSheet(name);
   return sheet;
+}
+
+// ============ HELPER: Normalisasi ID ============
+// Menyamakan format ID dari Sheet (number) dengan ID dari PWA (string)
+function normId(v) {
+  if (v === null || v === undefined || v === '') return '';
+  if (typeof v === 'number') {
+    return String(Math.round(v));
+  }
+  return String(v).trim();
 }
 
 function flattenObject(value, prefix, out) {
@@ -120,6 +137,14 @@ function flattenObject(value, prefix, out) {
   return out;
 }
 
+// FIX: Paksa kolom ID jadi Plain Text SEBELUM semua operasi
+function forceIdColumnPlainText(sheet, headers) {
+  const idColIndex = headers.indexOf('ID') + 1;
+  if (idColIndex > 0 && sheet.getMaxRows() >= 2) {
+    sheet.getRange(2, idColIndex, sheet.getMaxRows() - 1, 1).setNumberFormat('@');
+  }
+}
+
 function ensureHeaders(sheet, flatRecord) {
   const required = Object.keys(flatRecord);
   const lastCol = sheet.getLastColumn();
@@ -129,15 +154,16 @@ function ensureHeaders(sheet, flatRecord) {
     headers = required;
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     sheet.setFrozenRows(1);
-    return headers;
+  } else {
+    const missing = required.filter(function(h) { return headers.indexOf(h) === -1; });
+    if (missing.length) {
+      sheet.getRange(1, headers.length + 1, 1, missing.length).setValues([missing]);
+      headers = headers.concat(missing);
+    }
+    sheet.setFrozenRows(1);
   }
 
-  const missing = required.filter(function(h) { return headers.indexOf(h) === -1; });
-  if (missing.length) {
-    sheet.getRange(1, headers.length + 1, 1, missing.length).setValues([missing]);
-    headers = headers.concat(missing);
-  }
-  sheet.setFrozenRows(1);
+  forceIdColumnPlainText(sheet, headers);
   return headers;
 }
 
@@ -145,9 +171,9 @@ function findRowById(sheet, id, headers) {
   const idCol = headers.indexOf('ID') + 1;
   if (!idCol || sheet.getLastRow() < 2) return -1;
   const values = sheet.getRange(2, idCol, sheet.getLastRow() - 1, 1).getValues();
-  const target = String(id);
+  const target = normId(id);
   for (let i = 0; i < values.length; i++) {
-    if (String(values[i][0]) === target) return i + 2;
+    if (normId(values[i][0]) === target) return i + 2;
   }
   return -1;
 }
@@ -206,6 +232,169 @@ function handleWrite(payload) {
   throw new Error('Write action tidak dikenal: ' + action);
 }
 
+function handleWriteBatch(payload) {
+  if (!payload || !Array.isArray(payload.items) || !payload.items.length) {
+    throw new Error('Payload batch kosong.');
+  }
+
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(CONFIG.LOCK_TIMEOUT_MS);
+  } catch (lockErr) {
+    throw new Error('Server sedang sibuk. Coba lagi beberapa detik.');
+  }
+
+  try {
+    // Otomatis mengikuti semua tipe di CONFIG.SHEETS (lks, panen, kemasan, hyoshii)
+    const byType = {};
+    Object.keys(CONFIG.SHEETS).forEach(function(t) { byType[t] = []; });
+    payload.items.forEach(function(it) {
+      if (it && it.type && byType[it.type]) byType[it.type].push(it);
+    });
+
+    let processed = 0;
+    const details = [];
+
+    Object.keys(byType).forEach(function(type) {
+      if (!byType[type].length) return;
+      const r = applyBatch(byType[type], type);
+      processed += r.processed;
+      details.push(r);
+    });
+
+    return { processed: processed, details: details };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function applyBatch(items, type) {
+  const sheet = ensureSheet(type);
+  let processed = 0;
+
+  // 1) CLEAR
+  const clears = items.filter(function(x) { return x.action === 'clear'; });
+  if (clears.length) {
+    if (sheet.getLastRow() > 1) {
+      sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
+      sheet.deleteRows(2, sheet.getMaxRows() - 1);
+      sheet.insertRowsAfter(1, Math.max(1, 100));
+    }
+    processed += clears.length;
+  }
+
+  // 2) DELETE
+  const deletes = items.filter(function(x) { return x.action === 'delete'; });
+  if (deletes.length) {
+    const lastCol = sheet.getLastColumn();
+    const headers = lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
+    const idCol = headers.indexOf('ID') + 1;
+
+    if (idCol > 0 && sheet.getLastRow() >= 2) {
+      const idValues = sheet.getRange(2, idCol, sheet.getLastRow() - 1, 1).getValues();
+      const targetSet = {};
+      deletes.forEach(function(d) { targetSet[normId(d.id)] = true; });
+
+      const rowsToDelete = [];
+      for (let i = 0; i < idValues.length; i++) {
+        if (targetSet[normId(idValues[i][0])]) rowsToDelete.push(i + 2);
+      }
+
+      rowsToDelete.sort(function(a, b) { return b - a; }).forEach(function(r) {
+        sheet.deleteRow(r);
+      });
+      processed += rowsToDelete.length;
+    }
+  }
+
+  // 3) UPSERT
+  const upserts = items.filter(function(x) { return x.action === 'upsert' && x.record; });
+
+  if (upserts.length) {
+    const flatList = [];
+    upserts.forEach(function(u) {
+      const rec = u.record;
+      if (!rec || rec.id === undefined || rec.id === null) return;
+      const flat = flattenObject(rec);
+      flat.ID = String(rec.id);
+      flat.Updated_At = new Date().toISOString();
+      flat.Data_JSON = JSON.stringify(rec);
+      flatList.push({ record: rec, flat: flat });
+    });
+
+    if (flatList.length) {
+      const requiredSet = {};
+      flatList.forEach(function(f) {
+        Object.keys(f.flat).forEach(function(k) { requiredSet[k] = true; });
+      });
+      const requiredKeys = Object.keys(requiredSet);
+
+      const lastCol = sheet.getLastColumn();
+      let headers = lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
+
+      if (!headers.length || headers.every(function(h) { return h === ''; })) {
+        headers = requiredKeys;
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+        sheet.setFrozenRows(1);
+      } else {
+        const missing = requiredKeys.filter(function(h) { return headers.indexOf(h) === -1; });
+        if (missing.length) {
+          sheet.getRange(1, headers.length + 1, 1, missing.length).setValues([missing]);
+          headers = headers.concat(missing);
+        }
+        sheet.setFrozenRows(1);
+      }
+
+      // FIX: Paksa plain text SEBELUM lookup
+      forceIdColumnPlainText(sheet, headers);
+
+      const idCol = headers.indexOf('ID') + 1;
+      const idToRow = {};
+      if (idCol > 0 && sheet.getLastRow() >= 2) {
+        const idValues = sheet.getRange(2, idCol, sheet.getLastRow() - 1, 1).getValues();
+        for (let i = 0; i < idValues.length; i++) {
+          idToRow[normId(idValues[i][0])] = i + 2;
+        }
+      }
+
+      const updates = [];
+      const inserts = [];
+      const seenInBatch = {};
+
+      flatList.forEach(function(f) {
+        const rowData = headers.map(function(h) {
+          const v = f.flat[h];
+          return v === undefined || v === null ? '' : v;
+        });
+        const key = normId(f.record.id);
+
+        // Skip kalau ID ini sudah ada di batch yang sama (anti dobel dalam 1 batch)
+        if (seenInBatch[key]) return;
+        seenInBatch[key] = true;
+
+        if (idToRow[key]) {
+          updates.push({ row: idToRow[key], data: rowData });
+        } else {
+          inserts.push(rowData);
+        }
+      });
+
+      updates.forEach(function(u) {
+        sheet.getRange(u.row, 1, 1, headers.length).setValues([u.data]);
+      });
+
+      if (inserts.length) {
+        const startRow = sheet.getLastRow() + 1;
+        sheet.getRange(startRow, 1, inserts.length, headers.length).setValues(inserts);
+      }
+
+      processed += flatList.length;
+    }
+  }
+
+  return { type: type, processed: processed };
+}
+
 function pullAll() {
   const result = {};
   Object.keys(CONFIG.SHEETS).forEach(function(type) {
@@ -227,6 +416,57 @@ function pullSheet(type) {
     }).filter(Boolean);
   }
   return [];
+}
+
+// ============ CLEANUP DUPLIKAT ============
+function cleanupDuplicates(type) {
+  const sheet = ensureSheet(type);
+  const lastCol = sheet.getLastColumn();
+  if (lastCol < 1 || sheet.getLastRow() < 3) return { type: type, removed: 0 };
+
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  const idCol = headers.indexOf('ID') + 1;
+  if (idCol < 1) return { type: type, removed: 0, error: 'Kolom ID tidak ditemukan' };
+
+  forceIdColumnPlainText(sheet, headers);
+
+  const lastRow = sheet.getLastRow();
+  const idValues = sheet.getRange(2, idCol, lastRow - 1, 1).getValues();
+
+  // Cari duplikat (simpan baris PERTAMA, hapus sisanya)
+  const seen = {};
+  const rowsToDelete = [];
+  for (let i = 0; i < idValues.length; i++) {
+    const key = normId(idValues[i][0]);
+    if (!key) continue;
+    if (seen[key]) {
+      rowsToDelete.push(i + 2);
+    } else {
+      seen[key] = true;
+    }
+  }
+
+  // Hapus dari bawah ke atas
+  rowsToDelete.sort(function(a, b) { return b - a; }).forEach(function(r) {
+    sheet.deleteRow(r);
+  });
+
+  return { type: type, removed: rowsToDelete.length };
+}
+
+function cleanupAllDuplicates() {
+  const result = {};
+  let totalRemoved = 0;
+  Object.keys(CONFIG.SHEETS).forEach(function(type) {
+    try {
+      const r = cleanupDuplicates(type);
+      result[type] = r;
+      totalRemoved += r.removed || 0;
+    } catch (err) {
+      result[type] = { error: String(err.message || err) };
+    }
+  });
+  return { totalRemoved: totalRemoved, details: result };
 }
 
 function setupSheets() {

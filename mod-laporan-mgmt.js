@@ -184,7 +184,7 @@ function mgLineChart(labels, series, opts) {
   const n = labels.length;
   if (!n) return `<div style="color:${MG.MUTE};font-size:12px;">Belum ada data</div>`;
   const minV = opts.min || 0;
-  let max = opts.max || Math.max(...series.flatMap(s => s.values), opts.target || 0, 0.0001) * 1.12;
+  let max = opts.max || Math.max(...series.flatMap(s => s.values.filter(v => Number.isFinite(v))), opts.target || 0, 0.0001) * 1.12;
   if (max <= minV) max = minV + 1;
   const x = i => n === 1 ? (L + (W - L - R) / 2) : L + (W - L - R) * i / (n - 1);
   const y = v => T + (H - T - B) * (1 - (v - minV) / (max - minV));
@@ -202,9 +202,9 @@ function mgLineChart(labels, series, opts) {
     svg += `<text x="${W - R}" y="${yt - 4}" font-size="9.5" fill="${MG.BAD}" text-anchor="end" font-weight="700">Target ${mgN(opts.target, 0)}%</text>`;
   }
   series.forEach(s => {
-    const pts = s.values.map((v, i) => `${x(i)},${y(v)}`).join(' ');
+    const pts = s.values.map((v, i) => Number.isFinite(v) ? `${x(i)},${y(v)}` : null).filter(Boolean).join(' ');
     svg += `<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`;
-    if (n <= 16) s.values.forEach((v, i) => { svg += `<circle cx="${x(i)}" cy="${y(v)}" r="3" fill="${s.color}"/>`; });
+    if (n <= 16) s.values.forEach((v, i) => { if (Number.isFinite(v)) svg += `<circle cx="${x(i)}" cy="${y(v)}" r="3" fill="${s.color}"/>`; });
   });
   svg += '</svg>';
   const legend = series.length > 1 ? `<div style="font-size:11px;color:${MG.MUTE};margin-top:2px;">${series.map(s => `<span style="display:inline-block;width:10px;height:10px;background:${s.color};border-radius:2px;margin-right:4px;"></span>${s.name}`).join('&nbsp;&nbsp;&nbsp;')}</div>` : '';
@@ -244,6 +244,9 @@ function renderLaporanMgmt() {
   const M = mgMetrics(rg.start, rg.end), P = mgMetrics(rg.pstart, rg.pend);
   const A = M.all, PA = P.all;
   const hy = mgHyoshii(rg.start, rg.end), phy = mgHyoshii(rg.pstart, rg.pend);
+  const PR = typeof mgProduktivitas === 'function' ? mgProduktivitas(rg.start, rg.end) : null;
+  const PPR = typeof mgProduktivitas === 'function' ? mgProduktivitas(rg.pstart, rg.pend) : null;
+  const hasProd = !!(PR && PR.all.pop > 0);
 
   if (A.panen <= 0 && !hy) {
     host.innerHTML = `<div style="padding:28px;text-align:center;color:${MG.MUTE};background:#fff;border:1px solid ${MG.LINE};border-radius:10px;">Belum ada data panen pada periode <b>${rg.label}</b>.</div>`;
@@ -261,6 +264,10 @@ function renderLaporanMgmt() {
   bullets.push(`Total panen <b>${mgN(A.panen)} kg</b>${dP === null ? '' : (Math.abs(dP) < 0.05 ? ' (sama dengan periode sebelumnya)' : ` (${dP >= 0 ? 'naik' : 'turun'} ${mgN(Math.abs(dP), 1)}% dari periode sebelumnya)`)}; terkirim <b>${mgP(A.rateKirim)}</b> dari panen.`);
   const dRate = PA.panen > 0 ? rr - PA.rateRej : null;
   bullets.push(`Reject rate <b>${mgP(rr, 2)}</b> — ${rr <= target ? 'masih di bawah' : 'di atas'} target ${mgN(target, 0)}%${dRate === null ? '' : (Math.abs(dRate) < 0.005 ? ', sama dengan periode sebelumnya' : `, ${dRate > 0 ? 'naik' : 'turun'} ${mgN(Math.abs(dRate), 2)} poin dari periode sebelumnya`)}.`);
+  if (hasProd) {
+    const dpg = PPR && PPR.all.gpt > 0 ? (PR.all.gpt - PPR.all.gpt) / PPR.all.gpt * 100 : null;
+    bullets.push(`Produktivitas <b>${mgN(PR.all.gpt, 1)} gram/tanaman</b>${dpg === null ? '' : (Math.abs(dpg) < 0.05 ? ' (sama dengan periode sebelumnya)' : ` (${dpg >= 0 ? 'naik' : 'turun'} ${mgN(Math.abs(dpg), 1)}% dari periode sebelumnya)`)}.`);
+  }
   const causes = MG_CAUSES.map(([k, nm]) => ({ nm, v: A.cause[k] })).filter(c => c.v > 0).sort((a, b) => b.v - a.v);
   if (causes.length && A.rej > 0) {
     const c2 = causes[1] ? ` dan ${causes[1].nm} (${mgP(causes[1].v / A.rej * 100, 0)})` : '';
@@ -296,9 +303,10 @@ function renderLaporanMgmt() {
   const tdl = t => `<td style="padding:7px 8px;font-size:12.5px;text-align:left;border-bottom:1px solid ${MG.LINE};color:${MG.MUTE};">${t}</td>`;
   const rrCol = v => (v <= target ? MG.OK : (v <= target * 1.25 ? MG.WARN : MG.BAD));
   const ghs = [];
-  if (has1) ghs.push(['GH 1', M.g1]);
-  if (has2) ghs.push(['GH 2', M.g2]);
-  if (ghs.length > 1) ghs.push(['Gabungan', A]);
+  if (has1) ghs.push(['GH 1', M.g1, PR && PR.g1]);
+  if (has2) ghs.push(['GH 2', M.g2, PR && PR.g2]);
+  if (ghs.length > 1) ghs.push(['Gabungan', A, PR && PR.all]);
+  const prodRow = (lbl, f, bold) => hasProd ? `<tr>${tdl(lbl)}${ghs.map(([nm, t, pr], i) => td(pr && pr.pop > 0 ? f(pr) : '–', bold || (i === ghs.length - 1 && ghs.length > 1))).join('')}</tr>` : '';
   const ghRow = (lbl, f, bold, colorFn) => `<tr>${tdl(lbl)}${ghs.map(([nm, t], i) => td(f(t), bold || i === ghs.length - 1 && ghs.length > 1, colorFn && colorFn(t))).join('')}</tr>`;
   const ghTable = `<table style="width:100%;border-collapse:collapse;"><thead><tr>${th('', 'left')}${ghs.map(([nm]) => th(nm)).join('')}</tr></thead><tbody>
     ${ghRow('Panen (kg)', t => mgN(t.panen))}
@@ -307,6 +315,8 @@ function renderLaporanMgmt() {
     ${ghRow('% Terkirim (total)', t => mgP(t.rateKirim))}
     ${ghRow('Reject (kg)', t => mgN(t.rej))}
     ${ghRow('Reject Rate', t => mgP(t.rateRej, 2), true, t => (t.panen > 0 ? rrCol(t.rateRej) : null))}
+    ${prodRow('Jumlah tanaman', pr => mgN(pr.pop, 0))}
+    ${prodRow('Produktivitas (gram/tanaman)', pr => mgN(pr.gpt, 1), true)}
   </tbody></table>
   <div style="font-size:10.5px;color:${MG.MUTE};margin-top:6px;">Reject Fresh/Frozen yang tercampur GH dibagi otomatis ke GH yang panen pada hari itu.${has1 && !has2 ? ' GH 2 belum ada data pada periode ini.' : ''}</div>`;
   const ghTitle = ghs.length > 1 ? 'Perbandingan GH 1 vs GH 2' : ('Ringkasan ' + (ghs[0] ? ghs[0][0] : 'GH'));

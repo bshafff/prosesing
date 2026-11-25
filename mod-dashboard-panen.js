@@ -284,6 +284,7 @@ function updateDashboard() {
   renderRejectBreakdown(); 
   renderRejectTrendChart();
  renderDetailReject(); // <--- TAMBAHKAN INI
+  try { if (typeof renderPopulasi === 'function') renderPopulasi(); } catch (e) { console.warn('populasi:', e); }
   try { initRejectTab(); } catch (e) { console.warn('reject tab:', e); }
   try { if (typeof renderCekData === 'function') renderCekData(); } catch (e) { console.warn('cek data:', e); }
   try { if (typeof renderLaporanMgmt === 'function') renderLaporanMgmt(); } catch (e) { console.warn('laporan mgmt:', e); }

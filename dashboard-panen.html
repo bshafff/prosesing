@@ -180,6 +180,47 @@
     </div>
   </div>
 
+  <!-- PRODUKTIVITAS & POPULASI TANAMAN -->
+  <div class="card" style="margin-top:1rem;" data-collapse="produktivitas" data-open="1">
+    <div class="card-title">🌱 Produktivitas per Tanaman</div>
+    <div id="pop-result"></div>
+    <details id="pop-details" style="margin-top:0.9rem;">
+      <summary style="cursor:pointer;font-weight:700;font-size:0.9rem;">📝 Isi / ubah jumlah tanaman per GH</summary>
+      <div style="margin-top:0.75rem;">
+        <input type="hidden" id="pop-edit-id">
+        <div class="row-3">
+          <div class="input-group">
+            <label>Greenhouse</label>
+            <select id="pop-gh"><option value="GH 1">GH 1</option><option value="GH 2">GH 2</option></select>
+          </div>
+          <div class="input-group">
+            <label>Berlaku mulai</label>
+            <input type="date" id="pop-tgl">
+          </div>
+          <div class="input-group">
+            <label>Jumlah tanaman</label>
+            <input type="number" id="pop-jumlah" step="1" min="0" inputmode="numeric" placeholder="mis. 5000">
+          </div>
+        </div>
+        <div class="input-group">
+          <label>Keterangan (opsional)</label>
+          <input type="text" id="pop-ket" placeholder="mis. tanam ulang, tambah bedeng">
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" id="pop-btn-simpan" onclick="popSimpan()">💾 Simpan</button>
+          <button class="btn btn-secondary btn-sm" id="pop-btn-batal" style="display:none;" onclick="popResetForm()">Batal</button>
+        </div>
+        <small style="color:#666;display:block;margin:0.5rem 0;">Kalau jumlah tanaman berubah (tanam ulang, tambah/kurangi bedeng), tambahkan entri baru dengan tanggal berlaku barunya. Entri lama tidak perlu dihapus.</small>
+        <div class="recap-wrap">
+          <table class="recap-table" style="min-width:0;width:100%;">
+            <thead><tr><th class="th-base">GH</th><th class="th-base">Berlaku mulai</th><th class="th-base">Jumlah tanaman</th><th class="th-base">Keterangan</th><th class="th-base">Aksi</th></tr></thead>
+            <tbody id="pop-list"></tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+  </div>
+
   <!-- REJECT (tab: Komposisi / Tren / Per Bulan) -->
   <div class="card" style="margin-top:1rem;" data-collapse="reject" data-open="1">
     <div class="card-title">🍓 Reject</div>
