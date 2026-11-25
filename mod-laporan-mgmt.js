@@ -257,37 +257,12 @@ function renderLaporanMgmt() {
   const rr = A.rateRej;
   const rrStatus = rr <= target ? ['✓ Sesuai target', MG.OK] : (rr <= target * 1.25 ? ['⚠ Perlu perhatian', MG.WARN] : ['✗ Di atas target', MG.BAD]);
 
-  // ringkasan otomatis
-  const bullets = [];
-  const pctDiff = (c, p) => (p > 0 ? (c - p) / p * 100 : null);
-  const dP = pctDiff(A.panen, PA.panen);
-  bullets.push(`Total panen <b>${mgN(A.panen)} kg</b>${dP === null ? '' : (Math.abs(dP) < 0.05 ? ' (sama dengan periode sebelumnya)' : ` (${dP >= 0 ? 'naik' : 'turun'} ${mgN(Math.abs(dP), 1)}% dari periode sebelumnya)`)}; terkirim <b>${mgP(A.rateKirim)}</b> dari panen.`);
-  const dRate = PA.panen > 0 ? rr - PA.rateRej : null;
-  bullets.push(`Reject rate <b>${mgP(rr, 2)}</b> — ${rr <= target ? 'masih di bawah' : 'di atas'} target ${mgN(target, 0)}%${dRate === null ? '' : (Math.abs(dRate) < 0.005 ? ', sama dengan periode sebelumnya' : `, ${dRate > 0 ? 'naik' : 'turun'} ${mgN(Math.abs(dRate), 2)} poin dari periode sebelumnya`)}.`);
-  if (hasProd) {
-    const dpg = PPR && PPR.all.gpt > 0 ? (PR.all.gpt - PPR.all.gpt) / PPR.all.gpt * 100 : null;
-    bullets.push(`Produktivitas <b>${mgN(PR.all.gpt, 1)} gram/tanaman</b>${dpg === null ? '' : (Math.abs(dpg) < 0.05 ? ' (sama dengan periode sebelumnya)' : ` (${dpg >= 0 ? 'naik' : 'turun'} ${mgN(Math.abs(dpg), 1)}% dari periode sebelumnya)`)}.`);
-  }
-  const causes = MG_CAUSES.map(([k, nm]) => ({ nm, v: A.cause[k] })).filter(c => c.v > 0).sort((a, b) => b.v - a.v);
-  if (causes.length && A.rej > 0) {
-    const c2 = causes[1] ? ` dan ${causes[1].nm} (${mgP(causes[1].v / A.rej * 100, 0)})` : '';
-    bullets.push(`Penyebab reject terbesar: <b>${causes[0].nm}</b> (${mgP(causes[0].v / A.rej * 100, 0)})${c2}.`);
-  }
+  // catatan kecil soal GH 2 (tanpa kotak ringkasan)
   const has1 = M.g1.panen > 0, has2 = M.g2.panen > 0;
-  if (has1 && has2) {
-    const hi = M.g1.rateRej >= M.g2.rateRej ? ['GH 1', M.g1, 'GH 2', M.g2] : ['GH 2', M.g2, 'GH 1', M.g1];
-    bullets.push(`Reject rate <b>${hi[0]}</b> lebih tinggi (${mgP(hi[1].rateRej, 2)} vs ${mgP(hi[3].rateRej, 2)} di ${hi[2]}).`);
-  }
   const g2s = mgGh2Start();
-  if (has2 && PA.panen > 0 && P.g2.panen === 0 && g2s) {
-    bullets.push(`<span style="color:${MG.MUTE};">Catatan: GH 2 baru mulai panen sejak ${mgLong(g2s)}; periode pembanding hanya GH 1, jadi kenaikan panen sebagian karena penambahan GH 2.</span>`);
-  } else if (!has2 && has1) {
-    bullets.push(`<span style="color:${MG.MUTE};">Pada periode ini hanya GH 1 yang panen${g2s ? ` (GH 2 mulai ${mgLong(g2s)})` : ''}.</span>`);
-  }
-  if (hy) {
-    const susut = hy.sent.total - hy.recv.total;
-    bullets.push(`Diterima Hyoshii <b>${mgP(hy.pct, 2)}</b> dari yang dikirim (${susut >= 0 ? 'selisih kurang ' : 'selisih lebih '}${mgN(Math.abs(susut))} kg); reject pack Hyoshii <b>${hy.recv.rjTotal} pack</b>.`);
-  }
+  let gh2Note = '';
+  if (has2 && PA.panen > 0 && P.g2.panen === 0 && g2s) gh2Note = `Catatan: GH 2 baru mulai panen sejak ${mgLong(g2s)}; periode pembanding hanya GH 1, jadi kenaikan panen sebagian karena penambahan GH 2.`;
+  else if (!has2 && has1 && g2s) gh2Note = `Pada periode ini hanya GH 1 yang panen (GH 2 mulai ${mgLong(g2s)}).`;
 
   // KPI
   const kpis = '<table style="width:100%;border-collapse:separate;border-spacing:0;margin:0 -5px;"><tr>'
@@ -319,7 +294,7 @@ function renderLaporanMgmt() {
     ${prodRow('Produktivitas periode ini (gram/tanaman)', pr => mgN(pr.gpt, 1), true)}
   </tbody></table>
   <div style="font-size:10.5px;color:${MG.MUTE};margin-top:6px;">Reject Fresh/Frozen yang tercampur GH dibagi otomatis ke GH yang panen pada hari itu.${has1 && !has2 ? ' GH 2 belum ada data pada periode ini.' : ''}</div>`;
-  const ghTitle = ghs.length > 1 ? 'Perbandingan GH 1 vs GH 2' : ('Ringkasan ' + (ghs[0] ? ghs[0][0] : 'GH'));
+  const ghTitle = ghs.length > 1 ? 'Perbandingan GH 1 vs GH 2' : ('Kinerja ' + (ghs[0] ? ghs[0][0] : 'GH'));
 
   // trend
   const bk = mgBuckets(M);
@@ -382,11 +357,8 @@ function renderLaporanMgmt() {
         <td style="text-align:right;vertical-align:middle;font-size:13px;font-weight:700;color:#bbf7d0;">PT. Agri Wangi Berry</td></tr></table>
     </div>
     <div style="padding:14px 14px 0;">
-      <div style="background:#fff;border:1px solid ${MG.LINE};border-left:5px solid ${MG.GREEN};border-radius:10px;padding:12px 16px;">
-        <div style="font-size:13px;font-weight:800;color:${MG.GREEN};margin-bottom:6px;">Ringkasan</div>
-        <ul style="margin:0 0 0 18px;padding:0;font-size:13px;line-height:1.55;">${bullets.map(b => `<li style="margin:2px 0;">${b}</li>`).join('')}</ul>
-      </div>
-      <div style="margin-top:12px;">${kpis}</div>
+      <div style="margin-top:2px;">${kpis}</div>
+      ${gh2Note ? `<div style="margin:8px 6px 0;font-size:11.5px;color:${MG.MUTE};">${gh2Note}</div>` : ''}
       ${mgSection(ghTitle, ghTable)}
       ${mgSection('Tren', trend)}
       ${mgSection(causeTitle, causeHtml)}

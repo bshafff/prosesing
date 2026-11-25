@@ -1,4 +1,4 @@
 {
-  "version": "1.14.0",
-  "released": "2026-11-25",
-  "notes": "Menu Backup & Pulihkan: unduh semua data, pulihkan dari file/snapshot, snapshot otomatis sebelum data ditimpa, backup Sheet ke Drive"}
+  "version": "1.14.1",
+  "released": "2026-11-26",
+  "notes": "Laporan Manajemen tanpa kotak Ringkasan; tombol Hapus Semua History Kemasan dihapus"}

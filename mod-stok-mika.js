@@ -770,16 +770,6 @@ function hapusKemasanHistory(id) {
   updateDashboard();
 }
 
-function hapusSemuaHistoryKemasan() {
-  if (!confirm('⚠️ Yakin hapus SEMUA history?')) return;
-  localStorage.removeItem(KEMASAN_STORAGE_KEY);
-  showToast('✅ Semua history dibersihkan!');
-  recalculateStockKemasan();
-  renderKemasanForms();
-  renderKemasanTables();
-  updateDashboard();
-}
-
 // ============================================================
 // EDIT MODAL (tidak berubah strukturnya)
 // ============================================================
