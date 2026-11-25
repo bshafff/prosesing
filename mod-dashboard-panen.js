@@ -1572,10 +1572,10 @@ const DR_GROUPS = [
   { id: 'pack',    label: '🧰 Pack (Pcs)',       cls: 'th-mika',  argb: 'FF9333EA' },
   { id: 'tamu',    label: '👥 Tamu (Global)',    cls: 'th-gdg',   argb: 'FF475569' },
   { id: 'hykg',    label: '🏭 Terima Hyoshii (Berat)',        cls: 'th-hy',    argb: 'FF4F46E5' },
-  { id: 'hysel',   label: '⚖️ Selisih Berat (Terima − Kirim)', cls: 'th-hysel', argb: 'FFE11D48' },
   { id: 'hypk',    label: '🏭 Terima Hyoshii (Pack)',         cls: 'th-hy',    argb: 'FF4F46E5' },
-  { id: 'hysp',    label: '⚖️ Selisih Pack (Terima − Kirim)', cls: 'th-hysel', argb: 'FFE11D48' },
-  { id: 'hyrej',   label: '🚫 Reject Hyoshii (Pack)',         cls: 'th-hyrej', argb: 'FFB45309' }
+  { id: 'hyrej',   label: '🚫 Reject Hyoshii (Pack)',         cls: 'th-hyrej', argb: 'FFB45309' },
+  { id: 'hysel',   label: '⚖️ Selisih Berat (Terima − Kirim)', cls: 'th-hysel', argb: 'FFE11D48' },
+  { id: 'hysp',    label: '⚖️ Selisih Pack (Terima − Kirim)', cls: 'th-hysel', argb: 'FFE11D48' }
 ];
 
 const DR_COLS = [
@@ -1620,27 +1620,29 @@ const DR_COLS = [
   { id: 'hk_reject', grp: 'hykg', label: 'Reject', t: 'kg' },
   { id: 'hk_total', grp: 'hykg', label: 'Total Terima', t: 'kg', bold: true },
 
-  { id: 'sel_hatsu', grp: 'hysel', label: 'Hatsuhana', t: 'kg', signed: true },
-  { id: 'sel_a11', grp: 'hysel', label: 'Grade A', t: 'kg', signed: true },
-  { id: 'sel_a15', grp: 'hysel', label: 'Grade B', t: 'kg', signed: true },
-  { id: 'sel_reject', grp: 'hysel', label: 'Reject', t: 'kg', signed: true },
-  { id: 'sel_total', grp: 'hysel', label: 'Total Selisih', t: 'kg', signed: true, bold: true },
 
   { id: 'hp_hatsu', grp: 'hypk', label: 'Hatsuhana', t: 'int' },
   { id: 'hp_a11', grp: 'hypk', label: 'Grade A', t: 'int' },
   { id: 'hp_a15', grp: 'hypk', label: 'Grade B', t: 'int' },
   { id: 'hp_total', grp: 'hypk', label: 'Total Pack Terima', t: 'int', bold: true },
 
-  { id: 'sp_hatsu', grp: 'hysp', label: 'Hatsuhana', t: 'int', signed: true },
-  { id: 'sp_a11', grp: 'hysp', label: 'Grade A', t: 'int', signed: true },
-  { id: 'sp_a15', grp: 'hysp', label: 'Grade B', t: 'int', signed: true },
-  { id: 'sp_total', grp: 'hysp', label: 'Total Selisih Pack', t: 'int', signed: true, bold: true },
 
   { id: 'hr_hatsu', grp: 'hyrej', label: 'Hatsuhana', t: 'int' },
   { id: 'hr_a11', grp: 'hyrej', label: 'Grade A', t: 'int' },
   { id: 'hr_a15', grp: 'hyrej', label: 'Grade B', t: 'int' },
   { id: 'hr_total', grp: 'hyrej', label: 'Total Reject Pack', t: 'int', bold: true },
-  { id: 'h_ket', grp: 'hyrej', label: 'Keterangan Hyoshii', t: 'txt' }
+  { id: 'h_ket', grp: 'hyrej', label: 'Keterangan Hyoshii', t: 'txt' },
+
+  { id: 'sel_hatsu', grp: 'hysel', label: 'Hatsuhana', t: 'kg', signed: true },
+  { id: 'sel_a11', grp: 'hysel', label: 'Grade A', t: 'kg', signed: true },
+  { id: 'sel_a15', grp: 'hysel', label: 'Grade B', t: 'kg', signed: true },
+  { id: 'sel_reject', grp: 'hysel', label: 'Reject', t: 'kg', signed: true },
+  { id: 'sel_total', grp: 'hysel', label: 'Total Selisih', t: 'kg', signed: true, bold: true },
+
+  { id: 'sp_hatsu', grp: 'hysp', label: 'Hatsuhana', t: 'int', signed: true },
+  { id: 'sp_a11', grp: 'hysp', label: 'Grade A', t: 'int', signed: true },
+  { id: 'sp_a15', grp: 'hysp', label: 'Grade B', t: 'int', signed: true },
+  { id: 'sp_total', grp: 'hysp', label: 'Total Selisih Pack', t: 'int', signed: true, bold: true }
 ];
 
 const DR_GLOBAL_GROUPS = ['tamu'];
