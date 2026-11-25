@@ -1573,9 +1573,9 @@ const DR_GROUPS = [
   { id: 'tamu',    label: '👥 Tamu (Global)',    cls: 'th-gdg',   argb: 'FF475569' },
   { id: 'hykg',    label: '🏭 Terima Hyoshii (Berat)',        cls: 'th-hy',    argb: 'FF4F46E5' },
   { id: 'hypk',    label: '🏭 Terima Hyoshii (Pack)',         cls: 'th-hy',    argb: 'FF4F46E5' },
-  { id: 'hyrej',   label: '🚫 Reject Hyoshii (Pack)',         cls: 'th-hyrej', argb: 'FFB45309' },
   { id: 'hysel',   label: '⚖️ Selisih Berat (Terima − Kirim)', cls: 'th-hysel', argb: 'FFE11D48' },
-  { id: 'hysp',    label: '⚖️ Selisih Pack (Terima − Kirim)', cls: 'th-hysel', argb: 'FFE11D48' }
+  { id: 'hysp',    label: '⚖️ Selisih Pack (Terima − Kirim)', cls: 'th-hysel', argb: 'FFE11D48' },
+  { id: 'hyrej',   label: '🚫 Reject Hyoshii (Pack)',         cls: 'th-hyrej', argb: 'FFB45309' }
 ];
 
 const DR_COLS = [
@@ -1627,11 +1627,6 @@ const DR_COLS = [
   { id: 'hp_total', grp: 'hypk', label: 'Total Pack Terima', t: 'int', bold: true },
 
 
-  { id: 'hr_hatsu', grp: 'hyrej', label: 'Hatsuhana', t: 'int' },
-  { id: 'hr_a11', grp: 'hyrej', label: 'Grade A', t: 'int' },
-  { id: 'hr_a15', grp: 'hyrej', label: 'Grade B', t: 'int' },
-  { id: 'hr_total', grp: 'hyrej', label: 'Total Reject Pack', t: 'int', bold: true },
-  { id: 'h_ket', grp: 'hyrej', label: 'Keterangan Hyoshii', t: 'txt' },
 
   { id: 'sel_hatsu', grp: 'hysel', label: 'Hatsuhana', t: 'kg', signed: true },
   { id: 'sel_a11', grp: 'hysel', label: 'Grade A', t: 'kg', signed: true },
@@ -1642,7 +1637,13 @@ const DR_COLS = [
   { id: 'sp_hatsu', grp: 'hysp', label: 'Hatsuhana', t: 'int', signed: true },
   { id: 'sp_a11', grp: 'hysp', label: 'Grade A', t: 'int', signed: true },
   { id: 'sp_a15', grp: 'hysp', label: 'Grade B', t: 'int', signed: true },
-  { id: 'sp_total', grp: 'hysp', label: 'Total Selisih Pack', t: 'int', signed: true, bold: true }
+  { id: 'sp_total', grp: 'hysp', label: 'Total Selisih Pack', t: 'int', signed: true, bold: true },
+
+  { id: 'hr_hatsu', grp: 'hyrej', label: 'Hatsuhana', t: 'int' },
+  { id: 'hr_a11', grp: 'hyrej', label: 'Grade A', t: 'int' },
+  { id: 'hr_a15', grp: 'hyrej', label: 'Grade B', t: 'int' },
+  { id: 'hr_total', grp: 'hyrej', label: 'Total Reject Pack', t: 'int', bold: true },
+  { id: 'h_ket', grp: 'hyrej', label: 'Keterangan Hyoshii', t: 'txt' }
 ];
 
 const DR_GLOBAL_GROUPS = ['tamu'];
@@ -1911,7 +1912,7 @@ function drBuildRows(dari, sampai, ghMode, cols) {
   const numCols = cols.filter(c => c.t !== 'pct');
   return [...map.values()].map(drDerive)
     .filter(r => numCols.some(c => c.t === 'txt' ? !!r[c.id] : Math.abs(r[c.id] || 0) > 0))
-    .sort((a, b) => b.tgl.localeCompare(a.tgl) || String(a.gh).localeCompare(String(b.gh)));
+    .sort((a, b) => a.tgl.localeCompare(b.tgl) || String(a.gh).localeCompare(String(b.gh))); // tanggal 1 di atas
 }
 
 function drTotals(rows) {
