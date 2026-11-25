@@ -1,4 +1,4 @@
 {
-  "version": "1.13.2",
+  "version": "1.13.3",
   "released": "2026-11-25",
-  "notes": "Perbaikan: edit data panen tidak lagi menghapus reject dikirim data lama; kolom kirim & reject di history Hyoshii; Cek Data reject kirim vs terima"}
+  "notes": "Data Rekap: kolom Terima Hyoshii kini muncul di mode GH 1 saja / GH 2 saja (dibagi proporsional dari porsi kirim)"}

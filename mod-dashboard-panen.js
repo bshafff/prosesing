@@ -1844,6 +1844,46 @@ function drBuildRows(dari, sampai, ghMode, cols) {
     });
   }
 
+  // Mode "GH 1 saja" / "GH 2 saja": Hyoshii menerima gabungan, jadi data diterima dibagi proporsional
+  // sesuai porsi kirim GH tsb pada tanggal itu (per grade, reject, dan pack).
+  if (needHy && (ghMode === 'gh1' || ghMode === 'gh2')) {
+    const target = ghMode === 'gh1' ? 'GH 1' : 'GH 2';
+    const zero = () => ({ k_hatsu: 0, k_a11: 0, k_a15: 0, k_rfresh: 0, k_frozen: 0, m_hatsu: 0, m_a11: 0, m_a15: 0 });
+    const daily = {}, mine = {};
+    db.forEach(item => {
+      if (!item.tgl) return;
+      const d = daily[item.tgl] || (daily[item.tgl] = zero());
+      Object.keys(d).forEach(k => { d[k] += Number(item[k]) || 0; });
+      if (item.gh !== 'GLOBAL' && ghOf(item) === target) {
+        const m = mine[item.tgl] || (mine[item.tgl] = zero());
+        ['k_hatsu', 'k_a11', 'k_a15', 'm_hatsu', 'm_a11', 'm_a15'].forEach(k => { m[k] += Number(item[k]) || 0; });
+        const a = alokRekap(item);
+        m.k_rfresh += (Number(item.k_rfresh) || 0) + a.k_rfresh;
+        m.k_frozen += (Number(item.k_frozen) || 0) + a.k_frozen;
+      }
+    });
+    const sh = (mv, dv) => (dv > 0 ? mv / dv : 0);
+    readArrayRaw(nativeStorage.getItem(HYOSHII_STORAGE_KEY)).forEach(item => {
+      if (!item.tgl || item.tgl < dari || item.tgl > sampai) return;
+      const m = mine[item.tgl], d = daily[item.tgl];
+      if (!m || !d) return; // GH ini tidak kirim pada tanggal tsb
+      const key = item.tgl + '|' + target;
+      if (!map.has(key)) map.set(key, drNewRow(item.tgl, target));
+      const r = map.get(key);
+      const n = k => Number(item[k]) || 0;
+      const sHatsu = sh(m.k_hatsu, d.k_hatsu), sA = sh(m.k_a11, d.k_a11), sB = sh(m.k_a15, d.k_a15);
+      const sRej = sh(m.k_rfresh + m.k_frozen, d.k_rfresh + d.k_frozen);
+      const pHatsu = sh(m.m_hatsu, d.m_hatsu), pA = sh(m.m_a11, d.m_a11), pB = sh(m.m_a15, d.m_a15);
+      r.hk_hatsu += n('hk_hatsu') * sHatsu; r.hk_a11 += n('hk_a11') * sA; r.hk_a15 += n('hk_a15') * sB;
+      r.hk_reject += (n('hk_reject') + n('hk_rfresh') + n('hk_frozen')) * sRej;
+      r.hp_hatsu += n('hp_hatsu') * pHatsu; r.hp_a11 += n('hp_a11') * pA; r.hp_a15 += n('hp_a15') * pB;
+      r.hr_hatsu += n('hr_hatsu') * pHatsu; r.hr_a11 += n('hr_a11') * pA; r.hr_a15 += n('hr_a15') * pB;
+      if (item.h_ket) r.h_ket = r.h_ket ? (r.h_ket + '; ' + item.h_ket) : String(item.h_ket);
+      r._hy = true;
+      r.ds = m;
+    });
+  }
+
   db.forEach(item => {
     if (!item.tgl || item.tgl < dari || item.tgl > sampai) return;
     const isGlobal = item.gh === 'GLOBAL';
@@ -1919,7 +1959,7 @@ function renderDetailReject() {
   if (infoEl) {
     const needGlobal = cols.some(c => c.global || DR_GLOBAL_GROUPS.includes(c.grp));
     infoEl.innerHTML = `Periode: <b>${fmtTgl(dari)}</b> s/d <b>${fmtTgl(sampai)}</b> · ${DR_GH_LABEL[ghMode] || ''} · <b>${cols.length}</b> kolom data`
-      + (cols.some(c => c.grp.startsWith('hy')) ? '<br><small>Data Hyoshii satu kesatuan per tanggal (tampil di baris GH 1+2; selisih = diterima − total kirim hari itu). Paling mudah dibaca di mode Gabungan.</small>' : '')
+      + (cols.some(c => c.grp.startsWith('hy')) ? ((ghMode === 'gh1' || ghMode === 'gh2') ? '<br><small>Hyoshii menerima gabungan GH 1 & 2, jadi angka “Terima Hyoshii” di sini <b>dibagi proporsional</b> sesuai porsi kirim GH ini per tanggal (per grade, reject, dan pack). Untuk angka asli pakai mode Gabungan.</small>' : '<br><small>Data Hyoshii satu kesatuan per tanggal (tampil di baris GH 1+2; selisih = diterima − total kirim hari itu). Paling mudah dibaca di mode Gabungan.</small>') : '')
       + (needGlobal ? '<br><small>Reject Fresh/Frozen tercampur GH 1 & 2: dibagi otomatis ke tiap GH (dasar: ' + ({ reject: 'total reject', panen: 'panen', kirim: 'kirim grade' }[alokBasis()]) + '). Tamu tetap di baris 🌐 Global; mode Gabungan menampilkan totalnya.</small>' : '');
   }
 
