@@ -1,4 +1,4 @@
 {
-  "version": "1.14.1",
+  "version": "1.15.0",
   "released": "2026-11-26",
-  "notes": "Laporan Manajemen tanpa kotak Ringkasan; tombol Hapus Semua History Kemasan dihapus"}
+  "notes": "Menu Presentasi: slide otomatis sesuai filter tanggal (hari/minggu/bulan), mode presentasi, simpan PNG, unduh PPTX"}

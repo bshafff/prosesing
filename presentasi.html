@@ -1,0 +1,31 @@
+<div id="presentasi" class="view">
+  <div class="view-toolbar">
+    <button class="btn btn-sm btn-home" onclick="goHome()">← Menu</button>
+    <span class="view-title">🎞️ Presentasi Prosesing</span>
+  </div>
+
+  <div class="card">
+    <div class="row-2">
+      <div class="input-group"><label>Dari tanggal</label><input type="date" id="ps-from" onchange="psRender()"></div>
+      <div class="input-group"><label>Sampai tanggal</label><input type="date" id="ps-to" onchange="psRender()"></div>
+    </div>
+    <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+      <button class="btn btn-sm btn-secondary" onclick="psPreset('hari')">Hari ini</button>
+      <button class="btn btn-sm btn-secondary" onclick="psPreset('w0')">Minggu ini</button>
+      <button class="btn btn-sm btn-secondary" onclick="psPreset('w-1')">Minggu lalu</button>
+      <button class="btn btn-sm btn-secondary" onclick="psPreset('2w')">2 Minggu</button>
+      <button class="btn btn-sm btn-secondary" onclick="psPreset('m0')">Bulan ini</button>
+      <button class="btn btn-sm btn-secondary" onclick="psPreset('m-1')">Bulan lalu</button>
+    </div>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="psStart()">▶ Presentasi</button>
+      <button class="btn btn-primary" id="ps-btn-pptx" onclick="psExportPptx()" style="background:#2d5016;">📥 Unduh PPTX</button>
+      <button class="btn btn-secondary" onclick="psRender()">🔄 Muat ulang data</button>
+    </div>
+    <small style="color:#666;display:block;margin-top:0.6rem;">Slide dibuat otomatis dari data sesuai tanggal di atas. Klik teks di slide <b>Catatan &amp; Tindak Lanjut</b> untuk menulis (tersimpan per periode). Slide <b>Dokumentasi</b> berisi kotak foto: klik kotaknya lalu pilih gambar, atau arahkan kursor dan tekan <b>Ctrl+V</b> untuk menempel screenshot. Selama presentasi: tombol panah atau klik kanan/kiri layar untuk pindah slide, Esc untuk keluar.</small>
+  </div>
+
+  <div id="ps-deck"></div>
+  <input type="file" id="ps-file" accept="image/*" style="display:none" onchange="psFileChosen()">
+  <div class="ps-toast" id="ps-toast"></div>
+</div>

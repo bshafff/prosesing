@@ -8,7 +8,8 @@ const VIEW_FILES = {
   'panen': 'rekap-panen.html',
   'kemasan': 'stok-mika.html',
   'hyoshii': 'hyoshii.html',
-  'backup': 'backup.html'
+  'backup': 'backup.html',
+  'presentasi': 'presentasi.html'
 };
 
 async function loadAllViews() {

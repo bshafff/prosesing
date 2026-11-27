@@ -180,6 +180,7 @@ function mgSection(title, inner) {
 
 function mgLineChart(labels, series, opts) {
   opts = opts || {};
+  const fs = opts.fs || 1;
   const W = 440, H = 190, L = 46, R = 12, T = 14, B = 26;
   const n = labels.length;
   if (!n) return `<div style="color:${MG.MUTE};font-size:12px;">Belum ada data</div>`;
@@ -192,14 +193,14 @@ function mgLineChart(labels, series, opts) {
   for (let g = 0; g <= 4; g++) {
     const v = minV + (max - minV) * g / 4, yy = y(v);
     svg += `<line x1="${L}" y1="${yy}" x2="${W - R}" y2="${yy}" stroke="${MG.LINE}" stroke-width="1"/>`;
-    svg += `<text x="${L - 6}" y="${yy + 3}" font-size="9.5" fill="${MG.MUTE}" text-anchor="end">${mgN(v, opts.dec === undefined ? 0 : opts.dec)}</text>`;
+    svg += `<text x="${L - 6}" y="${yy + 3}" font-size="${9.5 * fs}" fill="${MG.MUTE}" text-anchor="end">${mgN(v, opts.dec === undefined ? 0 : opts.dec)}</text>`;
   }
   const step = Math.max(1, Math.ceil(n / 8));
-  labels.forEach((lb, i) => { if (i % step === 0 || (i === n - 1 && (n - 1) % step >= step / 2)) svg += `<text x="${x(i)}" y="${H - 8}" font-size="9.5" fill="${MG.MUTE}" text-anchor="middle">${lb}</text>`; });
+  labels.forEach((lb, i) => { if (i % step === 0 || (i === n - 1 && (n - 1) % step >= step / 2)) svg += `<text x="${x(i)}" y="${H - 8}" font-size="${9.5 * fs}" fill="${MG.MUTE}" text-anchor="middle">${lb}</text>`; });
   if (opts.target) {
     const yt = y(opts.target);
     svg += `<line x1="${L}" y1="${yt}" x2="${W - R}" y2="${yt}" stroke="${MG.BAD}" stroke-width="1.5" stroke-dasharray="5 4"/>`;
-    svg += `<text x="${W - R}" y="${yt - 4}" font-size="9.5" fill="${MG.BAD}" text-anchor="end" font-weight="700">Target ${mgN(opts.target, 0)}%</text>`;
+    svg += `<text x="${W - R}" y="${yt - 4}" font-size="${9.5 * fs}" fill="${MG.BAD}" text-anchor="end" font-weight="700">Target ${mgN(opts.target, 0)}%</text>`;
   }
   series.forEach(s => {
     const pts = s.values.map((v, i) => Number.isFinite(v) ? `${x(i)},${y(v)}` : null).filter(Boolean).join(' ');

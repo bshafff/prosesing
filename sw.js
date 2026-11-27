@@ -1,4 +1,4 @@
-const CACHE_NAME = 'awb-processing-v105';
+const CACHE_NAME = 'awb-processing-v106';
 const ASSETS = [
   './',
   './index.html',
@@ -17,6 +17,11 @@ const ASSETS = [
   './mod-laporan-mgmt.js',
   './mod-populasi.js',
   './mod-backup.js',
+  './mod-presentasi.js',
+  './presentasi.html',
+  './assets/leaf.png',
+  './assets/logo.png',
+  './assets/strawberry.png',
   './backup.html',
   './mod-dashboard-mika.js',
   './mod-estimasi.js',
