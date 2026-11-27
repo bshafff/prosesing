@@ -21,8 +21,9 @@
       <button class="btn btn-primary" onclick="psStart()">▶ Presentasi</button>
       <button class="btn btn-primary" id="ps-btn-pptx" onclick="psExportPptx()" style="background:#2d5016;">📥 Unduh PPTX</button>
       <button class="btn btn-secondary" onclick="psRender()">🔄 Muat ulang data</button>
+      <button class="btn btn-secondary" onclick="psResetEdits()">↺ Kembalikan teks asli</button>
     </div>
-    <small style="color:#666;display:block;margin-top:0.6rem;">Slide dibuat otomatis dari data sesuai tanggal di atas. Klik teks di slide <b>Catatan &amp; Tindak Lanjut</b> untuk menulis (tersimpan per periode). Slide <b>Dokumentasi</b> berisi kotak foto: klik kotaknya lalu pilih gambar, atau arahkan kursor dan tekan <b>Ctrl+V</b> untuk menempel screenshot. Selama presentasi: tombol panah atau klik kanan/kiri layar untuk pindah slide, Esc untuk keluar.</small>
+    <small style="color:#666;display:block;margin-top:0.6rem;">Slide dibuat otomatis dari data sesuai tanggal di atas. <b>Semua tulisan di slide bisa diklik dan diedit</b> (judul, label, angka, catatan); hasil editnya tersimpan per periode. Kalau data berubah, teks yang diedit pada bagian itu kembali ke teks otomatis. Slide <b>Dokumentasi</b> berisi kotak foto: klik kotaknya lalu pilih gambar, atau arahkan kursor dan tekan <b>Ctrl+V</b> untuk menempel screenshot. Selama presentasi: tombol panah atau klik kanan/kiri layar untuk pindah slide, Esc untuk keluar.</small>
   </div>
 
   <div id="ps-deck"></div>

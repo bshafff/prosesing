@@ -47,11 +47,11 @@ function psDerive(t) {
 function psAgg(start, end) {
   const all = readArrayRaw(nativeStorage.getItem(PANEN_STORAGE_KEY));
   const alok = buildAlokasiGlobal(all);
-  const T = { g1: psZero(), g2: psZero(), glob: 0 };
+  const T = { g1: psZero(), g2: psZero(), glob: 0, tamu: 0 };
   const days = {};
   all.filter(x => x.tgl && x.tgl >= start && x.tgl <= end).forEach(x => {
     const d = days[x.tgl] || (days[x.tgl] = { g1: psZero(), g2: psZero(), glob: 0 });
-    if (x.gh === 'GLOBAL') { const r = (Number(x.k_frozen) || 0) + (Number(x.k_rfresh) || 0); T.glob += r; d.glob += r; return; }
+    if (x.gh === 'GLOBAL') { const r = (Number(x.k_frozen) || 0) + (Number(x.k_rfresh) || 0); T.glob += r; d.glob += r; T.tamu += (Number(x.t_curah) || 0) + (Number(x.t_hatsu) || 0) + (Number(x.t_a11) || 0) + (Number(x.t_a15) || 0); return; }
     const g = ghOf(x) === 'GH 2' ? 'g2' : (ghOf(x) === 'GH 1' ? 'g1' : null);
     if (!g) return;
     const a = alok(x);
@@ -196,12 +196,25 @@ function psBuildSlides(a, b) {
   const bar = (lab, val, w, color, sub) => `<div class="ps-fl"><div class="ps-fl-l">${lab}</div><div class="ps-fl-b"><div style="width:${Math.max(2, w)}%;background:${color};"></div></div><div class="ps-fl-v">${val}<small>${sub || ''}</small></div></div>`;
   const pctOf = v => A.panen > 0 ? v / A.panen * 100 : 0;
   let flow = bar('Panen total', mgN(A.panen) + ' kg', 100, '#4b5a2b', 'grade + reject kebun')
-    + bar('Layak jual', mgN(A.layak) + ' kg', pctOf(A.layak), '#16a34a', mgP(pctOf(A.layak)) + ' dari panen · reject kebun ' + mgN(A.rk) + ' kg')
-    + bar('Dikemas', mgN(A.pack, 0) + ' pack', pctOf(A.kirimGrade), '#0891b2', 'kirim grade ' + mgN(A.kirimGrade) + ' kg')
+    + bar('Layak jual', mgN(A.layak) + ' kg', pctOf(A.layak), '#16a34a', mgP(pctOf(A.layak)) + ' dari panen')
+    + bar('Dikemas', mgN(A.kirimGrade) + ' kg', pctOf(A.kirimGrade), '#0891b2', mgN(A.pack, 0) + ' pack')
     + bar('Dikirim ke Hyoshii', mgN(A.kirim) + ' kg', pctOf(A.kirim), '#2563eb', mgP(A.rateKirim) + ' dari panen · termasuk reject ' + mgN(A.rejKirim) + ' kg');
   if (hy) flow += bar('Diterima Hyoshii', mgN(hy.recv.total) + ' kg', pctOf(hy.recv.total / (hy.sent.total || 1) * A.kirim), '#7c3aed', mgP(hy.pct, 2) + ' dari yang dikirim · ' + mgN(hy.recv.pTotal, 0) + ' pack');
   else flow += bar('Diterima Hyoshii', '–', 2, '#d1d5db', 'belum ada data Hyoshii');
-  S.push(['Alur Panen sampai Hyoshii', `<div class="ps-flow">${flow}</div><div class="ps-fn">Selisih dikirim vs diterima ${hy ? (hy.recv.total - hy.sent.total >= 0 ? '+' : '') + mgN(hy.recv.total - hy.sent.total) + ' kg · pack ' + (hy.recv.pTotal - hy.sent.pTotal >= 0 ? '+' : '') + mgN(hy.recv.pTotal - hy.sent.pTotal, 0) + ' · reject Hyoshii ' + hy.recv.rjTotal + ' pack' : '–'}.</div>${per}`]);
+  // Kurangnya ke mana? (panen total -> dikirim). Teks bisa diedit langsung di slide.
+  const gap = A.panen - A.kirim, tamu = T.tamu || 0;
+  const rkHpt = (() => { let v = 0; readArrayRaw(nativeStorage.getItem(PANEN_STORAGE_KEY)).forEach(x => { if (x.tgl && x.tgl >= a && x.tgl <= b && x.gh !== 'GLOBAL') v += Number(x.rk_hpt) || 0; }); return v; })();
+  const rpHpt = Math.max(0, A.c.hpt - rkHpt);
+  const rpNet = A.rp - A.rejKirim;
+  const rest = gap - A.rk - rpNet - tamu;
+  const sg = v => (v < 0 ? '−' : '') + mgN(Math.abs(v)) + ' kg';
+  const why = `<div class="ps-why"><div class="ps-why-h">Kurangnya ke mana? Panen total → dikirim: selisih ${sg(gap)}</div>
+    <div class="ps-why-r">• <b>Reject kebun</b> ${sg(A.rk)} <small>(termasuk HPT ${sg(rkHpt)})</small></div>
+    <div class="ps-why-r">• <b>Reject prosesing</b> ${sg(A.rp)} <small>(termasuk HPT ${sg(rpHpt)}), dikurangi reject yang ikut dikirim ${sg(A.rejKirim)}</small></div>
+    <div class="ps-why-r">• <b>Tamu / sampel</b> ${sg(tamu)}</div>
+    <div class="ps-why-r">• <b>${rest < 0 ? 'Kelebihan (selisih stok antar-hari / pembulatan)' : 'Belum terjelaskan (loss / penimbangan)'}</b> ${sg(rest)}</div></div>`;
+  const hyLine = hy ? `Dikirim vs diterima Hyoshii: ${(hy.recv.total - hy.sent.total >= 0 ? '+' : '−') + mgN(Math.abs(hy.recv.total - hy.sent.total))} kg · pack ${(hy.recv.pTotal - hy.sent.pTotal >= 0 ? '+' : '−') + mgN(Math.abs(hy.recv.pTotal - hy.sent.pTotal), 0)} · reject Hyoshii ${hy.recv.rjTotal} pack.` : '';
+  S.push(['Alur Panen sampai Hyoshii', `<div class="ps-flow">${flow}</div>${why}${hyLine ? `<div class="ps-fn">${hyLine}</div>` : ''}${per}`]);
 
   // 3. Persebaran panen
   const rowsT = bk.list.map((x, i) => {
@@ -301,6 +314,31 @@ function psKemasanSlide(a, b) {
     <div class="ps-fn">Stok = kondisi saat ini (bukan akhir periode). Gudang dalam dus/lembar/ball sesuai jenis, processing dalam pcs.</div>`;
 }
 
+// ---------- Semua teks slide bisa diedit ----------
+// Setiap blok teks diberi kunci urut (slide + urutan). Hasil edit disimpan bersama teks aslinya;
+// kalau data berubah (teks asli beda), edit lama diabaikan supaya angka tidak basi.
+function psBlockChild(c) { return c.nodeType === 1 && (['DIV', 'TABLE', 'TBODY', 'THEAD', 'TFOOT', 'TR', 'TD', 'TH', 'UL', 'OL', 'LI', 'IMG', 'P'].includes(c.tagName) || c.tagName.toLowerCase() === 'svg'); }
+function psWalk(node, fn) {
+  if (node.nodeType !== 1 || node.tagName.toLowerCase() === 'svg') return;
+  const cl = node.classList;
+  if (cl.contains('ps-ed') || cl.contains('ps-imgslot') || cl.contains('ps-nx')) return;
+  if (node.textContent.trim() && ![...node.children].some(psBlockChild)) { fn(node); return; }
+  [...node.children].forEach(c => psWalk(c, fn));
+}
+function psAutoEdit() {
+  const saved = PS.EDIT._a || {};
+  $ps('ps-deck').querySelectorAll('.ps-item').forEach((it, si) => {
+    let n = 0;
+    const sl = it.querySelector('.ps-sl');
+    ['.ps-ttl', '.ps-ct'].forEach(sel => { const root = sl.querySelector(sel); if (root) psWalk(root, el => {
+      const key = 'a' + si + '_' + (n++);
+      el.setAttribute('data-ak', key); el.setAttribute('data-orig', el.innerHTML);
+      el.setAttribute('contenteditable', 'true'); el.setAttribute('spellcheck', 'false');
+      const sv = saved[key]; if (sv && sv.o === el.innerHTML) el.innerHTML = sv.h;
+    }); });
+  });
+}
+
 // ---------- Render & tampilan ----------
 let psPost = [];
 function psRender() {
@@ -314,6 +352,7 @@ function psRender() {
   ['doc1', 'doc2', 'doc3'].forEach(k => { try { const v = localStorage.getItem('pimg:' + PS.KEY + ':' + k); if (v) PS.IMG[k] = v; } catch (e) { /* abaikan */ } });
   try { PS.slides = psBuildSlides(a, b); } catch (err) { console.error(err); $ps('ps-deck').innerHTML = '<div class="card" style="text-align:center;color:#b91c1c;">Gagal membuat slide: ' + psEsc(err.message) + '</div>'; return; }
   $ps('ps-deck').innerHTML = PS.slides.map((s, i) => `<div class="ps-item" data-i="${i}"><div class="ps-cap"><span>Slide ${i + 1} · ${psEsc(s[0])}</span><button class="btn btn-sm btn-secondary" onclick="psSavePng(${i})">📷 PNG</button></div><div class="ps-sw">${psSlideHtml(s[0], s[1])}</div></div>`).join('');
+  psAutoEdit();
   psFit();
 }
 
@@ -348,6 +387,12 @@ document.addEventListener('keydown', e => {
   if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { PS.cur = Math.max(0, PS.cur - 1); psShowCur(); e.preventDefault(); }
 });
 
+function psResetEdits() {
+  if (!confirm('Kembalikan semua teks slide periode ini ke teks asli (hasil edit manual dihapus)?')) return;
+  delete PS.EDIT._a;
+  try { localStorage.setItem('pedit:' + PS.KEY, JSON.stringify(PS.EDIT)); } catch (e) { /* abaikan */ }
+  psRender(); psToast('Teks dikembalikan ke asli');
+}
 function psToast(m) { const t = $ps('ps-toast'); if (!t) return; t.textContent = m; t.style.display = 'block'; clearTimeout(psToast._t); psToast._t = setTimeout(() => { t.style.display = 'none'; }, 2600); }
 
 // ---------- Edit teks & gambar ----------
@@ -360,6 +405,13 @@ document.addEventListener('click', e => {
   psPick = s.dataset.k; $ps('ps-file').value = ''; $ps('ps-file').click();
 });
 document.addEventListener('input', e => {
+  const ak = e.target.closest && e.target.closest('[data-ak]');
+  if (ak && $ps('ps-deck') && $ps('ps-deck').contains(ak)) {
+    PS.EDIT._a = PS.EDIT._a || {};
+    PS.EDIT._a[ak.dataset.ak] = { o: ak.getAttribute('data-orig'), h: ak.innerHTML };
+    try { localStorage.setItem('pedit:' + PS.KEY, JSON.stringify(PS.EDIT)); } catch (x) { /* abaikan */ }
+    return;
+  }
   const el = e.target.closest && e.target.closest('.ps-ed'); if (!el || !$ps('ps-deck') || !$ps('ps-deck').contains(el)) return;
   PS.EDIT[el.dataset.k] = el.innerHTML;
   try { localStorage.setItem('pedit:' + PS.KEY, JSON.stringify(PS.EDIT)); } catch (x) { /* abaikan */ }
@@ -367,7 +419,7 @@ document.addEventListener('input', e => {
 document.addEventListener('mouseover', e => { const s = e.target.closest && e.target.closest('.ps-imgslot'); if (s) psCurSlot = s.dataset.k; });
 document.addEventListener('paste', e => {
   const dk = $ps('ps-deck'); if (!dk || !dk.offsetParent) return;
-  const ed = e.target.closest && e.target.closest('.ps-ed');
+  const ed = e.target.closest && e.target.closest('.ps-ed,[data-ak]');
   const cd = e.clipboardData; if (!cd) return;
   const img = [...cd.items].find(i => i.type.startsWith('image/'));
   if (ed && !img) { e.preventDefault(); document.execCommand('insertText', false, cd.getData('text/plain')); return; }
@@ -413,7 +465,7 @@ async function psSnap(i, scale) {
     doc.querySelectorAll('.ps-imgslot .ps-ph,.ps-imgslot .ps-rm').forEach(p => { p.style.display = 'none'; });
     doc.querySelectorAll('.ps-imgslot:not(.has)').forEach(p => { p.style.border = 'none'; p.style.background = 'transparent'; });
     doc.querySelectorAll('.ps-ed').forEach(p => { p.style.background = 'transparent'; });
-    const st = doc.createElement('style'); st.textContent = '.ps-ed:empty::before{content:none!important}'; doc.head.appendChild(st);
+    const st = doc.createElement('style'); st.textContent = '.ps-ed:empty::before{content:none!important}[data-ak]{background:transparent!important;outline:none!important}'; doc.head.appendChild(st);
   } });
 }
 async function psSavePng(i) {

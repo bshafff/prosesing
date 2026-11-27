@@ -1,4 +1,4 @@
 {
-  "version": "1.15.0",
-  "released": "2026-11-26",
-  "notes": "Menu Presentasi: slide otomatis sesuai filter tanggal (hari/minggu/bulan), mode presentasi, simpan PNG, unduh PPTX"}
+  "version": "1.15.1",
+  "released": "2026-11-27",
+  "notes": "Presentasi: catatan kurangnya ke mana (HPT/tamu/loss), semua teks slide bisa diedit, tombol kembalikan teks asli"}
